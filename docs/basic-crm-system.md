@@ -16,35 +16,39 @@ A simple Customer Relationship Management (CRM) system built with PHP, Bootstrap
 - Modern web browser
 
 ## Project Structure
+
 ```
-crm-system/
-├── assets/
-│   ├── css/
-│   │   └── custom.css
-│   ├── js/
-│   │   └── main.js
-│   └── images/
-├── includes/
+crm.freeopsdao.com/
+├── public/                  # Web root (all public files)
+│   ├── index.php
+│   ├── login.php
+│   ├── logout.php
+│   ├── .htaccess
+│   ├── api/
+│   │   └── v1/
+│   │       └── index.php
+│   ├── pages/
+│   │   ├── dashboard.php
+│   │   ├── contacts.php
+│   │   └── error.php
+│   └── assets/
+│       ├── js/
+│       └── css/
+├── includes/                # PHP includes (private)
 │   ├── config.php
 │   ├── database.php
-│   ├── functions.php
 │   └── auth.php
-├── pages/
-│   ├── dashboard.php
-│   ├── customers.php
-│   ├── leads.php
-│   ├── deals.php
-│   └── reports.php
-├── api/
-│   ├── v1/
-│   │   └── index.php
-│   └── openapi.json
-├── db/
+├── db/                      # SQLite DB (private)
 │   └── crm.db
-├── index.php
-├── login.php
+├── tests/                   # Test suite (private)
+├── docs/                    # Documentation
 └── README.md
 ```
+
+## Deployment Best Practices
+- Set your web server root to `/public` (not the project root)
+- Never expose `/includes`, `/db`, `/tests`, or `/docs` to the web
+- All sensitive files are outside the web root for security
 
 ## Database Schema
 

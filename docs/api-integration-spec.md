@@ -4,6 +4,38 @@
 
 This document provides the technical specification for integrating external contact databases with the FreeOpsDAO CRM system. Use this guide to implement contact funneling from your existing systems.
 
+## Project Structure (Web Root)
+
+```
+crm.freeopsdao.com/
+├── public/                  # Web root (all public files)
+│   ├── index.php
+│   ├── login.php
+│   ├── logout.php
+│   ├── .htaccess
+│   ├── api/
+│   │   └── v1/
+│   │       └── index.php
+│   ├── pages/
+│   │   ├── dashboard.php
+│   │   ├── contacts.php
+│   │   └── error.php
+│   └── assets/
+│       ├── js/
+│       └── css/
+├── includes/                # PHP includes (private)
+│   ├── config.php
+│   ├── database.php
+│   └── auth.php
+├── db/                      # SQLite DB (private)
+│   └── crm.db
+├── tests/                   # Test suite (private)
+├── docs/                    # Documentation
+└── README.md
+```
+
+**Note:** All API endpoints are under `/public/api/v1/`.
+
 ## 🔗 Base URL
 
 ```

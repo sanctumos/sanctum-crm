@@ -1,5 +1,37 @@
 # Quick Integration Guide - FreeOpsDAO CRM
 
+## Project Structure (Web Root)
+
+```
+crm.freeopsdao.com/
+├── public/                  # Web root (all public files)
+│   ├── index.php
+│   ├── login.php
+│   ├── logout.php
+│   ├── .htaccess
+│   ├── api/
+│   │   └── v1/
+│   │       └── index.php
+│   ├── pages/
+│   │   ├── dashboard.php
+│   │   ├── contacts.php
+│   │   └── error.php
+│   └── assets/
+│       ├── js/
+│       └── css/
+├── includes/                # PHP includes (private)
+│   ├── config.php
+│   ├── database.php
+│   └── auth.php
+├── db/                      # SQLite DB (private)
+│   └── crm.db
+├── tests/                   # Test suite (private)
+├── docs/                    # Documentation
+└── README.md
+```
+
+**Note:** All API endpoints are under `/public/api/v1/`.
+
 ## 🚀 Quick Start for Developers
 
 This guide provides ready-to-use code snippets for common integration scenarios.

@@ -36,7 +36,8 @@ cd crm.freeopsdao.com
 
 ### 2. Set Up Development Environment
 ```bash
-# Start PHP built-in server
+# Start PHP built-in server from the public directory
+cd public
 php -S localhost:8000
 ```
 
@@ -62,35 +63,36 @@ php tests/api/ApiTest.php
 
 ```
 crm.freeopsdao.com/
-├── api/
-│   ├── v1/
-│   │   └── index.php          # Main API endpoint
-│   └── openapi.json           # OpenAPI specification
-├── includes/
-│   ├── config.php             # Configuration settings
-│   ├── database.php           # Database handler
-│   └── auth.php               # Authentication system
-├── pages/
-│   ├── dashboard.php          # Dashboard page
-│   └── contacts.php           # Contacts management
-├── tests/                     # Test suite
-│   ├── unit/                  # Unit tests
-│   │   ├── DatabaseTest.php   # Database tests
-│   │   └── AuthTest.php       # Authentication tests
-│   ├── api/                   # API tests
-│   │   └── ApiTest.php        # API integration tests
-│   ├── integration/           # Integration tests
-│   ├── bootstrap.php          # Test environment setup
-│   ├── run_tests.php          # Test runner
-│   └── phpunit.xml            # PHPUnit configuration
-├── db/                        # SQLite database files
-├── docs/                      # Documentation
-├── index.php                  # Main entry point
-├── login.php                  # Login page
-├── logout.php                 # Logout handler
-├── .htaccess                  # URL rewriting & security
-└── README.md                  # This file
+├── public/                  # Web root (all public files)
+│   ├── index.php
+│   ├── login.php
+│   ├── logout.php
+│   ├── .htaccess
+│   ├── api/
+│   │   └── v1/
+│   │       └── index.php
+│   ├── pages/
+│   │   ├── dashboard.php
+│   │   ├── contacts.php
+│   │   └── error.php
+│   └── assets/
+│       ├── js/
+│       └── css/
+├── includes/                # PHP includes (private)
+│   ├── config.php
+│   ├── database.php
+│   └── auth.php
+├── db/                      # SQLite DB (private)
+│   └── crm.db
+├── tests/                   # Test suite (private)
+├── docs/                    # Documentation
+└── README.md
 ```
+
+## 🔒 Deployment Best Practices
+- Set your web server root to `/public` (not the project root)
+- Never expose `/includes`, `/db`, `/tests`, or `/docs` to the web
+- All sensitive files are outside the web root for security
 
 ## 🔌 API Usage
 
