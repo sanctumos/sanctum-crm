@@ -15,7 +15,7 @@ class ApiTest {
         $this->baseUrl = 'http://localhost:8000';
         
         // Get admin API key
-        $this->apiKey = TestUtils::getTestApiKey();
+        $this->apiKey = '77440a1aab7aae86a8ed5dff27b56df0';
         
         $this->headers = [
             'Authorization: Bearer ' . $this->apiKey,
@@ -87,11 +87,11 @@ class ApiTest {
     
     public function testCreateContact() {
         echo "    Testing POST /api/v1/contacts... ";
-        
+        $uniqueEmail = 'apitest_' . uniqid() . '@example.com';
         $contactData = [
             'first_name' => 'API',
             'last_name' => 'Test',
-            'email' => 'apitest@example.com',
+            'email' => $uniqueEmail,
             'phone' => '+1234567890',
             'company' => 'Test Company',
             'position' => 'Manager',
@@ -100,8 +100,8 @@ class ApiTest {
             'source' => 'website',
             'notes' => 'API test contact'
         ];
-        
         $response = $this->makeRequest('POST', '/api/v1/contacts', $contactData);
+        file_put_contents(__DIR__ . '/contact_test_debug.log', date('c') . " POST /api/v1/contacts data=" . json_encode($contactData) . " response=" . json_encode($response) . "\n", FILE_APPEND);
         
         if ($response['code'] === 201) {
             $data = json_decode($response['body'], true);
@@ -190,8 +190,8 @@ class ApiTest {
     public function testDealsEndpoints() {
         echo "  Testing Deals API endpoints...\n";
         
-        // Create a contact first
-        $contactId = TestUtils::createTestContact();
+        // Create a contact via the API first
+        $contactId = $this->testCreateContact();
         
         // Test GET /api/v1/deals
         $this->testGetDeals();
@@ -200,18 +200,20 @@ class ApiTest {
         $dealId = $this->testCreateDeal($contactId);
         
         if ($dealId) {
-            // Test GET /api/v1/deals/{id}
+            // Test GET /api/v1/deals/{$dealId}
             $this->testGetDeal($dealId);
             
-            // Test PUT /api/v1/deals/{id}
+            // Test PUT /api/v1/deals/{$dealId}
             $this->testUpdateDeal($dealId);
             
-            // Test DELETE /api/v1/deals/{id}
+            // Test DELETE /api/v1/deals/{$dealId}
             $this->testDeleteDeal($dealId);
         }
         
-        // Clean up
-        TestUtils::getTestDatabase()->delete('contacts', 'id = ?', [$contactId]);
+        // Clean up via API
+        if ($contactId) {
+            $this->testDeleteContact($contactId);
+        }
     }
     
     public function testGetDeals() {
@@ -243,6 +245,7 @@ class ApiTest {
             'expected_close_date' => date('Y-m-d', strtotime('+30 days')),
             'description' => 'API test deal'
         ];
+        file_put_contents(__DIR__ . '/deal_test_debug.log', date('c') . " POST /api/v1/deals data=" . json_encode($dealData) . "\n", FILE_APPEND);
         
         $response = $this->makeRequest('POST', '/api/v1/deals', $dealData);
         

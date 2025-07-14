@@ -297,12 +297,14 @@ function mock_curl_close($ch) {
 }
 
 // Override cURL functions if not available or for testing
-if (!function_exists('curl_init') || defined('CRM_TESTING')) {
-    function curl_init() { return mock_curl_init(); }
-    function curl_setopt($ch, $option, $value) { return mock_curl_setopt($ch, $option, $value); }
-    function curl_exec($ch) { return mock_curl_exec($ch); }
-    function curl_getinfo($ch, $option = null) { return mock_curl_getinfo($ch, $option); }
-    function curl_close($ch) { return mock_curl_close($ch); }
+if (getenv('CRM_TESTING') === '1') {
+    if (!function_exists('curl_init')) {
+        function curl_init() { return mock_curl_init(); }
+        function curl_setopt($ch, $option, $value) { return mock_curl_setopt($ch, $option, $value); }
+        function curl_exec($ch) { return mock_curl_exec($ch); }
+        function curl_getinfo($ch, $option = null) { return mock_curl_getinfo($ch, $option); }
+        function curl_close($ch) { return mock_curl_close($ch); }
+    }
 }
 
 // Mock header function for CLI test runs

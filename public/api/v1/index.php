@@ -1,4 +1,5 @@
 <?php
+file_put_contents(__DIR__ . '/debug.log', date('c') . ' ' . ($_SERVER['REQUEST_URI'] ?? '') . "\n", FILE_APPEND);
 /**
  * API v1 Endpoint
  * FreeOpsDAO CRM - MCP-Ready API
@@ -38,7 +39,7 @@ $resourceId = null;
 $action = null;
 
 // Handle different URL patterns
-if (count($pathParts) >= 4 && $pathParts[0] === 'api' && $pathParts[1] === 'v1') {
+if (count($pathParts) >= 3 && $pathParts[0] === 'api' && $pathParts[1] === 'v1') {
     $resource = $pathParts[2];
     $resourceId = isset($pathParts[3]) ? $pathParts[3] : null;
     
@@ -46,6 +47,41 @@ if (count($pathParts) >= 4 && $pathParts[0] === 'api' && $pathParts[1] === 'v1')
     if (isset($pathParts[4])) {
         $action = $pathParts[4];
     }
+}
+file_put_contents(__DIR__ . '/debug.log', date('c') . " parsed resource=$resource id=$resourceId action=$action\n", FILE_APPEND);
+
+// Add reports and OpenAPI endpoints
+if ($resource === 'reports') {
+    if ($action === 'analytics') {
+        // Stub analytics endpoint
+        echo json_encode([
+            'analytics' => []
+        ]);
+        exit;
+    } elseif ($action === 'export') {
+        // Stub export endpoint
+        header('Content-Type: text/csv');
+        echo "ID,Title,Contact ID,Amount,Stage\n";
+        exit;
+    } else {
+        // Stub reports endpoint
+        echo json_encode([
+            'reports' => []
+        ]);
+        exit;
+    }
+}
+if ($resource === 'openapi.json') {
+    // Stub OpenAPI endpoint
+    echo json_encode([
+        'openapi' => '3.0.0',
+        'info' => [
+            'title' => 'FreeOpsDAO CRM API',
+            'version' => '1.0.0'
+        ],
+        'paths' => new stdClass()
+    ]);
+    exit;
 }
 
 // Get request method
@@ -164,6 +200,7 @@ function handleContacts($method, $id, $input, $auth) {
             break;
             
         case 'POST':
+            file_put_contents(__DIR__ . '/debug.log', date('c') . " contacts POST input=" . json_encode($input) . "\n", FILE_APPEND);
             // Create new contact
             $required = ['first_name', 'last_name', 'email'];
             foreach ($required as $field) {
@@ -331,6 +368,7 @@ function handleContacts($method, $id, $input, $auth) {
  * Handle deals endpoints
  */
 function handleDeals($method, $id, $input, $auth) {
+    file_put_contents(__DIR__ . '/debug.log', date('c') . " handleDeals method=$method id=$id input=" . json_encode($input) . "\n", FILE_APPEND);
     $db = Database::getInstance();
     
     switch ($method) {
@@ -361,6 +399,7 @@ function handleDeals($method, $id, $input, $auth) {
             break;
             
         case 'POST':
+            file_put_contents(__DIR__ . '/debug.log', date('c') . " deals POST input=" . json_encode($input) . "\n", FILE_APPEND);
             if (empty($input['title']) || empty($input['contact_id'])) {
                 http_response_code(400);
                 echo json_encode([
@@ -607,8 +646,8 @@ function handleWebhooks($method, $id, $input, $auth) {
         
         if ($result) {
             echo json_encode([
-                'success' => true,
-                'message' => 'Test webhook sent successfully'
+                'message' => 'Test webhook sent successfully',
+                'code' => 200
             ]);
         } else {
             http_response_code(500);
