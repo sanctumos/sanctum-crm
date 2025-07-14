@@ -21,7 +21,7 @@ class Auth {
     
     private function initSession() {
         if (defined('CRM_TESTING')) return; // Skip session in test mode
-        if (session_status() === PHP_SESSION_NONE) {
+        if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
             session_name('crm_session');
             session_start();
         }
@@ -43,7 +43,7 @@ class Auth {
         $apiKey = null;
         
         // Check Authorization header
-        $headers = getallheaders();
+        $headers = function_exists('getallheaders') ? getallheaders() : [];
         if (isset($headers['Authorization'])) {
             $auth = $headers['Authorization'];
             if (strpos($auth, 'Bearer ') === 0) {

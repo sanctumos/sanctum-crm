@@ -42,7 +42,7 @@ $recent_contacts = $db->fetchAll("SELECT * FROM contacts ORDER BY created_at DES
 $recent_deals = $db->fetchAll("SELECT * FROM deals ORDER BY created_at DESC LIMIT 5");
 
 function renderHeader($title = null) {
-    global $user, $auth;
+    global $user, $auth, $currentPage;
     $pageTitle = $title ? $title . ' - ' . APP_NAME : APP_NAME;
     ?>
     <!DOCTYPE html>

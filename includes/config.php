@@ -58,11 +58,13 @@ if (DEBUG_MODE) {
 // Timezone
 date_default_timezone_set('UTC');
 
-// Session Configuration
-ini_set('session.cookie_httponly', 1);
-ini_set('session.cookie_secure', 0); // Set to 1 in production with HTTPS
-ini_set('session.use_strict_mode', 1);
-ini_set('session.cookie_samesite', 'Lax');
+// Session Configuration - Only set if not already sent
+if (!headers_sent()) {
+    ini_set('session.cookie_httponly', 1);
+    ini_set('session.cookie_secure', 0); // Set to 1 in production with HTTPS
+    ini_set('session.use_strict_mode', 1);
+    ini_set('session.cookie_samesite', 'Lax');
+}
 
 // Custom error handler
 function customErrorHandler($errno, $errstr, $errfile, $errline) {
