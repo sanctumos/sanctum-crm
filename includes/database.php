@@ -261,11 +261,12 @@ class Database {
         // Handle WHERE clause - support both named and positional parameters
         $sql = "UPDATE $table SET $setClause WHERE $where";
         
-        // If WHERE clause uses positional parameters (like IN clause), merge params directly
-        // Otherwise, use named parameters
+        // If WHERE clause uses positional parameters (like IN clause), handle differently
         if (strpos($where, '?') !== false) {
             // Positional parameters (like IN clause)
-            $params = array_merge($cleanData, $whereParams);
+            // For positional parameters, we need to use array_values to ensure proper order
+            $params = array_values($cleanData);
+            $params = array_merge($params, $whereParams);
         } else {
             // Named parameters
             $params = array_merge($cleanData, $whereParams);

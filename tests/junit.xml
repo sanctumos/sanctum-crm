@@ -60,7 +60,7 @@
     <testcase name="test_8" status="passed" />
     <testcase name="test_9" status="passed" />
   </testsuite>
-  <testsuite name="UserManagementTest" tests="12" failures="1">
+  <testsuite name="UserManagementTest" tests="12" failures="0">
     <testcase name="test_0" status="passed" />
     <testcase name="test_1" status="passed" />
     <testcase name="test_2" status="passed" />
@@ -72,7 +72,7 @@
     <testcase name="test_8" status="passed" />
     <testcase name="test_9" status="passed" />
     <testcase name="test_10" status="passed" />
-    <testcase name="test_11" status="failed" />
+    <testcase name="test_11" status="passed" />
   </testsuite>
   <testsuite name="ReportsTest" tests="12" failures="0">
     <testcase name="test_0" status="passed" />
@@ -88,7 +88,7 @@
     <testcase name="test_10" status="passed" />
     <testcase name="test_11" status="passed" />
   </testsuite>
-  <testsuite name="ApiTest" tests="36" failures="4">
+  <testsuite name="ApiTest" tests="36" failures="2">
     <testcase name="test_0" status="passed" />
     <testcase name="test_1" status="passed" />
     <testcase name="test_2" status="passed" />
@@ -121,8 +121,8 @@
     <testcase name="test_29" status="passed" />
     <testcase name="test_30" status="passed" />
     <testcase name="test_31" status="passed" />
-    <testcase name="test_32" status="failed" />
-    <testcase name="test_33" status="failed" />
+    <testcase name="test_32" status="passed" />
+    <testcase name="test_33" status="passed" />
     <testcase name="test_34" status="failed" />
     <testcase name="test_35" status="failed" />
   </testsuite>

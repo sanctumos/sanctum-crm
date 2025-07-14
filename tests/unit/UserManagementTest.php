@@ -308,6 +308,10 @@ class UserManagementTest {
             ]);
         }
         
+        // Debug: Check what users were created
+        $createdUsers = $this->db->fetchAll("SELECT id, username, is_active FROM users WHERE username LIKE 'bulkuser%' ORDER BY id");
+        echo "\n    [DEBUG] Created users: " . json_encode($createdUsers) . "\n";
+        
         // Verify all users were created and are active
         $initialCount = $this->db->fetchOne("SELECT COUNT(*) as count FROM users WHERE username LIKE 'bulkuser%' AND is_active = 1");
         if ($initialCount['count'] != 5) {
@@ -319,7 +323,13 @@ class UserManagementTest {
         $placeholders = str_repeat('?,', count($userIds) - 1) . '?';
         $deactivated = $this->db->update('users', ['is_active' => 0], "id IN ($placeholders)", $userIds);
         
+        echo "    [DEBUG] Deactivated count: $deactivated, User IDs: " . json_encode($userIds) . "\n";
+        
         $activeCount = $this->db->fetchOne("SELECT COUNT(*) as count FROM users WHERE is_active = 1 AND username LIKE 'bulkuser%'");
+        
+        // Debug: Check status after deactivation
+        $afterDeactivation = $this->db->fetchAll("SELECT id, username, is_active FROM users WHERE username LIKE 'bulkuser%' ORDER BY id");
+        echo "    [DEBUG] After deactivation: " . json_encode($afterDeactivation) . "\n";
         
         if ($activeCount['count'] == 0) {
             // Test bulk reactivation

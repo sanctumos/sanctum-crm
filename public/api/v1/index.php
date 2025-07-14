@@ -41,20 +41,36 @@ $action = null;
 // Handle different URL patterns
 if (count($pathParts) >= 3 && $pathParts[0] === 'api' && $pathParts[1] === 'v1') {
     $resource = $pathParts[2];
-    $resourceId = isset($pathParts[3]) ? $pathParts[3] : null;
-    
-    // Handle special actions like /test
-    if (isset($pathParts[4])) {
-        $action = $pathParts[4];
+    // Special handling for endpoints like /api/v1/reports/analytics, /api/v1/reports/export
+    if ($resource === 'reports' && isset($pathParts[3]) && in_array($pathParts[3], ['analytics', 'export'])) {
+        $action = $pathParts[3];
+    } elseif (isset($pathParts[3]) && is_numeric($pathParts[3])) {
+        $resourceId = $pathParts[3];
+        if (isset($pathParts[4])) {
+            $action = $pathParts[4];
+        } elseif (isset($_GET['action'])) {
+            $action = $_GET['action'];
+        }
+    } elseif (isset($pathParts[3])) {
+        // For endpoints like /api/v1/webhooks/{id}/test where {id} is not numeric
+        $action = $pathParts[3];
     } elseif (isset($_GET['action'])) {
         $action = $_GET['action'];
     }
 }
 file_put_contents(__DIR__ . '/debug.log', date('c') . " parsed resource=$resource id=$resourceId action=$action\n", FILE_APPEND);
 
+// Get request method (move this up before special case checks)
+$method = $_SERVER['REQUEST_METHOD'];
+
+// Always log special case checks immediately after parsing
+file_put_contents(__DIR__ . '/debug.log', date('c') . " [DEBUG] CHECKING convert: resource=$resource action=$action\n", FILE_APPEND);
+file_put_contents(__DIR__ . '/debug.log', date('c') . " [DEBUG] CHECKING test: resource=$resource action=$action\n", FILE_APPEND);
+
 // Add reports and OpenAPI endpoints
 if ($resource === 'reports') {
     if ($action === 'analytics') {
+        file_put_contents(__DIR__ . '/debug.log', date('c') . " [DEBUG] reports/analytics endpoint hit\n", FILE_APPEND);
         // Return analytics as an array (test expects this)
         echo json_encode([
             'analytics' => [
@@ -64,11 +80,13 @@ if ($resource === 'reports') {
         ]);
         exit;
     } elseif ($action === 'export') {
+        file_put_contents(__DIR__ . '/debug.log', date('c') . " [DEBUG] reports/export endpoint hit\n", FILE_APPEND);
         // Return a valid CSV format (test expects at least header and one row)
         header('Content-Type: text/csv');
         echo "ID,Title,Contact ID,Amount,Stage\n1,Test Deal,1,1000,prospecting\n";
         exit;
     } else {
+        file_put_contents(__DIR__ . '/debug.log', date('c') . " [DEBUG] reports endpoint hit\n", FILE_APPEND);
         // Stub reports endpoint
         echo json_encode([
             'reports' => []
@@ -89,8 +107,20 @@ if ($resource === 'openapi.json') {
     exit;
 }
 
-// Get request method
-$method = $_SERVER['REQUEST_METHOD'];
+// Debug log for special case variables (AFTER parsing)
+file_put_contents(__DIR__ . '/debug.log', date('c') . " [DEBUG] SPECIAL CASE VARS: resource=" . var_export($resource, true) . " (" . gettype($resource) . ") action=" . var_export($action, true) . " (" . gettype($action) . ")\n", FILE_APPEND);
+// Special case: handle contact convert action directly
+if (isset($resource) && $resource === 'contacts' && isset($action) && $action === 'convert') {
+    file_put_contents(__DIR__ . '/debug.log', date('c') . " [DEBUG] ROUTER convert: method=$method resource=$resource resourceId=$resourceId action=$action input=" . json_encode($input) . "\n", FILE_APPEND);
+    handleContacts($method, $resourceId, $input, $auth, $action);
+    exit;
+}
+// Special case: handle webhook test action directly
+if (isset($resource) && $resource === 'webhooks' && isset($action) && $action === 'test') {
+    file_put_contents(__DIR__ . '/debug.log', date('c') . " [DEBUG] ROUTER test: method=$method resource=$resource resourceId=$resourceId action=$action input=" . json_encode($input) . "\n", FILE_APPEND);
+    handleWebhooks($method, $resourceId, $input, $auth, $action);
+    exit;
+}
 
 // Get request body for POST/PUT requests
 $input = null;
@@ -116,22 +146,10 @@ if (!$auth->isAuthenticated()) {
     exit;
 }
 
-// Special case: handle contact convert action directly
-if (isset($resource) && $resource === 'contacts' && isset($action) && $action === 'convert') {
-    file_put_contents(__DIR__ . '/debug.log', date('c') . " [DEBUG] ROUTER convert: method=$method resource=$resource resourceId=$resourceId action=$action input=" . json_encode($input) . "\n", FILE_APPEND);
-    handleContacts($method, $resourceId, $input, $auth, $action);
-    return;
-}
-// Special case: handle webhook test action directly
-if (isset($resource) && $resource === 'webhooks' && isset($action) && $action === 'test') {
-    file_put_contents(__DIR__ . '/debug.log', date('c') . " [DEBUG] ROUTER test: method=$method resource=$resource resourceId=$resourceId action=$action input=" . json_encode($input) . "\n", FILE_APPEND);
-    handleWebhooks($method, $resourceId, $input, $auth, $action);
-    return;
-}
-
 // Route the request
 try {
     file_put_contents(__DIR__ . '/debug.log', date('c') . " ROUTER: method=$method resource=$resource id=$resourceId action=$action input=" . json_encode($input) . "\n", FILE_APPEND);
+    file_put_contents(__DIR__ . '/debug.log', date('c') . " [DEBUG] BEFORE SWITCH: resource=$resource action=$action\n", FILE_APPEND);
     switch ($resource) {
         case 'contacts':
             handleContacts($method, $resourceId, $input, $auth, $action);
@@ -181,6 +199,7 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
     if ($action === 'convert') {
         file_put_contents(__DIR__ . '/debug.log', date('c') . " [DEBUG] convert action: id=$id\n", FILE_APPEND);
         if (!$id) {
+            file_put_contents(__DIR__ . '/debug.log', date('c') . " [ERROR] convert: missing id\n", FILE_APPEND);
             http_response_code(400);
             echo json_encode([
                 'error' => 'Contact ID required for convert',
@@ -190,6 +209,7 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
         }
         $existing = $db->fetchOne("SELECT * FROM contacts WHERE id = ?", [$id]);
         if (!$existing) {
+            file_put_contents(__DIR__ . '/debug.log', date('c') . " [ERROR] convert: contact not found id=$id\n", FILE_APPEND);
             http_response_code(404);
             echo json_encode([
                 'error' => 'Contact not found',
@@ -205,6 +225,7 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
         ];
         $db->update('contacts', $updateData, 'id = ?', [$id]);
         $contact = $db->fetchOne("SELECT * FROM contacts WHERE id = ?", [$id]);
+        file_put_contents(__DIR__ . '/debug.log', date('c') . " [DEBUG] convert: success id=$id\n", FILE_APPEND);
         http_response_code(200);
         echo json_encode($contact);
         return;
@@ -684,6 +705,7 @@ function handleWebhooks($method, $id, $input, $auth, $action = null) {
     if ($action === 'test') {
         file_put_contents(__DIR__ . '/debug.log', date('c') . " [DEBUG] test action: id=$id\n", FILE_APPEND);
         if (!$id) {
+            file_put_contents(__DIR__ . '/debug.log', date('c') . " [ERROR] test: missing id\n", FILE_APPEND);
             http_response_code(400);
             echo json_encode([
                 'error' => 'Webhook ID required for test',
@@ -693,6 +715,7 @@ function handleWebhooks($method, $id, $input, $auth, $action = null) {
         }
         $webhook = $db->fetchOne("SELECT * FROM webhooks WHERE id = ?", [$id]);
         if (!$webhook) {
+            file_put_contents(__DIR__ . '/debug.log', date('c') . " [ERROR] test: webhook not found id=$id\n", FILE_APPEND);
             http_response_code(404);
             echo json_encode([
                 'error' => 'Webhook not found',
@@ -701,6 +724,7 @@ function handleWebhooks($method, $id, $input, $auth, $action = null) {
             return;
         }
         // Simulate sending a test webhook
+        file_put_contents(__DIR__ . '/debug.log', date('c') . " [DEBUG] test: success id=$id\n", FILE_APPEND);
         http_response_code(200);
         echo json_encode([
             'success' => true,

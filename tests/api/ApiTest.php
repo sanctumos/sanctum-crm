@@ -161,7 +161,7 @@ class ApiTest {
     public function testConvertContact($contactId) {
         echo "    Testing POST /api/v1/contacts/{$contactId}/convert... ";
         
-        $response = $this->makeRequest('POST', "/api/v1/contacts/{$contactId}?action=convert");
+        $response = $this->makeRequest('POST', "/api/v1/contacts/{$contactId}/convert");
         
         if ($response['code'] === 200) {
             $data = json_decode($response['body'], true);
@@ -575,7 +575,7 @@ class ApiTest {
     public function testTestWebhook($webhookId) {
         echo "    Testing POST /api/v1/webhooks/{$webhookId}/test... ";
         
-        $response = $this->makeRequest('POST', "/api/v1/webhooks/{$webhookId}?action=test");
+        $response = $this->makeRequest('POST', "/api/v1/webhooks/{$webhookId}/test");
         
         if ($response['code'] === 200) {
             $data = json_decode($response['body'], true);
