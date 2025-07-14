@@ -139,7 +139,11 @@ class AuthTest {
         
         try {
             // Login as admin first
-            $this->auth->login('admin', 'admin123');
+            $loginResult = $this->auth->login('admin', 'admin123');
+            if (!$loginResult) {
+                echo "FAIL - Could not login as admin\n";
+                return;
+            }
             
             // Create test user with unique data
             $uniq = uniqid();
@@ -184,7 +188,11 @@ class AuthTest {
         
         try {
             // Login as admin first
-            $this->auth->login('admin', 'admin123');
+            $loginResult = $this->auth->login('admin', 'admin123');
+            if (!$loginResult) {
+                echo "FAIL - Could not login as admin\n";
+                return;
+            }
             
             // Create test user with unique data
             $userData = [

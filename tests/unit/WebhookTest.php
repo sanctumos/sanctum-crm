@@ -34,6 +34,7 @@ class WebhookTest {
         echo "  Testing webhook creation... ";
         
         $webhookData = [
+            'user_id' => 1,
             'url' => 'https://webhook.site/test-' . uniqid(),
             'events' => json_encode(['contact.created', 'deal.created']),
             'is_active' => 1
@@ -122,6 +123,7 @@ class WebhookTest {
         
         // Test valid webhook data
         $validData = [
+            'user_id' => 1,
             'url' => 'https://webhook.site/test',
             'events' => json_encode(['contact.created']),
             'is_active' => 1
@@ -132,6 +134,7 @@ class WebhookTest {
         if ($webhookId) {
             // Test invalid URL
             $invalidData = [
+                'user_id' => 1,
                 'url' => 'not-a-valid-url',
                 'events' => json_encode(['contact.created']),
                 'is_active' => 1
@@ -153,6 +156,7 @@ class WebhookTest {
         
         $events = ['contact.created', 'contact.updated', 'deal.created', 'deal.updated'];
         $webhookData = [
+            'user_id' => 1,
             'url' => 'https://webhook.site/test',
             'events' => json_encode($events),
             'is_active' => 1

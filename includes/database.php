@@ -219,20 +219,40 @@ class Database {
     }
     
     public function insert($table, $data) {
-        $columns = implode(', ', array_keys($data));
-        $placeholders = ':' . implode(', :', array_keys($data));
+        // Ensure all data values are scalar
+        $cleanData = [];
+        foreach ($data as $key => $value) {
+            if (is_array($value)) {
+                $cleanData[$key] = json_encode($value);
+            } else {
+                $cleanData[$key] = $value;
+            }
+        }
+        
+        $columns = implode(', ', array_keys($cleanData));
+        $placeholders = ':' . implode(', :', array_keys($cleanData));
         
         $sql = "INSERT INTO $table ($columns) VALUES ($placeholders)";
         
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute($data);
+        $stmt->execute($cleanData);
         
         return $this->pdo->lastInsertId();
     }
     
     public function update($table, $data, $where, $whereParams = []) {
+        // Ensure all data values are scalar
+        $cleanData = [];
+        foreach ($data as $key => $value) {
+            if (is_array($value)) {
+                $cleanData[$key] = json_encode($value);
+            } else {
+                $cleanData[$key] = $value;
+            }
+        }
+        
         $setClause = [];
-        foreach (array_keys($data) as $column) {
+        foreach (array_keys($cleanData) as $column) {
             $setClause[] = "$column = :$column";
         }
         $setClause = implode(', ', $setClause);
@@ -240,7 +260,7 @@ class Database {
         $sql = "UPDATE $table SET $setClause WHERE $where";
         
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute(array_merge($data, $whereParams));
+        $stmt->execute(array_merge($cleanData, $whereParams));
         
         return $stmt->rowCount();
     }

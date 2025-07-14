@@ -46,7 +46,8 @@ class TestUtils {
         }
         
         $auth = new Auth();
-        return $auth->createUser($userData);
+        $result = $auth->createUser($userData);
+        return is_array($result) ? $result['id'] : $result;
     }
     
     public static function createTestContact($data = []) {
@@ -95,6 +96,7 @@ class TestUtils {
     
     public static function createTestWebhook($data = []) {
         $defaultData = [
+            'user_id' => 1, // Use admin user as default
             'url' => 'https://webhook.site/test-' . uniqid(),
             'events' => json_encode(['contact.created', 'deal.created']),
             'is_active' => 1,
@@ -162,7 +164,8 @@ class TestUtils {
         self::cleanupTestDatabase();
         
         // Create test data in order (respecting foreign key constraints)
-        $userId = self::createTestUser();
+        $userResult = self::createTestUser();
+        $userId = is_array($userResult) ? $userResult['id'] : $userResult;
         
         // Wait a moment to ensure user is created
         if ($userId) {

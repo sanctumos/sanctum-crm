@@ -47,9 +47,10 @@ class UserManagementTest {
             'is_active' => 1
         ];
         
-        $userId = $this->auth->createUser($userData);
+        $userResult = $this->auth->createUser($userData);
         
-        if ($userId) {
+        if ($userResult && isset($userResult['id'])) {
+            $userId = $userResult['id'];
             $user = $this->db->fetchOne("SELECT * FROM users WHERE id = ?", [$userId]);
             
             if ($user && $user['username'] === $userData['username'] && $user['is_active'] == 1) {
