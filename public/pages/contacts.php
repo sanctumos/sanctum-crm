@@ -121,9 +121,7 @@ renderHeader('Contacts');
                             <li><a class="dropdown-item" href="#" onclick="editContact(<?php echo $contact['id']; ?>)">
                                 <i class="fas fa-edit me-2"></i>Edit
                             </a></li>
-                            <li><a class="dropdown-item" href="#" onclick="viewContact(<?php echo $contact['id']; ?>)">
-                                <i class="fas fa-eye me-2"></i>View
-                            </a></li>
+                            <li><a class="dropdown-item" href="/index.php?page=view_contact&id=<?php echo $contact['id']; ?>" class="dropdown-item">View</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item text-danger" href="#" onclick="deleteContact(<?php echo $contact['id']; ?>)">
                                 <i class="fas fa-trash me-2"></i>Delete
