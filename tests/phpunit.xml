@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit bootstrap="bootstrap.php"
+         colors="true"
+         verbose="true"
+         stopOnFailure="false">
+    <testsuites>
+        <testsuite name="Unit Tests">
+            <directory>unit</directory>
+        </testsuite>
+        <testsuite name="API Tests">
+            <directory>api</directory>
+        </testsuite>
+        <testsuite name="Integration Tests">
+            <directory>integration</directory>
+        </testsuite>
+    </testsuites>
+    
+    <filter>
+        <whitelist>
+            <directory suffix=".php">../includes</directory>
+        </whitelist>
+    </filter>
+    
+    <php>
+        <env name="CRM_TESTING" value="true"/>
+        <env name="DB_PATH" value="../db/test_crm.db"/>
+    </php>
+</phpunit> 

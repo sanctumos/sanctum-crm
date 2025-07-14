@@ -44,17 +44,52 @@ php -S localhost:8000
 - Open your browser to `http://localhost:8000`
 - Default admin credentials: `admin/admin123`
 
+### 4. Run Tests
+```bash
+# Run all tests
+php tests/run_tests.php
+
+# Run specific test suites
+php tests/unit/DatabaseTest.php
+php tests/unit/AuthTest.php
+php tests/api/ApiTest.php
+
+# Web interface for tests
+# Visit http://localhost:8000/tests/run_tests.php
+```
+
 ## 📁 Project Structure
 
 ```
 crm.freeopsdao.com/
-├── assets/          # CSS, JS, images
-├── includes/        # PHP includes and functions
-├── pages/          # Main application pages
-├── api/v1/         # API endpoints
-├── db/             # Database files
-├── docs/           # Documentation
-└── index.php       # Main entry point
+├── api/
+│   ├── v1/
+│   │   └── index.php          # Main API endpoint
+│   └── openapi.json           # OpenAPI specification
+├── includes/
+│   ├── config.php             # Configuration settings
+│   ├── database.php           # Database handler
+│   └── auth.php               # Authentication system
+├── pages/
+│   ├── dashboard.php          # Dashboard page
+│   └── contacts.php           # Contacts management
+├── tests/                     # Test suite
+│   ├── unit/                  # Unit tests
+│   │   ├── DatabaseTest.php   # Database tests
+│   │   └── AuthTest.php       # Authentication tests
+│   ├── api/                   # API tests
+│   │   └── ApiTest.php        # API integration tests
+│   ├── integration/           # Integration tests
+│   ├── bootstrap.php          # Test environment setup
+│   ├── run_tests.php          # Test runner
+│   └── phpunit.xml            # PHPUnit configuration
+├── db/                        # SQLite database files
+├── docs/                      # Documentation
+├── index.php                  # Main entry point
+├── login.php                  # Login page
+├── logout.php                 # Logout handler
+├── .htaccess                  # URL rewriting & security
+└── README.md                  # This file
 ```
 
 ## 🔌 API Usage
