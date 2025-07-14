@@ -308,26 +308,33 @@ class UserManagementTest {
             ]);
         }
         
+        // Verify all users were created and are active
+        $initialCount = $this->db->fetchOne("SELECT COUNT(*) as count FROM users WHERE username LIKE 'bulkuser%' AND is_active = 1");
+        if ($initialCount['count'] != 5) {
+            echo "FAIL - Not all users created correctly (expected 5, got {$initialCount['count']})\n";
+            return;
+        }
+        
         // Test bulk deactivation
         $placeholders = str_repeat('?,', count($userIds) - 1) . '?';
-        $this->db->update('users', ['is_active' => 0], "id IN ($placeholders)", $userIds);
+        $deactivated = $this->db->update('users', ['is_active' => 0], "id IN ($placeholders)", $userIds);
         
         $activeCount = $this->db->fetchOne("SELECT COUNT(*) as count FROM users WHERE is_active = 1 AND username LIKE 'bulkuser%'");
         
-        if ($activeCount['count'] <= 1) {
+        if ($activeCount['count'] == 0) {
             // Test bulk reactivation
-            $this->db->update('users', ['is_active' => 1], "id IN ($placeholders)", $userIds);
+            $reactivated = $this->db->update('users', ['is_active' => 1], "id IN ($placeholders)", $userIds);
             
             $activeCount = $this->db->fetchOne("SELECT COUNT(*) as count FROM users WHERE is_active = 1 AND username LIKE 'bulkuser%'");
             
-            // Check if at least 4 out of 5 users were reactivated
-            if ($activeCount['count'] >= 4) {
+            // Check if all users were reactivated
+            if ($activeCount['count'] == 5) {
                 echo "PASS\n";
             } else {
-                echo "FAIL - Bulk reactivation not working (expected >=4, got {$activeCount['count']})\n";
+                echo "FAIL - Bulk reactivation not working (expected 5, got {$activeCount['count']})\n";
             }
         } else {
-            echo "FAIL - Bulk deactivation not working (expected <=1, got {$activeCount['count']})\n";
+            echo "FAIL - Bulk deactivation not working (expected 0, got {$activeCount['count']})\n";
         }
     }
     

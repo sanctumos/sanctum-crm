@@ -159,9 +159,9 @@ class ApiTest {
     }
     
     public function testConvertContact($contactId) {
-        echo "    Testing PUT /api/v1/contacts/{$contactId}/convert... ";
+        echo "    Testing POST /api/v1/contacts/{$contactId}/convert... ";
         
-        $response = $this->makeRequest('PUT', "/api/v1/contacts/{$contactId}/convert");
+        $response = $this->makeRequest('POST', "/api/v1/contacts/{$contactId}?action=convert");
         
         if ($response['code'] === 200) {
             $data = json_decode($response['body'], true);
@@ -575,7 +575,7 @@ class ApiTest {
     public function testTestWebhook($webhookId) {
         echo "    Testing POST /api/v1/webhooks/{$webhookId}/test... ";
         
-        $response = $this->makeRequest('POST', "/api/v1/webhooks/{$webhookId}/test");
+        $response = $this->makeRequest('POST', "/api/v1/webhooks/{$webhookId}?action=test");
         
         if ($response['code'] === 200) {
             $data = json_decode($response['body'], true);
@@ -762,6 +762,7 @@ class ApiTest {
     }
     
     private function makeRequest($method, $endpoint, $data = null, $headers = null) {
+        file_put_contents(__DIR__ . '/api_test_debug.log', date('c') . " makeRequest: method=$method endpoint=$endpoint\n", FILE_APPEND);
         // Check if CURL is available
         if (!function_exists('curl_init')) {
             echo "SKIP - CURL not available\n";

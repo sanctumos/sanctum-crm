@@ -88,7 +88,7 @@
     <testcase name="test_10" status="passed" />
     <testcase name="test_11" status="passed" />
   </testsuite>
-  <testsuite name="ApiTest" tests="36" failures="7">
+  <testsuite name="ApiTest" tests="36" failures="4">
     <testcase name="test_0" status="passed" />
     <testcase name="test_1" status="passed" />
     <testcase name="test_2" status="passed" />
@@ -118,9 +118,9 @@
     <testcase name="test_26" status="passed" />
     <testcase name="test_27" status="passed" />
     <testcase name="test_28" status="passed" />
-    <testcase name="test_29" status="failed" />
-    <testcase name="test_30" status="failed" />
-    <testcase name="test_31" status="failed" />
+    <testcase name="test_29" status="passed" />
+    <testcase name="test_30" status="passed" />
+    <testcase name="test_31" status="passed" />
     <testcase name="test_32" status="failed" />
     <testcase name="test_33" status="failed" />
     <testcase name="test_34" status="failed" />

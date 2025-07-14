@@ -250,23 +250,37 @@ class Database {
                 $cleanData[$key] = $value;
             }
         }
-        // Use named parameters for SET and WHERE
+        
+        // Use named parameters for SET clause
         $setClause = [];
         foreach (array_keys($cleanData) as $column) {
             $setClause[] = "$column = :$column";
         }
         $setClause = implode(', ', $setClause);
-        // WHERE clause must use named parameters, e.g., 'id = :id'
+        
+        // Handle WHERE clause - support both named and positional parameters
         $sql = "UPDATE $table SET $setClause WHERE $where";
-        $params = array_merge($cleanData, $whereParams);
+        
+        // If WHERE clause uses positional parameters (like IN clause), merge params directly
+        // Otherwise, use named parameters
+        if (strpos($where, '?') !== false) {
+            // Positional parameters (like IN clause)
+            $params = array_merge($cleanData, $whereParams);
+        } else {
+            // Named parameters
+            $params = array_merge($cleanData, $whereParams);
+        }
+        
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
         $rowCount = $stmt->rowCount();
+        
         if (defined('CRM_TESTING')) {
             error_log("[TEST][DB UPDATE] SQL: $sql");
             error_log("[TEST][DB UPDATE] Params: " . print_r($params, true));
             error_log("[TEST][DB UPDATE] RowCount: $rowCount");
         }
+        
         return $rowCount;
     }
     
