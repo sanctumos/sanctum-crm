@@ -14,9 +14,13 @@ require_once __DIR__ . '/../includes/auth.php';
 
 // Initialize authentication
 $auth = new Auth();
+require_once __DIR__ . '/../includes/layout.php';
 
 // Check if user is authenticated
-if (!defined('CRM_TESTING')) header('Location: /login.php');
+if (!$auth->isAuthenticated()) {
+    header('Location: /login.php');
+    exit;
+}
 
 // Get current page
 $page = $_GET['page'] ?? 'dashboard';

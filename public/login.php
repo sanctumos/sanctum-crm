@@ -21,8 +21,6 @@ if ($auth->isAuthenticated()) {
     exit;
 }
 
-if (!defined('CRM_TESTING')) header('Location: /index.php');
-
 $error = '';
 $success = '';
 
