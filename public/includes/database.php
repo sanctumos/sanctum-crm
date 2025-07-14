@@ -208,13 +208,19 @@ class Database {
         $placeholders = implode(', ', array_fill(0, count($cleanData), '?'));
         $sql = "INSERT INTO $table ($columns) VALUES ($placeholders)";
         $stmt = $this->db->prepare($sql);
+        if (!$stmt) {
+            throw new Exception('Failed to prepare insert statement: ' . $this->db->lastErrorMsg());
+        }
         $i = 1;
         foreach ($cleanData as $value) {
             $type = is_int($value) ? SQLITE3_INTEGER : SQLITE3_TEXT;
             $stmt->bindValue($i, $value, $type);
             $i++;
         }
-        $stmt->execute();
+        $result = $stmt->execute();
+        if ($result === false) {
+            throw new Exception('Insert failed: ' . $this->db->lastErrorMsg());
+        }
         return $this->db->lastInsertRowID();
     }
     public function update($table, $data, $where, $whereParams = []) {
@@ -226,9 +232,15 @@ class Database {
                 $cleanData[$key] = $value;
             }
         }
+        if (empty($cleanData)) {
+            throw new Exception('No valid data to update');
+        }
         $setClause = implode(', ', array_map(function($k) { return "$k = ?"; }, array_keys($cleanData)));
         $sql = "UPDATE $table SET $setClause WHERE $where";
         $stmt = $this->db->prepare($sql);
+        if (!$stmt) {
+            throw new Exception('Failed to prepare update statement: ' . $this->db->lastErrorMsg());
+        }
         $i = 1;
         foreach ($cleanData as $value) {
             $type = is_int($value) ? SQLITE3_INTEGER : SQLITE3_TEXT;
@@ -240,18 +252,29 @@ class Database {
             $stmt->bindValue($i, $value, $type);
             $i++;
         }
-        return $stmt->execute();
+        $result = $stmt->execute();
+        if ($result === false) {
+            throw new Exception('Update failed: ' . $this->db->lastErrorMsg());
+        }
+        return true;
     }
     public function delete($table, $where, $params = []) {
         $sql = "DELETE FROM $table WHERE $where";
         $stmt = $this->db->prepare($sql);
+        if (!$stmt) {
+            throw new Exception('Failed to prepare delete statement: ' . $this->db->lastErrorMsg());
+        }
         $i = 1;
         foreach ($params as $value) {
             $type = is_int($value) ? SQLITE3_INTEGER : SQLITE3_TEXT;
             $stmt->bindValue($i, $value, $type);
             $i++;
         }
-        return $stmt->execute();
+        $result = $stmt->execute();
+        if ($result === false) {
+            throw new Exception('Delete failed: ' . $this->db->lastErrorMsg());
+        }
+        return true;
     }
     public function beginTransaction() {
         $this->db->exec('BEGIN TRANSACTION');

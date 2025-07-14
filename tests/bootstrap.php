@@ -12,9 +12,9 @@ if (!defined('CRM_LOADED')) define('CRM_LOADED', true);
 if (!defined('DB_PATH')) define('DB_PATH', __DIR__ . '/../db/test_crm.db');
 
 // Include required files
-require_once __DIR__ . '/../includes/config.php';
-require_once __DIR__ . '/../includes/database.php';
-require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../public/includes/config.php';
+require_once __DIR__ . '/../public/includes/database.php';
+require_once __DIR__ . '/../public/includes/auth.php';
 
 // Test utilities
 class TestUtils {

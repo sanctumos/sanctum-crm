@@ -28,7 +28,7 @@
     <testcase name="test_24" status="passed" />
     <testcase name="test_25" status="passed" />
   </testsuite>
-  <testsuite name="DatabaseTest" tests="18" failures="0">
+  <testsuite name="DatabaseTest" tests="18" failures="2">
     <testcase name="test_0" status="passed" />
     <testcase name="test_1" status="passed" />
     <testcase name="test_2" status="passed" />
@@ -45,8 +45,8 @@
     <testcase name="test_13" status="passed" />
     <testcase name="test_14" status="passed" />
     <testcase name="test_15" status="passed" />
-    <testcase name="test_16" status="passed" />
-    <testcase name="test_17" status="passed" />
+    <testcase name="test_16" status="failed" />
+    <testcase name="test_17" status="failed" />
   </testsuite>
   <testsuite name="WebhookTest" tests="10" failures="0">
     <testcase name="test_0" status="passed" />
