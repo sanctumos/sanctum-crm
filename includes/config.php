@@ -132,4 +132,38 @@ function logActivity($user_id, $action, $details = null) {
     if (DEBUG_MODE) {
         error_log("Activity: User $user_id performed $action" . ($details ? " - $details" : ''));
     }
+}
+
+// Helper function to send webhook
+function sendWebhook($url, $payload) {
+    $ch = curl_init();
+    
+    curl_setopt_array($ch, [
+        CURLOPT_URL => $url,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => json_encode($payload),
+        CURLOPT_HTTPHEADER => [
+            'Content-Type: application/json',
+            'User-Agent: FreeOpsDAO-CRM/1.0'
+        ],
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 10,
+        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_SSL_VERIFYPEER => true,
+        CURLOPT_SSL_VERIFYHOST => 2
+    ]);
+    
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $error = curl_error($ch);
+    
+    curl_close($ch);
+    
+    if ($error) {
+        error_log("Webhook error: $error");
+        return false;
+    }
+    
+    // Consider 2xx status codes as success
+    return $httpCode >= 200 && $httpCode < 300;
 } 

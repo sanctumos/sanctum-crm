@@ -35,13 +35,14 @@ $pathParts = explode('/', trim($path, '/'));
 // Extract resource and ID from path
 $resource = null;
 $resourceId = null;
+$action = null;
 
 // Handle different URL patterns
 if (count($pathParts) >= 4 && $pathParts[0] === 'api' && $pathParts[1] === 'v1') {
     $resource = $pathParts[2];
     $resourceId = isset($pathParts[3]) ? $pathParts[3] : null;
     
-    // Handle special actions like /convert
+    // Handle special actions like /test
     if (isset($pathParts[4])) {
         $action = $pathParts[4];
     }
@@ -511,9 +512,17 @@ function handleUsers($method, $id, $input, $auth) {
             }
             
             try {
-                $auth->updateUser($id, $input);
-                $user = $auth->getUserById($id);
-                echo json_encode($user);
+                // Handle API key regeneration
+                if (isset($input['regenerate_api_key']) && $input['regenerate_api_key']) {
+                    $newApiKey = $auth->regenerateApiKey($id);
+                    $user = $auth->getUserById($id);
+                    $user['api_key'] = $newApiKey; // Include the new API key in response
+                    echo json_encode($user);
+                } else {
+                    $auth->updateUser($id, $input);
+                    $user = $auth->getUserById($id);
+                    echo json_encode($user);
+                }
             } catch (Exception $e) {
                 http_response_code(400);
                 echo json_encode([
@@ -555,14 +564,222 @@ function handleUsers($method, $id, $input, $auth) {
 }
 
 /**
- * Handle webhooks endpoints (future implementation)
+ * Handle webhooks endpoints
  */
 function handleWebhooks($method, $id, $input, $auth) {
-    http_response_code(501);
-    echo json_encode([
-        'error' => 'Webhooks not implemented yet',
-        'code' => 501
-    ]);
+    global $action;
+    $db = Database::getInstance();
+    
+    // Handle test action
+    if ($action === 'test' && $method === 'POST') {
+        if (!$id) {
+            http_response_code(400);
+            echo json_encode([
+                'error' => 'Webhook ID required for test',
+                'code' => 400
+            ]);
+            return;
+        }
+        
+        // Check if webhook belongs to user
+        $webhook = $db->fetchOne("SELECT * FROM webhooks WHERE id = ? AND user_id = ?", [$id, $auth->getUserId()]);
+        if (!$webhook) {
+            http_response_code(404);
+            echo json_encode([
+                'error' => 'Webhook not found',
+                'code' => 404
+            ]);
+            return;
+        }
+        
+        // Send test webhook
+        $testPayload = [
+            'event' => 'webhook.test',
+            'timestamp' => getCurrentTimestamp(),
+            'data' => [
+                'message' => 'This is a test webhook from FreeOpsDAO CRM',
+                'webhook_id' => $webhook['id'],
+                'user_id' => $auth->getUserId()
+            ]
+        ];
+        
+        $result = sendWebhook($webhook['url'], $testPayload);
+        
+        if ($result) {
+            echo json_encode([
+                'success' => true,
+                'message' => 'Test webhook sent successfully'
+            ]);
+        } else {
+            http_response_code(500);
+            echo json_encode([
+                'error' => 'Failed to send test webhook',
+                'code' => 500
+            ]);
+        }
+        return;
+    }
+    
+    switch ($method) {
+        case 'GET':
+            if ($id) {
+                $sql = "SELECT * FROM webhooks WHERE id = ? AND user_id = ?";
+                $webhook = $db->fetchOne($sql, [$id, $auth->getUserId()]);
+                
+                if (!$webhook) {
+                    http_response_code(404);
+                    echo json_encode([
+                        'error' => 'Webhook not found',
+                        'code' => 404
+                    ]);
+                    return;
+                }
+                
+                echo json_encode($webhook);
+            } else {
+                $sql = "SELECT * FROM webhooks WHERE user_id = ? ORDER BY created_at DESC";
+                $webhooks = $db->fetchAll($sql, [$auth->getUserId()]);
+                
+                echo json_encode([
+                    'webhooks' => $webhooks,
+                    'count' => count($webhooks)
+                ]);
+            }
+            break;
+            
+        case 'POST':
+            if (empty($input['url']) || empty($input['events'])) {
+                http_response_code(400);
+                echo json_encode([
+                    'error' => 'URL and events are required',
+                    'code' => 400
+                ]);
+                return;
+            }
+            
+            // Validate URL
+            if (!filter_var($input['url'], FILTER_VALIDATE_URL)) {
+                http_response_code(400);
+                echo json_encode([
+                    'error' => 'Invalid URL format',
+                    'code' => 400
+                ]);
+                return;
+            }
+            
+            $webhookData = [
+                'user_id' => $auth->getUserId(),
+                'url' => $input['url'],
+                'events' => json_encode($input['events']),
+                'is_active' => $input['is_active'] ?? 1
+            ];
+            
+            $webhookId = $db->insert('webhooks', $webhookData);
+            $webhook = $db->fetchOne("SELECT * FROM webhooks WHERE id = ?", [$webhookId]);
+            
+            http_response_code(201);
+            echo json_encode($webhook);
+            break;
+            
+        case 'PUT':
+            if (!$id) {
+                http_response_code(400);
+                echo json_encode([
+                    'error' => 'Webhook ID required for update',
+                    'code' => 400
+                ]);
+                return;
+            }
+            
+            // Check if webhook belongs to user
+            $existing = $db->fetchOne("SELECT * FROM webhooks WHERE id = ? AND user_id = ?", [$id, $auth->getUserId()]);
+            if (!$existing) {
+                http_response_code(404);
+                echo json_encode([
+                    'error' => 'Webhook not found',
+                    'code' => 404
+                ]);
+                return;
+            }
+            
+            $updateData = [];
+            
+            if (isset($input['url'])) {
+                if (!filter_var($input['url'], FILTER_VALIDATE_URL)) {
+                    http_response_code(400);
+                    echo json_encode([
+                        'error' => 'Invalid URL format',
+                        'code' => 400
+                    ]);
+                    return;
+                }
+                $updateData['url'] = $input['url'];
+            }
+            
+            if (isset($input['events'])) {
+                $updateData['events'] = json_encode($input['events']);
+            }
+            
+            if (isset($input['is_active'])) {
+                $updateData['is_active'] = $input['is_active'];
+            }
+            
+            if (empty($updateData)) {
+                http_response_code(400);
+                echo json_encode([
+                    'error' => 'No valid data to update',
+                    'code' => 400
+                ]);
+                return;
+            }
+            
+            $db->update('webhooks', $updateData, 'id = ?', [$id]);
+            $webhook = $db->fetchOne("SELECT * FROM webhooks WHERE id = ?", [$id]);
+            
+            echo json_encode($webhook);
+            break;
+            
+        case 'DELETE':
+            if (!$id) {
+                http_response_code(400);
+                echo json_encode([
+                    'error' => 'Webhook ID required for deletion',
+                    'code' => 400
+                ]);
+                return;
+            }
+            
+            // Check if webhook belongs to user
+            $existing = $db->fetchOne("SELECT * FROM webhooks WHERE id = ? AND user_id = ?", [$id, $auth->getUserId()]);
+            if (!$existing) {
+                http_response_code(404);
+                echo json_encode([
+                    'error' => 'Webhook not found',
+                    'code' => 404
+                ]);
+                return;
+            }
+            
+            $deleted = $db->delete('webhooks', 'id = ?', [$id]);
+            
+            if ($deleted) {
+                http_response_code(204);
+            } else {
+                http_response_code(404);
+                echo json_encode([
+                    'error' => 'Webhook not found',
+                    'code' => 404
+                ]);
+            }
+            break;
+            
+        default:
+            http_response_code(405);
+            echo json_encode([
+                'error' => 'Method not allowed',
+                'code' => 405
+            ]);
+    }
 }
 
 /**

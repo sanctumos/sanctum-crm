@@ -5,9 +5,13 @@ A modern Customer Relationship Management (CRM) system built with PHP, Bootstrap
 ## 🚀 Features
 
 - **Contact Management**: Unified leads and customers with Web3 integration
-- **Deal Pipeline**: Track sales opportunities and conversions
+- **Deal Pipeline**: Track sales opportunities and conversions with Kanban view
+- **User Management**: Admin interface for user management and API key generation
+- **Reports & Analytics**: Comprehensive sales analytics with charts and exports
+- **Webhook System**: Real-time notifications and integrations
+- **Settings Management**: User profile and password management
 - **MCP-Ready API**: Machine-friendly endpoints for AI agents and automation
-- **Modern UI**: Responsive Bootstrap 5 interface
+- **Modern UI**: Responsive Bootstrap 5 interface with interactive components
 - **Web3 Integration**: EVM addresses, social media handles, and blockchain-ready
 - **API-First Design**: RESTful API with OpenAPI documentation
 
@@ -160,12 +164,16 @@ For support and questions:
 
 ## 🔮 Roadmap
 
-- [ ] Webhook system implementation
-- [ ] Advanced reporting and analytics
+- [x] Webhook system implementation
+- [x] Advanced reporting and analytics
+- [x] User management interface
+- [x] Settings management
 - [ ] Email integration
 - [ ] Calendar integration
 - [ ] Mobile app
 - [ ] Advanced MCP features
+- [ ] Batch operations
+- [ ] Advanced filtering & search
 
 ---
 

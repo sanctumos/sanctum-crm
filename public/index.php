@@ -25,7 +25,7 @@ if (!$auth->isAuthenticated()) {
 $page = $_GET['page'] ?? 'dashboard';
 
 // Validate page
-$allowedPages = ['dashboard', 'contacts', 'deals', 'users', 'reports'];
+$allowedPages = ['dashboard', 'contacts', 'deals', 'users', 'reports', 'webhooks'];
 if (!in_array($page, $allowedPages)) {
     $page = 'dashboard';
 }

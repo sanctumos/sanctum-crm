@@ -276,7 +276,7 @@ class Auth {
     public function getAllUsers() {
         $this->requireAdmin();
         
-        $sql = "SELECT id, username, email, first_name, last_name, role, is_active, created_at 
+        $sql = "SELECT id, username, email, first_name, last_name, role, is_active, api_key, created_at 
                 FROM users ORDER BY created_at DESC";
         
         return $this->db->fetchAll($sql);
@@ -285,7 +285,7 @@ class Auth {
     public function getUserById($userId) {
         $this->requireAdmin();
         
-        $sql = "SELECT id, username, email, first_name, last_name, role, is_active, created_at 
+        $sql = "SELECT id, username, email, first_name, last_name, role, is_active, api_key, created_at 
                 FROM users WHERE id = ?";
         
         return $this->db->fetchOne($sql, [$userId]);

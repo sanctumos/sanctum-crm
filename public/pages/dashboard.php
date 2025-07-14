@@ -133,6 +133,9 @@ $user = $auth->getUser();
                         <a class="nav-link" href="/index.php?page=reports">
                             <i class="fas fa-chart-bar me-2"></i> Reports
                         </a>
+                        <a class="nav-link" href="/index.php?page=webhooks">
+                            <i class="fas fa-link me-2"></i> Webhooks
+                        </a>
                     </nav>
                 </div>
             </div>
@@ -151,7 +154,7 @@ $user = $auth->getUser();
                                         <?php echo htmlspecialchars($user['first_name'] . ' ' . $user['last_name']); ?>
                                     </a>
                                     <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Settings</a></li>
+                                        <li><a class="dropdown-item" href="/pages/settings.php"><i class="fas fa-cog me-2"></i>Settings</a></li>
                                         <li><hr class="dropdown-divider"></li>
                                         <li><a class="dropdown-item" href="/logout.php"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
                                     </ul>
