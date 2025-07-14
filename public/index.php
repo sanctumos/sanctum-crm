@@ -8,13 +8,13 @@
 define('CRM_LOADED', true);
 
 // Include required files
-require_once dirname(__DIR__) . '/includes/config.php';
-require_once dirname(__DIR__) . '/includes/database.php';
-require_once dirname(__DIR__) . '/includes/auth.php';
+require_once __DIR__ . '/includes/config.php';
+require_once __DIR__ . '/includes/database.php';
+require_once __DIR__ . '/includes/auth.php';
 
 // Initialize authentication
 $auth = new Auth();
-require_once dirname(__DIR__) . '/includes/layout.php';
+require_once __DIR__ . '/includes/layout.php';
 
 // Check if user is authenticated
 if (!$auth->isAuthenticated()) {

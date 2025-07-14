@@ -16,8 +16,8 @@ define('APP_URL', 'http://localhost:8000'); // Change for production
 define('DEBUG_MODE', true); // Set to false in production
 
 // Database Configuration
-define('DB_PATH', dirname(__DIR__) . '/db/crm.db');
-define('DB_BACKUP_PATH', dirname(__DIR__) . '/db/backup/');
+define('DB_PATH', dirname(dirname(__DIR__)) . '/db/crm.db');
+define('DB_BACKUP_PATH', dirname(dirname(__DIR__)) . '/db/backup/');
 
 // Security Configuration
 define('SESSION_NAME', 'crm_session');

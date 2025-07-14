@@ -9,9 +9,9 @@ file_put_contents(__DIR__ . '/debug.log', date('c') . ' METHOD=' . ($_SERVER['RE
 define('CRM_LOADED', true);
 
 // Include required files
-require_once __DIR__ . '/../../../includes/config.php';
-require_once __DIR__ . '/../../../includes/database.php';
-require_once __DIR__ . '/../../../includes/auth.php';
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/database.php';
+require_once __DIR__ . '/../../includes/auth.php';
 
 // Set JSON content type
 if (!defined('CRM_TESTING')) header('Content-Type: application/json');

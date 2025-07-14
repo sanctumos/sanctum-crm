@@ -7,9 +7,9 @@
 // Define CRM loaded constant
 define('CRM_LOADED', true);
 
-require_once __DIR__ . '/../../../includes/config.php';
-require_once __DIR__ . '/../../../includes/database.php';
-require_once __DIR__ . '/../../../includes/auth.php';
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/database.php';
+require_once __DIR__ . '/../../includes/auth.php';
 
 if (!defined('CRM_TESTING')) header('Content-Type: application/json');
 if (!defined('CRM_TESTING')) header('Access-Control-Allow-Origin: *');
