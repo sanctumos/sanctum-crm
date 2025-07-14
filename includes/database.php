@@ -26,6 +26,11 @@ class Database {
     }
     
     private function connect() {
+        // Ensure db folder exists
+        $dbDir = dirname(DB_PATH);
+        if (!is_dir($dbDir)) {
+            mkdir($dbDir, 0777, true);
+        }
         try {
             $this->pdo = new PDO('sqlite:' . DB_PATH);
             $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
