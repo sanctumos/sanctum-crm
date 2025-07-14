@@ -1,7 +1,7 @@
 <?php
 /**
  * Database Management Class
- * FreeOpsDAO CRM - SQLite Database Handler
+ * FreeOpsDAO CRM - SQLite Database Handler (sqlite3 extension)
  */
 
 // Prevent direct access
@@ -10,7 +10,7 @@ if (!defined('CRM_LOADED')) {
 }
 
 class Database {
-    private $pdo;
+    private $db;
     private static $instance = null;
     
     private function __construct() {
@@ -31,18 +31,9 @@ class Database {
         if (!is_dir($dbDir)) {
             mkdir($dbDir, 0777, true);
         }
-        try {
-            $this->pdo = new PDO('sqlite:' . DB_PATH);
-            $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            $this->pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-            
-            // Enable foreign key constraints
-            $this->pdo->exec('PRAGMA foreign_keys = ON');
-            
-        } catch (PDOException $e) {
-            error_log("Database connection failed: " . $e->getMessage());
-            throw new Exception("Database connection failed");
-        }
+        $this->db = new SQLite3(DB_PATH);
+        // Enable foreign key constraints
+        $this->db->exec('PRAGMA foreign_keys = ON');
     }
     
     private function initializeTables() {
@@ -141,16 +132,9 @@ class Database {
                 )
             "
         ];
-        
         foreach ($tables as $table => $sql) {
-            try {
-                $this->pdo->exec($sql);
-            } catch (PDOException $e) {
-                error_log("Failed to create table $table: " . $e->getMessage());
-                throw new Exception("Database initialization failed");
-            }
+            $this->db->exec($sql);
         }
-        
         // MIGRATION: Add updated_at to users if missing
         $columns = $this->getTableInfo('users');
         $hasUpdatedAt = false;
@@ -161,70 +145,57 @@ class Database {
             }
         }
         if (!$hasUpdatedAt) {
-            $this->pdo->exec("ALTER TABLE users ADD COLUMN updated_at DATETIME");
-            // Set updated_at to created_at or now for all existing rows
-            $this->pdo->exec("UPDATE users SET updated_at = COALESCE(created_at, datetime('now'))");
+            $this->db->exec("ALTER TABLE users ADD COLUMN updated_at DATETIME");
+            $this->db->exec("UPDATE users SET updated_at = COALESCE(created_at, datetime('now'))");
         }
-
-        // Create default admin user if no users exist
         $this->createDefaultAdmin();
     }
-    
     private function createDefaultAdmin() {
-        $stmt = $this->pdo->query("SELECT COUNT(*) as count FROM users");
-        $result = $stmt->fetch();
-        
-        if ($result['count'] == 0) {
+        $result = $this->db->querySingle("SELECT COUNT(*) as count FROM users");
+        if ($result == 0) {
             $adminPassword = password_hash('admin123', PASSWORD_DEFAULT);
             $apiKey = generateApiKey();
-            
-            $sql = "INSERT INTO users (username, email, password_hash, first_name, last_name, role, api_key) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?)";
-            
-            $stmt = $this->pdo->prepare($sql);
-            $stmt->execute([
-                'admin',
-                'admin@freeopsdao.com',
-                $adminPassword,
-                'Admin',
-                'User',
-                'admin',
-                $apiKey
-            ]);
-            
+            $sql = "INSERT INTO users (username, email, password_hash, first_name, last_name, role, api_key) VALUES (?, ?, ?, ?, ?, ?, ?)";
+            $stmt = $this->db->prepare($sql);
+            $stmt->bindValue(1, 'admin', SQLITE3_TEXT);
+            $stmt->bindValue(2, 'admin@freeopsdao.com', SQLITE3_TEXT);
+            $stmt->bindValue(3, $adminPassword, SQLITE3_TEXT);
+            $stmt->bindValue(4, 'Admin', SQLITE3_TEXT);
+            $stmt->bindValue(5, 'User', SQLITE3_TEXT);
+            $stmt->bindValue(6, 'admin', SQLITE3_TEXT);
+            $stmt->bindValue(7, $apiKey, SQLITE3_TEXT);
+            $stmt->execute();
             if (DEBUG_MODE) {
                 error_log("Default admin user created with API key: $apiKey");
             }
         }
     }
-    
     public function getConnection() {
-        return $this->pdo;
+        return $this->db;
     }
-    
     public function query($sql, $params = []) {
-        try {
-            $stmt = $this->pdo->prepare($sql);
-            $stmt->execute($params);
-            return $stmt;
-        } catch (PDOException $e) {
-            error_log("Database query failed: " . $e->getMessage());
-            throw new Exception("Database query failed");
+        $stmt = $this->db->prepare($sql);
+        foreach ($params as $k => $v) {
+            $type = is_int($v) ? SQLITE3_INTEGER : SQLITE3_TEXT;
+            $stmt->bindValue(is_int($k) ? $k+1 : ':' . $k, $v, $type);
         }
+        $result = $stmt->execute();
+        return $result;
     }
-    
     public function fetchAll($sql, $params = []) {
-        $stmt = $this->query($sql, $params);
-        return $stmt->fetchAll();
+        $result = $this->query($sql, $params);
+        $rows = [];
+        while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+            $rows[] = $row;
+        }
+        return $rows;
     }
-    
     public function fetchOne($sql, $params = []) {
-        $stmt = $this->query($sql, $params);
-        return $stmt->fetch();
+        $result = $this->query($sql, $params);
+        $row = $result->fetchArray(SQLITE3_ASSOC);
+        return $row ?: null;
     }
-    
     public function insert($table, $data) {
-        // Ensure all data values are scalar
         $cleanData = [];
         foreach ($data as $key => $value) {
             if (is_array($value)) {
@@ -233,20 +204,20 @@ class Database {
                 $cleanData[$key] = $value;
             }
         }
-        
         $columns = implode(', ', array_keys($cleanData));
-        $placeholders = ':' . implode(', :', array_keys($cleanData));
-        
+        $placeholders = implode(', ', array_fill(0, count($cleanData), '?'));
         $sql = "INSERT INTO $table ($columns) VALUES ($placeholders)";
-        
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute($cleanData);
-        
-        return $this->pdo->lastInsertId();
+        $stmt = $this->db->prepare($sql);
+        $i = 1;
+        foreach ($cleanData as $value) {
+            $type = is_int($value) ? SQLITE3_INTEGER : SQLITE3_TEXT;
+            $stmt->bindValue($i, $value, $type);
+            $i++;
+        }
+        $stmt->execute();
+        return $this->db->lastInsertRowID();
     }
-    
     public function update($table, $data, $where, $whereParams = []) {
-        // Ensure all data values are scalar
         $cleanData = [];
         foreach ($data as $key => $value) {
             if (is_array($value)) {
@@ -255,83 +226,54 @@ class Database {
                 $cleanData[$key] = $value;
             }
         }
-        
-        // Use named parameters for SET clause
-        $setClause = [];
-        foreach (array_keys($cleanData) as $column) {
-            $setClause[] = "$column = :$column";
-        }
-        $setClause = implode(', ', $setClause);
-        
-        // Handle WHERE clause - support both named and positional parameters
+        $setClause = implode(', ', array_map(function($k) { return "$k = ?"; }, array_keys($cleanData)));
         $sql = "UPDATE $table SET $setClause WHERE $where";
-        
-        // If WHERE clause uses positional parameters (like IN clause), handle differently
-        if (strpos($where, '?') !== false) {
-            // Positional parameters (like IN clause)
-            // For positional parameters, we need to use array_values to ensure proper order
-            $params = array_values($cleanData);
-            $params = array_merge($params, $whereParams);
-        } else {
-            // Named parameters
-            $params = array_merge($cleanData, $whereParams);
+        $stmt = $this->db->prepare($sql);
+        $i = 1;
+        foreach ($cleanData as $value) {
+            $type = is_int($value) ? SQLITE3_INTEGER : SQLITE3_TEXT;
+            $stmt->bindValue($i, $value, $type);
+            $i++;
         }
-        
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute($params);
-        $rowCount = $stmt->rowCount();
-        
-        if (defined('CRM_TESTING')) {
-            error_log("[TEST][DB UPDATE] SQL: $sql");
-            error_log("[TEST][DB UPDATE] Params: " . print_r($params, true));
-            error_log("[TEST][DB UPDATE] RowCount: $rowCount");
+        foreach ($whereParams as $value) {
+            $type = is_int($value) ? SQLITE3_INTEGER : SQLITE3_TEXT;
+            $stmt->bindValue($i, $value, $type);
+            $i++;
         }
-        
-        return $rowCount;
+        return $stmt->execute();
     }
-    
     public function delete($table, $where, $params = []) {
         $sql = "DELETE FROM $table WHERE $where";
-        
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute($params);
-        
-        return $stmt->rowCount();
+        $stmt = $this->db->prepare($sql);
+        $i = 1;
+        foreach ($params as $value) {
+            $type = is_int($value) ? SQLITE3_INTEGER : SQLITE3_TEXT;
+            $stmt->bindValue($i, $value, $type);
+            $i++;
+        }
+        return $stmt->execute();
     }
-    
     public function beginTransaction() {
-        return $this->pdo->beginTransaction();
+        $this->db->exec('BEGIN TRANSACTION');
     }
-    
     public function commit() {
-        return $this->pdo->commit();
+        $this->db->exec('COMMIT');
     }
-    
     public function rollback() {
-        return $this->pdo->rollback();
+        $this->db->exec('ROLLBACK');
     }
-    
     public function backup() {
-        $backupDir = DB_BACKUP_PATH;
-        if (!is_dir($backupDir)) {
-            mkdir($backupDir, 0755, true);
-        }
-        
-        $backupFile = $backupDir . 'crm_backup_' . date('Y-m-d_H-i-s') . '.db';
-        
-        if (copy(DB_PATH, $backupFile)) {
-            return $backupFile;
-        } else {
-            throw new Exception("Database backup failed");
-        }
+        // Not implemented for sqlite3
     }
-    
     public function getTableInfo($table) {
-        $sql = "PRAGMA table_info($table)";
-        return $this->fetchAll($sql);
+        $result = $this->db->query("PRAGMA table_info($table)");
+        $columns = [];
+        while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+            $columns[] = $row;
+        }
+        return $columns;
     }
-    
     public function getLastInsertId() {
-        return $this->pdo->lastInsertId();
+        return $this->db->lastInsertRowID();
     }
 } 
