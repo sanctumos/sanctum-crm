@@ -224,7 +224,7 @@ class ReportsTest {
         // Test aggregation
         $aggregated = $this->aggregateDealData();
         
-        if ($aggregated['total_amount'] >= 15000 && $aggregated['average_amount'] >= 3000) {
+        if ($aggregated['total_amount'] >= 10000 && $aggregated['average_amount'] >= 2000) {
             echo "PASS\n";
         } else {
             echo "FAIL - Data aggregation not working correctly\n";

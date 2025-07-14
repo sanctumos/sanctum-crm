@@ -250,19 +250,24 @@ class Database {
                 $cleanData[$key] = $value;
             }
         }
-        
+        // Use named parameters for SET and WHERE
         $setClause = [];
         foreach (array_keys($cleanData) as $column) {
             $setClause[] = "$column = :$column";
         }
         $setClause = implode(', ', $setClause);
-        
+        // WHERE clause must use named parameters, e.g., 'id = :id'
         $sql = "UPDATE $table SET $setClause WHERE $where";
-        
+        $params = array_merge($cleanData, $whereParams);
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute(array_merge($cleanData, $whereParams));
-        
-        return $stmt->rowCount();
+        $stmt->execute($params);
+        $rowCount = $stmt->rowCount();
+        if (defined('CRM_TESTING')) {
+            error_log("[TEST][DB UPDATE] SQL: $sql");
+            error_log("[TEST][DB UPDATE] Params: " . print_r($params, true));
+            error_log("[TEST][DB UPDATE] RowCount: $rowCount");
+        }
+        return $rowCount;
     }
     
     public function delete($table, $where, $params = []) {

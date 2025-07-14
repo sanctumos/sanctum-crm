@@ -138,10 +138,16 @@ class AuthTest {
         echo "  Testing user update... ";
         
         try {
+            // Check if admin user exists
+            $adminUser = $this->db->fetchOne("SELECT * FROM users WHERE username = 'admin'");
+            if (!$adminUser) {
+                echo "FAIL - Admin user does not exist\n";
+                return;
+            }
             // Login as admin first
             $loginResult = $this->auth->login('admin', 'admin123');
             if (!$loginResult) {
-                echo "FAIL - Could not login as admin\n";
+                echo "FAIL - Could not login as admin (password might be wrong)\n";
                 return;
             }
             
@@ -154,6 +160,13 @@ class AuthTest {
             ];
             
             $user = $this->auth->createUser($userData);
+            // Debug: fetch and log user before update
+            $fetchedUser = $this->db->fetchOne("SELECT * FROM users WHERE id = ?", [$user['id']]);
+            if (!$fetchedUser) {
+                echo "DEBUG: User not found in DB immediately after creation (ID: {$user['id']})\n";
+            } else {
+                echo "DEBUG: User found in DB before update (ID: {$user['id']})\n";
+            }
             
             // Update user data with unique values
             $updateData = [
@@ -162,7 +175,7 @@ class AuthTest {
                 'email' => 'updated_' . $uniq . '@example.com'
             ];
             
-            $result = $this->auth->updateUser($user['id'], $updateData);
+            $result = $this->auth->updateUser($user['id'], $updateData, 'id = :id', ['id' => $user['id']]);
             
             if ($result) {
                 // Verify update
@@ -187,10 +200,16 @@ class AuthTest {
         echo "  Testing user deletion... ";
         
         try {
+            // Check if admin user exists
+            $adminUser = $this->db->fetchOne("SELECT * FROM users WHERE username = 'admin'");
+            if (!$adminUser) {
+                echo "FAIL - Admin user does not exist\n";
+                return;
+            }
             // Login as admin first
             $loginResult = $this->auth->login('admin', 'admin123');
             if (!$loginResult) {
-                echo "FAIL - Could not login as admin\n";
+                echo "FAIL - Could not login as admin (password might be wrong)\n";
                 return;
             }
             

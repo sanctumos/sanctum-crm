@@ -123,6 +123,13 @@ class Auth {
         return $this->user ? $this->user['role'] : null;
     }
     
+    public function setApiKey($apiKey) {
+        // Set API key for testing purposes
+        if (defined('CRM_TESTING')) {
+            $this->authenticateApiKey($apiKey);
+        }
+    }
+    
     public function requireAuth() {
         if (!$this->isAuthenticated()) {
             if (isApiRequest()) {
@@ -241,7 +248,7 @@ class Auth {
         
         $updateData['updated_at'] = getCurrentTimestamp();
         
-        $this->db->update('users', $updateData, 'id = ?', [$userId]);
+        $this->db->update('users', $updateData, 'id = :id', ['id' => $userId]);
         
         logActivity($this->getUserId(), 'update_user', "Updated user: $userId");
         
@@ -255,7 +262,7 @@ class Auth {
         
         $apiKey = generateApiKey();
         
-        $this->db->update('users', ['api_key' => $apiKey], 'id = ?', [$userId]);
+        $this->db->update('users', ['api_key' => $apiKey], 'id = :id', ['id' => $userId]);
         
         logActivity($this->getUserId(), 'regenerate_api_key', "Regenerated API key for user: $userId");
         

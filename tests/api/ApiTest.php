@@ -759,6 +759,23 @@ class ApiTest {
     }
     
     private function makeRequest($method, $endpoint, $data = null, $headers = null) {
+        // Check if CURL is available
+        if (!function_exists('curl_init')) {
+            echo "SKIP - CURL not available\n";
+            return ['code' => 0, 'body' => 'CURL not available'];
+        }
+        
+        // Define CURL constants if not defined
+        if (!defined('CURLOPT_URL')) {
+            define('CURLOPT_URL', 10002);
+            define('CURLOPT_RETURNTRANSFER', 19913);
+            define('CURLOPT_CUSTOMREQUEST', 10036);
+            define('CURLOPT_HTTPHEADER', 10023);
+            define('CURLOPT_TIMEOUT', 13);
+            define('CURLOPT_POSTFIELDS', 10015);
+            define('CURLINFO_HTTP_CODE', 2097154);
+        }
+        
         $url = $this->baseUrl . $endpoint;
         $requestHeaders = $headers ?: $this->headers;
         

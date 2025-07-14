@@ -167,3 +167,8 @@ function sendWebhook($url, $payload) {
     // Consider 2xx status codes as success
     return $httpCode >= 200 && $httpCode < 300;
 } 
+
+// Helper function to validate URL
+function validateUrl($url) {
+    return filter_var($url, FILTER_VALIDATE_URL) !== false;
+} 

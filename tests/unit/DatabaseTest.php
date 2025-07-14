@@ -128,7 +128,7 @@ class DatabaseTest {
                 'contact_status' => 'qualified'
             ];
             
-            $affected = $this->db->update('contacts', $updateData, 'id = ?', [$contactId]);
+            $affected = $this->db->update('contacts', $updateData, 'id = :id', ['id' => $contactId]);
             
             if ($affected == 1) {
                 // Verify update

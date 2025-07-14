@@ -108,6 +108,10 @@ class TestUtils {
         if (isset($webhookData['events']) && is_array($webhookData['events'])) {
             $webhookData['events'] = json_encode($webhookData['events']);
         }
+        // Validate URL
+        if (!validateUrl($webhookData['url'])) {
+            throw new Exception('Invalid URL format');
+        }
         // Ensure all fields are scalar
         foreach ($webhookData as $k => $v) {
             if (is_array($v)) $webhookData[$k] = json_encode($v);
