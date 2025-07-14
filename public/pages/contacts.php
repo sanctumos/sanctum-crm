@@ -139,7 +139,7 @@ renderHeader('Contacts');
                     <p class="mb-1"><i class="fas fa-building me-2 text-muted"></i><?php echo htmlspecialchars($contact['company']); ?></p>
                     <?php endif; ?>
                     
-                    <?php if ($contact['position']): ?>
+                    <?php if (!empty($contact['position'])): ?>
                     <p class="mb-1"><i class="fas fa-briefcase me-2 text-muted"></i><?php echo htmlspecialchars($contact['position']); ?></p>
                     <?php endif; ?>
                 </div>
