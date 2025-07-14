@@ -163,15 +163,18 @@ class ApiTest {
         
         $response = $this->makeRequest('POST', "/api/v1/contacts/{$contactId}/convert");
         
+        // Debug output
+        file_put_contents(__DIR__ . '/convert_test_debug.log', date('c') . " convert test response: " . json_encode($response) . "\n", FILE_APPEND);
+        
         if ($response['code'] === 200) {
             $data = json_decode($response['body'], true);
-            if ($data['contact_type'] === 'customer' && $data['contact_status'] === 'active') {
+            if ($data && $data['contact_type'] === 'customer' && $data['contact_status'] === 'active') {
                 echo "PASS\n";
             } else {
-                echo "FAIL - Conversion not successful\n";
+                echo "FAIL - Conversion not successful (data: " . json_encode($data) . ")\n";
             }
         } else {
-            echo "FAIL - HTTP " . $response['code'] . "\n";
+            echo "FAIL - HTTP " . $response['code'] . " (body: " . substr($response['body'], 0, 100) . ")\n";
         }
     }
     
@@ -577,15 +580,18 @@ class ApiTest {
         
         $response = $this->makeRequest('POST', "/api/v1/webhooks/{$webhookId}/test");
         
+        // Debug output
+        file_put_contents(__DIR__ . '/webhook_test_debug.log', date('c') . " webhook test response: " . json_encode($response) . "\n", FILE_APPEND);
+        
         if ($response['code'] === 200) {
             $data = json_decode($response['body'], true);
-            if (isset($data['success']) && $data['success']) {
+            if ($data && isset($data['success']) && $data['success']) {
                 echo "PASS\n";
             } else {
-                echo "FAIL - Test not successful\n";
+                echo "FAIL - Test not successful (data: " . json_encode($data) . ")\n";
             }
         } else {
-            echo "FAIL - HTTP " . $response['code'] . "\n";
+            echo "FAIL - HTTP " . $response['code'] . " (body: " . substr($response['body'], 0, 100) . ")\n";
         }
     }
     

@@ -61,7 +61,13 @@ if (count($pathParts) >= 3 && $pathParts[0] === 'api' && $pathParts[1] === 'v1')
 file_put_contents(__DIR__ . '/debug.log', date('c') . " parsed resource=$resource id=$resourceId action=$action\n", FILE_APPEND);
 
 // Get request method (move this up before special case checks)
-$method = $_SERVER['REQUEST_METHOD'];
+$method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+// Fallback: try to get method from headers if not set
+if (empty($method) && isset($_SERVER['HTTP_X_HTTP_METHOD'])) {
+    $method = $_SERVER['HTTP_X_HTTP_METHOD'];
+} elseif (empty($method) && isset($_SERVER['HTTP_X_HTTP_METHOD_OVERRIDE'])) {
+    $method = $_SERVER['HTTP_X_HTTP_METHOD_OVERRIDE'];
+}
 
 // Always log special case checks immediately after parsing
 file_put_contents(__DIR__ . '/debug.log', date('c') . " [DEBUG] CHECKING convert: resource=$resource action=$action\n", FILE_APPEND);
@@ -107,6 +113,25 @@ if ($resource === 'openapi.json') {
     exit;
 }
 
+// Get request body for POST/PUT requests (move this up before special case checks)
+$input = null;
+if (in_array($method, ['POST', 'PUT', 'PATCH'])) {
+    $rawInput = file_get_contents('php://input');
+    if (trim($rawInput) === '') {
+        $input = [];
+    } else {
+        $input = json_decode($rawInput, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            http_response_code(400);
+            echo json_encode([
+                'error' => 'Invalid JSON in request body',
+                'code' => 400
+            ]);
+            exit;
+        }
+    }
+}
+
 // Debug log for special case variables (AFTER parsing)
 file_put_contents(__DIR__ . '/debug.log', date('c') . " [DEBUG] SPECIAL CASE VARS: resource=" . var_export($resource, true) . " (" . gettype($resource) . ") action=" . var_export($action, true) . " (" . gettype($action) . ")\n", FILE_APPEND);
 // Special case: handle contact convert action directly
@@ -120,20 +145,6 @@ if (isset($resource) && $resource === 'webhooks' && isset($action) && $action ==
     file_put_contents(__DIR__ . '/debug.log', date('c') . " [DEBUG] ROUTER test: method=$method resource=$resource resourceId=$resourceId action=$action input=" . json_encode($input) . "\n", FILE_APPEND);
     handleWebhooks($method, $resourceId, $input, $auth, $action);
     exit;
-}
-
-// Get request body for POST/PUT requests
-$input = null;
-if (in_array($method, ['POST', 'PUT', 'PATCH'])) {
-    $input = json_decode(file_get_contents('php://input'), true);
-    if (json_last_error() !== JSON_ERROR_NONE) {
-        http_response_code(400);
-        echo json_encode([
-            'error' => 'Invalid JSON in request body',
-            'code' => 400
-        ]);
-        exit;
-    }
 }
 
 // Rate limiting (basic implementation)
