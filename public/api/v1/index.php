@@ -326,7 +326,11 @@ function handleContacts($method, $id, $input, $auth) {
             
             $updateData['updated_at'] = getCurrentTimestamp();
             
-            $db->update('contacts', $updateData, 'id = ?', [$id]);
+            file_put_contents(__DIR__ . '/debug.log', date('c') . " contact update data=" . json_encode($updateData) . " id=$id\n", FILE_APPEND);
+            
+            $result = $db->update('contacts', $updateData, 'id = :id', ['id' => $id]);
+            
+            file_put_contents(__DIR__ . '/debug.log', date('c') . " contact update result=$result\n", FILE_APPEND);
             
             $contact = $db->fetchOne("SELECT * FROM contacts WHERE id = ?", [$id]);
             echo json_encode($contact);
@@ -453,9 +457,13 @@ function handleDeals($method, $id, $input, $auth) {
             
             $updateData['updated_at'] = getCurrentTimestamp();
             
-            $db->update('deals', $updateData, 'id = ?', [$id]);
-            $deal = $db->fetchOne("SELECT * FROM deals WHERE id = ?", [$id]);
+            file_put_contents(__DIR__ . '/debug.log', date('c') . " deal update data=" . json_encode($updateData) . " id=$id\n", FILE_APPEND);
             
+            $result = $db->update('deals', $updateData, 'id = :id', ['id' => $id]);
+            
+            file_put_contents(__DIR__ . '/debug.log', date('c') . " deal update result=$result\n", FILE_APPEND);
+            
+            $deal = $db->fetchOne("SELECT * FROM deals WHERE id = ?", [$id]);
             echo json_encode($deal);
             break;
             

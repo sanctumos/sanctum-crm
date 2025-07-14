@@ -320,13 +320,14 @@ class UserManagementTest {
             
             $activeCount = $this->db->fetchOne("SELECT COUNT(*) as count FROM users WHERE is_active = 1 AND username LIKE 'bulkuser%'");
             
-            if ($activeCount['count'] >= 3) {
+            // Check if at least 4 out of 5 users were reactivated
+            if ($activeCount['count'] >= 4) {
                 echo "PASS\n";
             } else {
-                echo "FAIL - Bulk reactivation not working\n";
+                echo "FAIL - Bulk reactivation not working (expected >=4, got {$activeCount['count']})\n";
             }
         } else {
-            echo "FAIL - Bulk deactivation not working\n";
+            echo "FAIL - Bulk deactivation not working (expected <=1, got {$activeCount['count']})\n";
         }
     }
     

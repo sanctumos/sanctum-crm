@@ -151,7 +151,7 @@ class ApiTest {
             if ($data['first_name'] === 'Updated' && $data['contact_status'] === 'qualified') {
                 echo "PASS\n";
             } else {
-                echo "FAIL - Update not reflected\n";
+                echo "FAIL - Update not reflected (first_name: {$data['first_name']}, contact_status: {$data['contact_status']})\n";
             }
         } else {
             echo "FAIL - HTTP " . $response['code'] . "\n";
@@ -298,7 +298,7 @@ class ApiTest {
             if ($data['title'] === 'Updated Deal' && $data['stage'] === 'qualification') {
                 echo "PASS\n";
             } else {
-                echo "FAIL - Update not reflected\n";
+                echo "FAIL - Update not reflected (title: {$data['title']}, stage: {$data['stage']})\n";
             }
         } else {
             echo "FAIL - HTTP " . $response['code'] . "\n";

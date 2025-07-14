@@ -126,8 +126,15 @@ class Auth {
     public function setApiKey($apiKey) {
         // Set API key for testing purposes
         if (defined('CRM_TESTING')) {
-            $this->authenticateApiKey($apiKey);
+            $sql = "SELECT * FROM users WHERE api_key = ? AND is_active = 1";
+            $user = $this->db->fetchOne($sql, [$apiKey]);
+            
+            if ($user) {
+                $this->user = $user;
+                return true;
+            }
         }
+        return false;
     }
     
     public function requireAuth() {

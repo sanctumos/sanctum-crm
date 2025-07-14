@@ -255,16 +255,18 @@ class WebhookTest {
             ]);
         }
         
-        // Test counting
-        $count = $this->db->fetchOne("SELECT COUNT(*) as count FROM webhooks WHERE is_active = 1");
+        // Test counting before bulk operation
+        $countBefore = $this->db->fetchOne("SELECT COUNT(*) as count FROM webhooks WHERE is_active = 1");
         
         // Test bulk deactivation
         $placeholders = str_repeat('?,', count($webhookIds) - 1) . '?';
         $this->db->update('webhooks', ['is_active' => 0], "id IN ($placeholders)", $webhookIds);
         
-        $activeCount = $this->db->fetchOne("SELECT COUNT(*) as count FROM webhooks WHERE is_active = 1");
+        // Test counting after bulk operation
+        $countAfter = $this->db->fetchOne("SELECT COUNT(*) as count FROM webhooks WHERE is_active = 1");
         
-        if ($count['count'] >= 4 && $activeCount['count'] <= 3) {
+        // Verify that the count decreased by at least the number of webhooks we deactivated
+        if ($countBefore['count'] >= 5 && $countAfter['count'] <= ($countBefore['count'] - 4)) {
             echo "PASS\n";
         } else {
             echo "FAIL - Bulk operations not working correctly\n";
