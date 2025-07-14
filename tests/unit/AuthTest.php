@@ -138,20 +138,24 @@ class AuthTest {
         echo "  Testing user update... ";
         
         try {
+            // Login as admin first
+            $this->auth->login('admin', 'admin123');
+            
             // Create test user with unique data
+            $uniq = uniqid();
             $userData = [
-                'username' => 'testupdate',
-                'email' => 'testupdate@example.com',
+                'username' => 'testupdate_' . $uniq,
+                'email' => 'testupdate_' . $uniq . '@example.com',
                 'password' => 'testpass123'
             ];
             
             $user = $this->auth->createUser($userData);
             
-            // Update user data
+            // Update user data with unique values
             $updateData = [
-                'first_name' => 'Updated',
-                'last_name' => 'User',
-                'email' => 'updated@example.com'
+                'first_name' => 'Updated_' . $uniq,
+                'last_name' => 'User_' . $uniq,
+                'email' => 'updated_' . $uniq . '@example.com'
             ];
             
             $result = $this->auth->updateUser($user['id'], $updateData);
@@ -159,7 +163,7 @@ class AuthTest {
             if ($result) {
                 // Verify update
                 $updatedUser = $this->db->fetchOne("SELECT * FROM users WHERE id = ?", [$user['id']]);
-                if ($updatedUser['first_name'] === 'Updated' && $updatedUser['email'] === 'updated@example.com') {
+                if ($updatedUser['first_name'] === $updateData['first_name'] && $updatedUser['email'] === $updateData['email']) {
                     echo "PASS\n";
                 } else {
                     echo "FAIL - Update not reflected\n";
@@ -179,6 +183,9 @@ class AuthTest {
         echo "  Testing user deletion... ";
         
         try {
+            // Login as admin first
+            $this->auth->login('admin', 'admin123');
+            
             // Create test user with unique data
             $userData = [
                 'username' => 'testdelete',

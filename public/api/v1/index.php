@@ -13,10 +13,10 @@ require_once __DIR__ . '/../../../includes/database.php';
 require_once __DIR__ . '/../../../includes/auth.php';
 
 // Set JSON content type
-header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+if (!defined('CRM_TESTING')) header('Content-Type: application/json');
+if (!defined('CRM_TESTING')) header('Access-Control-Allow-Origin: *');
+if (!defined('CRM_TESTING')) header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+if (!defined('CRM_TESTING')) header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
 
 // Handle preflight requests
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {

@@ -120,10 +120,11 @@ class DatabaseTest {
         
         try {
             // Create test data
-            $contactId = TestUtils::createTestContact();
+            $uniq = uniqid();
+            $contactId = TestUtils::createTestContact(['first_name' => 'ToUpdate_' . $uniq]);
             
             $updateData = [
-                'first_name' => 'Updated',
+                'first_name' => 'Updated_' . $uniq,
                 'contact_status' => 'qualified'
             ];
             
@@ -132,7 +133,7 @@ class DatabaseTest {
             if ($affected == 1) {
                 // Verify update
                 $result = $this->db->fetchOne("SELECT * FROM contacts WHERE id = ?", [$contactId]);
-                if ($result['first_name'] === 'Updated' && $result['contact_status'] === 'qualified') {
+                if ($result['first_name'] === $updateData['first_name'] && $result['contact_status'] === 'qualified') {
                     echo "PASS\n";
                 } else {
                     echo "FAIL - Update not reflected\n";

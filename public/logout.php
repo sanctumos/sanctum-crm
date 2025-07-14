@@ -19,5 +19,5 @@ $auth = new Auth();
 $auth->logout();
 
 // Redirect to login page
-header('Location: /login.php');
+if (!defined('CRM_TESTING')) header('Location: /login.php');
 exit; 

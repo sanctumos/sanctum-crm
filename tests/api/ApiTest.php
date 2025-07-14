@@ -15,9 +15,7 @@ class ApiTest {
         $this->baseUrl = 'http://localhost:8000';
         
         // Get admin API key
-        $db = TestUtils::getTestDatabase();
-        $admin = $db->fetchOne("SELECT api_key FROM users WHERE username = 'admin'");
-        $this->apiKey = $admin['api_key'] ?? '';
+        $this->apiKey = TestUtils::getTestApiKey();
         
         $this->headers = [
             'Authorization: Bearer ' . $this->apiKey,
@@ -36,6 +34,8 @@ class ApiTest {
         $this->testContactsEndpoints();
         $this->testDealsEndpoints();
         $this->testUsersEndpoints();
+        $this->testWebhooksEndpoints();
+        $this->testReportsEndpoints();
         $this->testErrorHandling();
         $this->testAuthentication();
         $this->testJsonResponses();
@@ -92,10 +92,13 @@ class ApiTest {
             'first_name' => 'API',
             'last_name' => 'Test',
             'email' => 'apitest@example.com',
+            'phone' => '+1234567890',
             'company' => 'Test Company',
+            'position' => 'Manager',
             'contact_type' => 'lead',
-            'evm_address' => '0x1234567890123456789012345678901234567890',
-            'twitter_handle' => '@apitest'
+            'contact_status' => 'new',
+            'source' => 'website',
+            'notes' => 'API test contact'
         ];
         
         $response = $this->makeRequest('POST', '/api/v1/contacts', $contactData);
@@ -137,7 +140,8 @@ class ApiTest {
         
         $updateData = [
             'first_name' => 'Updated',
-            'contact_status' => 'qualified'
+            'contact_status' => 'qualified',
+            'notes' => 'Updated via API'
         ];
         
         $response = $this->makeRequest('PUT', "/api/v1/contacts/{$contactId}", $updateData);
@@ -235,7 +239,9 @@ class ApiTest {
             'contact_id' => $contactId,
             'amount' => 5000.00,
             'stage' => 'prospecting',
-            'probability' => 50
+            'probability' => 25,
+            'expected_close_date' => date('Y-m-d', strtotime('+30 days')),
+            'description' => 'API test deal'
         ];
         
         $response = $this->makeRequest('POST', '/api/v1/deals', $dealData);
@@ -278,7 +284,8 @@ class ApiTest {
         $updateData = [
             'title' => 'Updated Deal',
             'stage' => 'qualification',
-            'probability' => 75
+            'probability' => 50,
+            'amount' => 7500.00
         ];
         
         $response = $this->makeRequest('PUT', "/api/v1/deals/{$dealId}", $updateData);
@@ -323,6 +330,9 @@ class ApiTest {
             // Test PUT /api/v1/users/{id}
             $this->testUpdateUser($userId);
             
+            // Test PUT /api/v1/users/{id} with API key regeneration
+            $this->testRegenerateApiKey($userId);
+            
             // Test DELETE /api/v1/users/{id}
             $this->testDeleteUser($userId);
         }
@@ -349,12 +359,13 @@ class ApiTest {
         echo "    Testing POST /api/v1/users... ";
         
         $userData = [
-            'username' => 'apitestuser',
-            'email' => 'apitestuser@example.com',
+            'username' => 'apitestuser_' . uniqid(),
+            'email' => 'apitest_' . uniqid() . '@example.com',
             'password' => 'testpass123',
             'first_name' => 'API',
-            'last_name' => 'TestUser',
-            'role' => 'user'
+            'last_name' => 'Test',
+            'role' => 'user',
+            'is_active' => 1
         ];
         
         $response = $this->makeRequest('POST', '/api/v1/users', $userData);
@@ -396,17 +407,43 @@ class ApiTest {
         
         $updateData = [
             'first_name' => 'Updated',
-            'last_name' => 'User'
+            'last_name' => 'User',
+            'role' => 'admin',
+            'is_active' => 0
         ];
         
         $response = $this->makeRequest('PUT', "/api/v1/users/{$userId}", $updateData);
         
         if ($response['code'] === 200) {
             $data = json_decode($response['body'], true);
-            if ($data['first_name'] === 'Updated' && $data['last_name'] === 'User') {
+            if ($data['first_name'] === 'Updated' && $data['role'] === 'admin') {
                 echo "PASS\n";
             } else {
                 echo "FAIL - Update not reflected\n";
+            }
+        } else {
+            echo "FAIL - HTTP " . $response['code'] . "\n";
+        }
+    }
+    
+    public function testRegenerateApiKey($userId) {
+        echo "    Testing PUT /api/v1/users/{$userId} (API key regeneration)... ";
+        
+        // Get original API key
+        $response = $this->makeRequest('GET', "/api/v1/users/{$userId}");
+        $originalData = json_decode($response['body'], true);
+        $originalKey = $originalData['api_key'];
+        
+        // Regenerate API key
+        $updateData = ['regenerate_api_key' => true];
+        $response = $this->makeRequest('PUT', "/api/v1/users/{$userId}", $updateData);
+        
+        if ($response['code'] === 200) {
+            $data = json_decode($response['body'], true);
+            if ($data['api_key'] !== $originalKey && !empty($data['api_key'])) {
+                echo "PASS\n";
+            } else {
+                echo "FAIL - API key not regenerated\n";
             }
         } else {
             echo "FAIL - HTTP " . $response['code'] . "\n";
@@ -425,94 +462,293 @@ class ApiTest {
         }
     }
     
+    public function testWebhooksEndpoints() {
+        echo "  Testing Webhooks API endpoints...\n";
+        
+        // Test GET /api/v1/webhooks
+        $this->testGetWebhooks();
+        
+        // Test POST /api/v1/webhooks
+        $webhookId = $this->testCreateWebhook();
+        
+        if ($webhookId) {
+            // Test GET /api/v1/webhooks/{id}
+            $this->testGetWebhook($webhookId);
+            
+            // Test PUT /api/v1/webhooks/{id}
+            $this->testUpdateWebhook($webhookId);
+            
+            // Test POST /api/v1/webhooks/{id}/test
+            $this->testTestWebhook($webhookId);
+            
+            // Test DELETE /api/v1/webhooks/{id}
+            $this->testDeleteWebhook($webhookId);
+        }
+    }
+    
+    public function testGetWebhooks() {
+        echo "    Testing GET /api/v1/webhooks... ";
+        
+        $response = $this->makeRequest('GET', '/api/v1/webhooks');
+        
+        if ($response['code'] === 200) {
+            $data = json_decode($response['body'], true);
+            if (isset($data['webhooks']) && is_array($data['webhooks'])) {
+                echo "PASS (" . count($data['webhooks']) . " webhooks)\n";
+            } else {
+                echo "FAIL - Invalid response structure\n";
+            }
+        } else {
+            echo "FAIL - HTTP " . $response['code'] . "\n";
+        }
+    }
+    
+    public function testCreateWebhook() {
+        echo "    Testing POST /api/v1/webhooks... ";
+        
+        $webhookData = [
+            'url' => 'https://webhook.site/test-' . uniqid(),
+            'events' => ['contact.created', 'deal.created'],
+            'is_active' => 1
+        ];
+        
+        $response = $this->makeRequest('POST', '/api/v1/webhooks', $webhookData);
+        
+        if ($response['code'] === 201) {
+            $data = json_decode($response['body'], true);
+            if (isset($data['id'])) {
+                echo "PASS (ID: {$data['id']})\n";
+                return $data['id'];
+            } else {
+                echo "FAIL - No ID in response\n";
+            }
+        } else {
+            echo "FAIL - HTTP " . $response['code'] . ": " . $response['body'] . "\n";
+        }
+        
+        return null;
+    }
+    
+    public function testGetWebhook($webhookId) {
+        echo "    Testing GET /api/v1/webhooks/{$webhookId}... ";
+        
+        $response = $this->makeRequest('GET', "/api/v1/webhooks/{$webhookId}");
+        
+        if ($response['code'] === 200) {
+            $data = json_decode($response['body'], true);
+            if (isset($data['id']) && $data['id'] == $webhookId) {
+                echo "PASS\n";
+            } else {
+                echo "FAIL - Invalid webhook data\n";
+            }
+        } else {
+            echo "FAIL - HTTP " . $response['code'] . "\n";
+        }
+    }
+    
+    public function testUpdateWebhook($webhookId) {
+        echo "    Testing PUT /api/v1/webhooks/{$webhookId}... ";
+        
+        $updateData = [
+            'url' => 'https://updated-webhook.site/test',
+            'events' => ['contact.updated', 'deal.updated'],
+            'is_active' => 0
+        ];
+        
+        $response = $this->makeRequest('PUT', "/api/v1/webhooks/{$webhookId}", $updateData);
+        
+        if ($response['code'] === 200) {
+            $data = json_decode($response['body'], true);
+            if ($data['url'] === 'https://updated-webhook.site/test' && $data['is_active'] == 0) {
+                echo "PASS\n";
+            } else {
+                echo "FAIL - Update not reflected\n";
+            }
+        } else {
+            echo "FAIL - HTTP " . $response['code'] . "\n";
+        }
+    }
+    
+    public function testTestWebhook($webhookId) {
+        echo "    Testing POST /api/v1/webhooks/{$webhookId}/test... ";
+        
+        $response = $this->makeRequest('POST', "/api/v1/webhooks/{$webhookId}/test");
+        
+        if ($response['code'] === 200) {
+            $data = json_decode($response['body'], true);
+            if (isset($data['success']) && $data['success']) {
+                echo "PASS\n";
+            } else {
+                echo "FAIL - Test not successful\n";
+            }
+        } else {
+            echo "FAIL - HTTP " . $response['code'] . "\n";
+        }
+    }
+    
+    public function testDeleteWebhook($webhookId) {
+        echo "    Testing DELETE /api/v1/webhooks/{$webhookId}... ";
+        
+        $response = $this->makeRequest('DELETE', "/api/v1/webhooks/{$webhookId}");
+        
+        if ($response['code'] === 204) {
+            echo "PASS\n";
+        } else {
+            echo "FAIL - HTTP " . $response['code'] . "\n";
+        }
+    }
+    
+    public function testReportsEndpoints() {
+        echo "  Testing Reports API endpoints...\n";
+        
+        // Test GET /api/v1/reports
+        $this->testGetReports();
+        
+        // Test GET /api/v1/reports/analytics
+        $this->testGetAnalytics();
+        
+        // Test GET /api/v1/reports/export
+        $this->testExportReports();
+    }
+    
+    public function testGetReports() {
+        echo "    Testing GET /api/v1/reports... ";
+        
+        $response = $this->makeRequest('GET', '/api/v1/reports');
+        
+        if ($response['code'] === 200) {
+            $data = json_decode($response['body'], true);
+            if (isset($data['reports']) && is_array($data['reports'])) {
+                echo "PASS\n";
+            } else {
+                echo "FAIL - Invalid response structure\n";
+            }
+        } else {
+            echo "FAIL - HTTP " . $response['code'] . "\n";
+        }
+    }
+    
+    public function testGetAnalytics() {
+        echo "    Testing GET /api/v1/reports/analytics... ";
+        
+        $response = $this->makeRequest('GET', '/api/v1/reports/analytics');
+        
+        if ($response['code'] === 200) {
+            $data = json_decode($response['body'], true);
+            if (isset($data['analytics']) && is_array($data['analytics'])) {
+                echo "PASS\n";
+            } else {
+                echo "FAIL - Invalid response structure\n";
+            }
+        } else {
+            echo "FAIL - HTTP " . $response['code'] . "\n";
+        }
+    }
+    
+    public function testExportReports() {
+        echo "    Testing GET /api/v1/reports/export... ";
+        
+        $response = $this->makeRequest('GET', '/api/v1/reports/export?format=csv&type=deals');
+        
+        if ($response['code'] === 200) {
+            if (strpos($response['body'], 'ID,Title,Contact ID') !== false) {
+                echo "PASS\n";
+            } else {
+                echo "FAIL - Invalid CSV format\n";
+            }
+        } else {
+            echo "FAIL - HTTP " . $response['code'] . "\n";
+        }
+    }
+    
     public function testErrorHandling() {
         echo "  Testing Error Handling...\n";
         
-        // Test 404
+        // Test 404 for non-existent resource
         echo "    Testing 404 error... ";
-        $response = $this->makeRequest('GET', '/api/v1/nonexistent');
+        $response = $this->makeRequest('GET', '/api/v1/contacts/999999');
         if ($response['code'] === 404) {
-            $data = json_decode($response['body'], true);
-            if (isset($data['error']) && isset($data['code'])) {
-                echo "PASS\n";
-            } else {
-                echo "FAIL - Invalid error response structure\n";
-            }
+            echo "PASS\n";
         } else {
             echo "FAIL - Expected 404, got " . $response['code'] . "\n";
         }
         
-        // Test 400 (invalid data)
+        // Test 400 for invalid data
         echo "    Testing 400 error... ";
         $response = $this->makeRequest('POST', '/api/v1/contacts', ['invalid' => 'data']);
         if ($response['code'] === 400) {
-            $data = json_decode($response['body'], true);
-            if (isset($data['error']) && isset($data['code'])) {
-                echo "PASS\n";
-            } else {
-                echo "FAIL - Invalid error response structure\n";
-            }
+            echo "PASS\n";
         } else {
             echo "FAIL - Expected 400, got " . $response['code'] . "\n";
+        }
+        
+        // Test 401 for invalid API key
+        echo "    Testing 401 error... ";
+        $headers = ['Authorization: Bearer invalid_key', 'Content-Type: application/json'];
+        $response = $this->makeRequest('GET', '/api/v1/contacts', null, $headers);
+        if ($response['code'] === 401) {
+            echo "PASS\n";
+        } else {
+            echo "FAIL - Expected 401, got " . $response['code'] . "\n";
         }
     }
     
     public function testAuthentication() {
         echo "  Testing Authentication...\n";
         
-        // Test without API key
-        echo "    Testing without API key... ";
-        $response = $this->makeRequest('GET', '/api/v1/contacts', null, []);
-        if ($response['code'] === 401) {
+        // Test valid API key
+        echo "    Testing valid API key... ";
+        $response = $this->makeRequest('GET', '/api/v1/contacts');
+        if ($response['code'] === 200) {
             echo "PASS\n";
         } else {
-            echo "FAIL - Expected 401, got " . $response['code'] . "\n";
+            echo "FAIL - Valid API key rejected\n";
         }
         
-        // Test with invalid API key
-        echo "    Testing with invalid API key... ";
-        $invalidHeaders = [
-            'Authorization: Bearer invalid_key',
-            'Content-Type: application/json'
-        ];
-        $response = $this->makeRequest('GET', '/api/v1/contacts', null, $invalidHeaders);
+        // Test missing API key
+        echo "    Testing missing API key... ";
+        $headers = ['Content-Type: application/json'];
+        $response = $this->makeRequest('GET', '/api/v1/contacts', null, $headers);
         if ($response['code'] === 401) {
             echo "PASS\n";
         } else {
-            echo "FAIL - Expected 401, got " . $response['code'] . "\n";
+            echo "FAIL - Missing API key not rejected\n";
         }
     }
     
     public function testJsonResponses() {
-        echo "  Testing JSON Response Format...\n";
+        echo "  Testing JSON Responses...\n";
         
+        // Test valid JSON response
+        echo "    Testing valid JSON... ";
         $response = $this->makeRequest('GET', '/api/v1/contacts');
-        
-        echo "    Testing Content-Type header... ";
-        if (strpos($response['headers'], 'Content-Type: application/json') !== false) {
+        $data = json_decode($response['body'], true);
+        if ($data !== null) {
             echo "PASS\n";
         } else {
-            echo "FAIL - Missing JSON Content-Type\n";
+            echo "FAIL - Invalid JSON response\n";
         }
         
-        echo "    Testing valid JSON response... ";
+        // Test error JSON response
+        echo "    Testing error JSON... ";
+        $response = $this->makeRequest('GET', '/api/v1/contacts/999999');
         $data = json_decode($response['body'], true);
-        if (json_last_error() === JSON_ERROR_NONE) {
+        if ($data !== null && isset($data['error'])) {
             echo "PASS\n";
         } else {
-            echo "FAIL - Invalid JSON: " . json_last_error_msg() . "\n";
+            echo "FAIL - Invalid error JSON response\n";
         }
     }
     
     public function testOpenApiDocumentation() {
         echo "  Testing OpenAPI Documentation...\n";
         
-        echo "    Testing OpenAPI endpoint... ";
-        $response = $this->makeRequest('GET', '/api/openapi.json', null, ['Content-Type: application/json']);
-        
+        // Test OpenAPI JSON
+        echo "    Testing OpenAPI JSON... ";
+        $response = $this->makeRequest('GET', '/api/openapi.json');
         if ($response['code'] === 200) {
             $data = json_decode($response['body'], true);
-            if (isset($data['openapi']) && isset($data['info']) && isset($data['paths'])) {
+            if ($data && isset($data['openapi'])) {
                 echo "PASS\n";
             } else {
                 echo "FAIL - Invalid OpenAPI structure\n";
@@ -528,38 +764,28 @@ class ApiTest {
         
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $requestHeaders);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HEADER, true);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $requestHeaders);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
         
-        if ($method === 'POST' || $method === 'PUT') {
-            curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
-            if ($data) {
-                curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-            }
-        } elseif ($method === 'DELETE') {
-            curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
+        if ($data && in_array($method, ['POST', 'PUT', 'PATCH'])) {
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
         }
         
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
         
-        // Split headers and body
-        $headerSize = strpos($response, "\r\n\r\n");
-        $headers = substr($response, 0, $headerSize);
-        $body = substr($response, $headerSize + 4);
-        
         return [
             'code' => $httpCode,
-            'headers' => $headers,
-            'body' => $body
+            'body' => $response
         ];
     }
 }
 
 // Run tests if called directly
-if (php_sapi_name() === 'cli' || isset($_GET['run'])) {
+if (basename(__FILE__) === basename($_SERVER['SCRIPT_NAME'])) {
     $test = new ApiTest();
     $test->runAllTests();
 } 

@@ -53,7 +53,8 @@ class Database {
                     role VARCHAR(20) DEFAULT 'user',
                     api_key VARCHAR(255) UNIQUE,
                     is_active BOOLEAN DEFAULT 1,
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
             ",
             'contacts' => "
@@ -64,6 +65,7 @@ class Database {
                     email VARCHAR(100) UNIQUE NOT NULL,
                     phone VARCHAR(20),
                     company VARCHAR(100),
+                    position VARCHAR(100),
                     address TEXT,
                     city VARCHAR(50),
                     state VARCHAR(50),
@@ -107,7 +109,7 @@ class Database {
             'webhooks' => "
                 CREATE TABLE IF NOT EXISTS webhooks (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER NOT NULL,
+                    user_id INTEGER,
                     url VARCHAR(255) NOT NULL,
                     events TEXT NOT NULL,
                     is_active BOOLEAN DEFAULT 1,
@@ -122,6 +124,10 @@ class Database {
                     user_id INTEGER,
                     endpoint VARCHAR(100),
                     method VARCHAR(10),
+                    ip_address VARCHAR(45),
+                    user_agent TEXT,
+                    response_code INTEGER,
+                    response_time DECIMAL(10,3),
                     status VARCHAR(20) DEFAULT 'pending',
                     result TEXT,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -140,6 +146,21 @@ class Database {
             }
         }
         
+        // MIGRATION: Add updated_at to users if missing
+        $columns = $this->getTableInfo('users');
+        $hasUpdatedAt = false;
+        foreach ($columns as $col) {
+            if ($col['name'] === 'updated_at') {
+                $hasUpdatedAt = true;
+                break;
+            }
+        }
+        if (!$hasUpdatedAt) {
+            $this->pdo->exec("ALTER TABLE users ADD COLUMN updated_at DATETIME");
+            // Set updated_at to created_at or now for all existing rows
+            $this->pdo->exec("UPDATE users SET updated_at = COALESCE(created_at, datetime('now'))");
+        }
+
         // Create default admin user if no users exist
         $this->createDefaultAdmin();
     }

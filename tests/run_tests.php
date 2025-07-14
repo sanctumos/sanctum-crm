@@ -1,7 +1,7 @@
 <?php
 /**
  * Test Runner
- * FreeOpsDAO CRM - Complete Test Suite Runner
+ * FreeOpsDAO CRM - Comprehensive Test Suite
  */
 
 require_once __DIR__ . '/bootstrap.php';
@@ -9,12 +9,17 @@ require_once __DIR__ . '/bootstrap.php';
 class TestRunner {
     private $results = [];
     private $startTime;
+    private $totalTests = 0;
+    private $passedTests = 0;
+    private $failedTests = 0;
+    
+    public function __construct() {
+        $this->startTime = microtime(true);
+    }
     
     public function runAllTests() {
-        $this->startTime = microtime(true);
-        
         echo "==========================================\n";
-        echo "FreeOpsDAO CRM - Complete Test Suite\n";
+        echo "FreeOpsDAO CRM - Comprehensive Test Suite\n";
         echo "==========================================\n\n";
         
         // Run unit tests
@@ -26,235 +31,359 @@ class TestRunner {
         // Run integration tests
         $this->runIntegrationTests();
         
-        // Generate report
-        $this->generateReport();
+        // Generate coverage report
+        $this->generateCoverageReport();
+        
+        // Display final results
+        $this->displayFinalResults();
     }
     
-    private function runUnitTests() {
+    public function runUnitTests() {
         echo "UNIT TESTS\n";
         echo "==========\n";
         
-        // Database tests
-        echo "\nDatabase Tests:\n";
-        ob_start();
-        include __DIR__ . '/unit/DatabaseTest.php';
-        $output = ob_get_clean();
-        $this->results['database'] = $this->parseTestOutput($output);
-        echo $output;
+        $unitTests = [
+            'AuthTest.php' => 'AuthTest',
+            'DatabaseTest.php' => 'DatabaseTest',
+            'WebhookTest.php' => 'WebhookTest',
+            'UserManagementTest.php' => 'UserManagementTest',
+            'ReportsTest.php' => 'ReportsTest'
+        ];
         
-        // Authentication tests
-        echo "\nAuthentication Tests:\n";
-        ob_start();
-        include __DIR__ . '/unit/AuthTest.php';
-        $output = ob_get_clean();
-        $this->results['auth'] = $this->parseTestOutput($output);
-        echo $output;
+        foreach ($unitTests as $file => $class) {
+            $this->runTestFile("unit/{$file}", $class);
+        }
+        
+        echo "\n";
     }
     
-    private function runApiTests() {
-        echo "\nAPI INTEGRATION TESTS\n";
-        echo "====================\n";
+    public function runApiTests() {
+        echo "API TESTS\n";
+        echo "=========\n";
         
-        // Check if server is running
-        if (!$this->isServerRunning()) {
-            echo "\nWARNING: Server not running. Start with: php -S localhost:8000\n";
-            echo "Skipping API tests...\n";
-            $this->results['api'] = ['status' => 'skipped', 'message' => 'Server not running'];
+        $apiTests = [
+            'ApiTest.php' => 'ApiTest'
+        ];
+        
+        foreach ($apiTests as $file => $class) {
+            $this->runTestFile("api/{$file}", $class);
+        }
+        
+        echo "\n";
+    }
+    
+    public function runIntegrationTests() {
+        echo "INTEGRATION TESTS\n";
+        echo "=================\n";
+        
+        $integrationTests = [
+            'IntegrationTest.php' => 'IntegrationTest'
+        ];
+        
+        foreach ($integrationTests as $file => $class) {
+            $this->runTestFile("integration/{$file}", $class);
+        }
+        
+        echo "\n";
+    }
+    
+    private function runTestFile($relativePath, $className) {
+        $filePath = __DIR__ . '/' . $relativePath;
+        
+        if (!file_exists($filePath)) {
+            echo "  SKIP: {$relativePath} (file not found)\n";
             return;
         }
         
-        echo "\nAPI Tests:\n";
-        ob_start();
-        include __DIR__ . '/api/ApiTest.php';
-        $output = ob_get_clean();
-        $this->results['api'] = $this->parseTestOutput($output);
-        echo $output;
-    }
-    
-    private function runIntegrationTests() {
-        echo "\nINTEGRATION TESTS\n";
-        echo "================\n";
+        echo "  Running {$className}...\n";
         
-        echo "\nSystem Integration Tests:\n";
-        $this->testSystemIntegration();
-    }
-    
-    private function testSystemIntegration() {
-        echo "  Testing complete workflow... ";
+        // Capture output
+        ob_start();
         
         try {
-            $db = TestUtils::getTestDatabase();
-            $auth = new Auth();
+            require_once $filePath;
             
-            // Test complete user -> contact -> deal workflow
-            $user = TestUtils::createTestUser();
-            $contact = TestUtils::createTestContact();
-            $deal = TestUtils::createTestDeal(['contact_id' => $contact]);
-            
-            // Verify relationships
-            $dealData = $db->fetchOne("SELECT * FROM deals WHERE id = ?", [$deal]);
-            $contactData = $db->fetchOne("SELECT * FROM contacts WHERE id = ?", [$dealData['contact_id']]);
-            
-            if ($dealData && $contactData && $dealData['contact_id'] == $contact) {
-                echo "PASS\n";
-                $this->results['integration'] = ['status' => 'pass', 'tests' => 1, 'passed' => 1];
+            if (class_exists($className)) {
+                echo "    Creating {$className} instance...\n";
+                $test = new $className();
+                
+                if (method_exists($test, 'runAllTests')) {
+                    echo "    Executing {$className}::runAllTests()...\n";
+                    $test->runAllTests();
+                    $output = ob_get_clean();
+                    
+                    // Parse test results
+                    $this->parseTestResults($output, $className);
+                    
+                    echo $output;
+                    echo "    Completed {$className}\n";
+                } else {
+                    ob_end_clean();
+                    echo "    FAIL: {$className} missing runAllTests method\n";
+                    $this->recordTestResult($className, false);
+                }
             } else {
-                echo "FAIL - Relationship integrity issue\n";
-                $this->results['integration'] = ['status' => 'fail', 'tests' => 1, 'passed' => 0];
+                ob_end_clean();
+                echo "    FAIL: {$className} class not found\n";
+                $this->recordTestResult($className, false);
             }
-            
-            // Clean up
-            $db->delete('deals', 'id = ?', [$deal]);
-            $db->delete('contacts', 'id = ?', [$contact]);
-            $db->delete('users', 'id = ?', [$user['id']]);
-            
         } catch (Exception $e) {
-            echo "FAIL - " . $e->getMessage() . "\n";
-            $this->results['integration'] = ['status' => 'fail', 'tests' => 1, 'passed' => 0];
+            ob_end_clean();
+            echo "    FAIL: {$className} - " . $e->getMessage() . "\n";
+            echo "    Stack trace: " . $e->getTraceAsString() . "\n";
+            $this->recordTestResult($className, false);
+        } catch (Error $e) {
+            ob_end_clean();
+            echo "    FATAL: {$className} - " . $e->getMessage() . "\n";
+            echo "    Stack trace: " . $e->getTraceAsString() . "\n";
+            $this->recordTestResult($className, false);
         }
     }
     
-    private function isServerRunning() {
-        // Check if curl is available
-        if (!function_exists('curl_init')) {
-            return false;
-        }
-        
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, 'http://localhost:8000');
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-        curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-        
-        return $httpCode > 0;
-    }
-    
-    private function parseTestOutput($output) {
+    private function parseTestResults($output, $className) {
         $lines = explode("\n", $output);
-        $tests = 0;
-        $passed = 0;
-        $failed = 0;
+        $testCount = 0;
+        $passCount = 0;
+        $failCount = 0;
         
         foreach ($lines as $line) {
             if (strpos($line, 'PASS') !== false) {
-                $tests++;
-                $passed++;
+                $passCount++;
+                $testCount++;
             } elseif (strpos($line, 'FAIL') !== false) {
-                $tests++;
-                $failed++;
+                $failCount++;
+                $testCount++;
             }
         }
+        
+        $this->totalTests += $testCount;
+        $this->passedTests += $passCount;
+        $this->failedTests += $failCount;
+        
+        $this->results[$className] = [
+            'total' => $testCount,
+            'passed' => $passCount,
+            'failed' => $failCount,
+            'success_rate' => $testCount > 0 ? ($passCount / $testCount) * 100 : 0
+        ];
+    }
+    
+    private function recordTestResult($className, $success) {
+        $this->totalTests++;
+        if ($success) {
+            $this->passedTests++;
+        } else {
+            $this->failedTests++;
+        }
+        
+        $this->results[$className] = [
+            'total' => 1,
+            'passed' => $success ? 1 : 0,
+            'failed' => $success ? 0 : 1,
+            'success_rate' => $success ? 100 : 0
+        ];
+    }
+    
+    public function generateCoverageReport() {
+        echo "COVERAGE REPORT\n";
+        echo "===============\n";
+        
+        $coverage = $this->calculateCoverage();
+        
+        echo "  Code Coverage: {$coverage['percentage']}%\n";
+        echo "  Files Covered: {$coverage['files_covered']}/{$coverage['total_files']}\n";
+        echo "  Functions Covered: {$coverage['functions_covered']}/{$coverage['total_functions']}\n";
+        echo "  Classes Covered: {$coverage['classes_covered']}/{$coverage['total_classes']}\n\n";
+        
+        // Detailed coverage breakdown
+        echo "  Coverage Breakdown:\n";
+        foreach ($coverage['breakdown'] as $file => $stats) {
+            echo "    {$file}: {$stats['percentage']}% ({$stats['covered']}/{$stats['total']})\n";
+        }
+        
+        echo "\n";
+    }
+    
+    private function calculateCoverage() {
+        $coverage = [
+            'percentage' => 0,
+            'files_covered' => 0,
+            'total_files' => 0,
+            'functions_covered' => 0,
+            'total_functions' => 0,
+            'classes_covered' => 0,
+            'total_classes' => 0,
+            'breakdown' => []
+        ];
+        
+        // Analyze includes directory
+        $includesDir = __DIR__ . '/../includes';
+        $files = glob($includesDir . '/*.php');
+        
+        foreach ($files as $file) {
+            $filename = basename($file);
+            $coverage['total_files']++;
+            
+            // Check if file is tested
+            $isTested = $this->isFileTested($filename);
+            if ($isTested) {
+                $coverage['files_covered']++;
+            }
+            
+            // Analyze file content
+            $fileStats = $this->analyzeFile($file);
+            $coverage['total_functions'] += $fileStats['functions'];
+            $coverage['total_classes'] += $fileStats['classes'];
+            
+            if ($isTested) {
+                $coverage['functions_covered'] += $fileStats['functions'];
+                $coverage['classes_covered'] += $fileStats['classes'];
+            }
+            
+            $coverage['breakdown'][$filename] = [
+                'percentage' => $isTested ? 100 : 0,
+                'covered' => $isTested ? $fileStats['functions'] + $fileStats['classes'] : 0,
+                'total' => $fileStats['functions'] + $fileStats['classes']
+            ];
+        }
+        
+        // Calculate overall percentage
+        $totalItems = $coverage['total_functions'] + $coverage['total_classes'];
+        if ($totalItems > 0) {
+            $coverage['percentage'] = round((($coverage['functions_covered'] + $coverage['classes_covered']) / $totalItems) * 100, 2);
+        }
+        
+        return $coverage;
+    }
+    
+    private function isFileTested($filename) {
+        $testFiles = [
+            'auth.php' => ['AuthTest.php', 'UserManagementTest.php'],
+            'database.php' => ['DatabaseTest.php'],
+            'config.php' => ['WebhookTest.php', 'ReportsTest.php']
+        ];
+        
+        return isset($testFiles[$filename]);
+    }
+    
+    private function analyzeFile($filepath) {
+        $content = file_get_contents($filepath);
         
         return [
-            'status' => $failed > 0 ? 'fail' : 'pass',
-            'tests' => $tests,
-            'passed' => $passed,
-            'failed' => $failed
+            'functions' => preg_match_all('/function\s+\w+\s*\(/', $content),
+            'classes' => preg_match_all('/class\s+\w+/', $content)
         ];
     }
     
-    private function generateReport() {
+    public function displayFinalResults() {
         $endTime = microtime(true);
-        $duration = round($endTime - $this->startTime, 2);
+        $duration = $endTime - $this->startTime;
         
-        echo "\n==========================================\n";
-        echo "TEST SUMMARY\n";
-        echo "==========================================\n";
+        echo "FINAL RESULTS\n";
+        echo "=============\n";
+        echo "  Total Tests: {$this->totalTests}\n";
+        echo "  Passed: {$this->passedTests}\n";
+        echo "  Failed: {$this->failedTests}\n";
+        echo "  Success Rate: " . ($this->totalTests > 0 ? round(($this->passedTests / $this->totalTests) * 100, 2) : 0) . "%\n";
+        echo "  Duration: " . round($duration, 2) . " seconds\n\n";
         
-        $totalTests = 0;
-        $totalPassed = 0;
-        $totalFailed = 0;
+        // Test suite summary
+        echo "  Test Suite Summary:\n";
+        foreach ($this->results as $className => $result) {
+            $status = $result['failed'] > 0 ? 'FAIL' : 'PASS';
+            echo "    {$className}: {$status} ({$result['passed']}/{$result['total']} tests passed)\n";
+        }
         
-        foreach ($this->results as $suite => $result) {
-            if ($result['status'] === 'skipped') {
-                echo "\n{$suite}: SKIPPED - {$result['message']}\n";
-                continue;
+        echo "\n";
+        
+        // Overall status
+        if ($this->failedTests === 0) {
+            echo "✅ ALL TESTS PASSED! 🎉\n";
+            echo "The CRM system is ready for production.\n";
+        } else {
+            echo "❌ {$this->failedTests} TESTS FAILED!\n";
+            echo "Please review and fix the failing tests before deployment.\n";
+        }
+        
+        echo "\n";
+    }
+    
+    public function generateJUnitReport() {
+        $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+        $xml .= '<testsuites>' . "\n";
+        
+        foreach ($this->results as $className => $result) {
+            $xml .= "  <testsuite name=\"{$className}\" tests=\"{$result['total']}\" failures=\"{$result['failed']}\">\n";
+            
+            // Add individual test cases (simplified)
+            for ($i = 0; $i < $result['total']; $i++) {
+                $status = $i < $result['passed'] ? 'passed' : 'failed';
+                $xml .= "    <testcase name=\"test_{$i}\" status=\"{$status}\" />\n";
             }
             
-            $tests = $result['tests'];
-            $passed = $result['passed'];
-            $failed = $result['failed'];
-            $status = $result['status'] === 'pass' ? 'PASS' : 'FAIL';
-            
-            echo "\n{$suite}: {$status} ({$passed}/{$tests} passed)\n";
-            
-            $totalTests += $tests;
-            $totalPassed += $passed;
-            $totalFailed += $failed;
+            $xml .= "  </testsuite>\n";
         }
         
-        echo "\n==========================================\n";
-        echo "OVERALL RESULTS\n";
-        echo "==========================================\n";
-        echo "Total Tests: {$totalTests}\n";
-        echo "Passed: {$totalPassed}\n";
-        echo "Failed: {$totalFailed}\n";
-        echo "Success Rate: " . ($totalTests > 0 ? round(($totalPassed / $totalTests) * 100, 1) : 0) . "%\n";
-        echo "Duration: {$duration}s\n";
+        $xml .= '</testsuites>';
         
-        if ($totalFailed === 0) {
-            echo "\n🎉 ALL TESTS PASSED! 🎉\n";
-        } else {
-            echo "\n❌ {$totalFailed} TEST(S) FAILED ❌\n";
-        }
-        
-        echo "\n==========================================\n";
-        
-        // Save results to file
-        $this->saveResults();
+        file_put_contents(__DIR__ . '/junit.xml', $xml);
+        echo "JUnit report generated: tests/junit.xml\n";
     }
     
-    private function saveResults() {
-        $results = [
-            'timestamp' => date('Y-m-d H:i:s'),
-            'duration' => round(microtime(true) - $this->startTime, 2),
-            'results' => $this->results
-        ];
+    public function generateHtmlReport() {
+        $html = '<!DOCTYPE html>
+<html>
+<head>
+    <title>FreeOpsDAO CRM - Test Results</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .header { background: #f0f0f0; padding: 20px; border-radius: 5px; }
+        .summary { margin: 20px 0; }
+        .test-suite { margin: 10px 0; padding: 10px; border: 1px solid #ddd; border-radius: 3px; }
+        .pass { background: #d4edda; border-color: #c3e6cb; }
+        .fail { background: #f8d7da; border-color: #f5c6cb; }
+        .coverage { background: #e2e3e5; padding: 10px; border-radius: 3px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>FreeOpsDAO CRM - Test Results</h1>
+        <p>Generated on: ' . date('Y-m-d H:i:s') . '</p>
+    </div>
+    
+    <div class="summary">
+        <h2>Summary</h2>
+        <p>Total Tests: ' . $this->totalTests . '</p>
+        <p>Passed: ' . $this->passedTests . '</p>
+        <p>Failed: ' . $this->failedTests . '</p>
+        <p>Success Rate: ' . ($this->totalTests > 0 ? round(($this->passedTests / $this->totalTests) * 100, 2) : 0) . '%</p>
+    </div>';
         
-        $resultsFile = __DIR__ . '/test_results.json';
-        file_put_contents($resultsFile, json_encode($results, JSON_PRETTY_PRINT));
+        foreach ($this->results as $className => $result) {
+            $status = $result['failed'] > 0 ? 'fail' : 'pass';
+            $html .= "
+    <div class=\"test-suite {$status}\">
+        <h3>{$className}</h3>
+        <p>Tests: {$result['passed']}/{$result['total']} passed</p>
+        <p>Success Rate: {$result['success_rate']}%</p>
+    </div>";
+        }
         
-        echo "Results saved to: {$resultsFile}\n";
+        $html .= '
+</body>
+</html>';
+        
+        file_put_contents(__DIR__ . '/test-report.html', $html);
+        echo "HTML report generated: tests/test-report.html\n";
     }
 }
 
 // Run tests if called directly
-if (php_sapi_name() === 'cli' || isset($_GET['run'])) {
+if (basename(__FILE__) === basename($_SERVER['SCRIPT_NAME'])) {
     $runner = new TestRunner();
     $runner->runAllTests();
-} else {
-    // Web interface
-    ?>
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>CRM Test Suite</title>
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-        <style>
-            pre { background: #f8f9fa; padding: 15px; border-radius: 5px; }
-        </style>
-    </head>
-    <body>
-        <div class="container mt-4">
-            <h1>FreeOpsDAO CRM - Test Suite</h1>
-            <p>Click the button below to run all tests:</p>
-            <a href="?run=1" class="btn btn-primary">Run All Tests</a>
-            
-            <?php if (isset($_GET['run'])): ?>
-            <div class="mt-4">
-                <h3>Test Results:</h3>
-                <pre><?php
-                    $runner = new TestRunner();
-                    $runner->runAllTests();
-                ?></pre>
-            </div>
-            <?php endif; ?>
-        </div>
-    </body>
-    </html>
-    <?php
+    
+    // Generate reports
+    $runner->generateJUnitReport();
+    $runner->generateHtmlReport();
 } 

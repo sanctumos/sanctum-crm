@@ -20,8 +20,9 @@ class Auth {
     }
     
     private function initSession() {
+        if (defined('CRM_TESTING')) return; // Skip session in test mode
         if (session_status() === PHP_SESSION_NONE) {
-            session_name(SESSION_NAME);
+            session_name('crm_session');
             session_start();
         }
     }
@@ -97,9 +98,8 @@ class Auth {
         if ($this->user) {
             logActivity($this->user['id'], 'logout', 'User logged out');
         }
-        
         $this->user = null;
-        session_destroy();
+        if (!defined('CRM_TESTING')) session_destroy();
         return true;
     }
     
@@ -132,7 +132,7 @@ class Auth {
                     'code' => 401
                 ]);
             } else {
-                header('Location: /login.php');
+                if (!defined('CRM_TESTING')) header('Location: /login.php');
             }
             exit;
         }
@@ -149,7 +149,7 @@ class Auth {
                     'code' => 403
                 ]);
             } else {
-                header('Location: /pages/error.php?error=access_denied');
+                if (!defined('CRM_TESTING')) header('Location: /pages/error.php?error=access_denied');
             }
             exit;
         }

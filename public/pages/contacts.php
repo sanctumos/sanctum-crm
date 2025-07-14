@@ -4,6 +4,15 @@
  * FreeOpsDAO CRM - Contact Management
  */
 
+define('CRM_LOADED', true);
+require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../includes/database.php';
+require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/layout.php';
+
+$auth = new Auth();
+$auth->requireAuth();
+
 // Get database instance
 $db = Database::getInstance();
 
@@ -33,411 +42,442 @@ if ($status_filter) {
 $sql = "SELECT * FROM contacts WHERE $where ORDER BY created_at DESC";
 $contacts = $db->fetchAll($sql, $params);
 
-// Get current user
-$user = $auth->getUser();
+// Render the page using the template system
+renderHeader('Contacts');
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Contacts - <?php echo APP_NAME; ?></title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        .sidebar {
-            min-height: 100vh;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-        .sidebar .nav-link {
-            color: rgba(255, 255, 255, 0.8);
-            border-radius: 10px;
-            margin: 2px 0;
-            transition: all 0.3s ease;
-        }
-        .sidebar .nav-link:hover,
-        .sidebar .nav-link.active {
-            color: white;
-            background: rgba(255, 255, 255, 0.1);
-            transform: translateX(5px);
-        }
-        .main-content {
-            background: #f8f9fa;
-            min-height: 100vh;
-        }
-        .card {
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-        }
-        .table {
-            border-radius: 10px;
-            overflow: hidden;
-        }
-        .btn-action {
-            border-radius: 20px;
-            padding: 6px 12px;
-            font-size: 0.875rem;
-        }
-        .contact-card {
-            transition: transform 0.3s ease;
-        }
-        .contact-card:hover {
-            transform: translateY(-2px);
-        }
-    </style>
-</head>
-<body>
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar -->
-            <div class="col-md-3 col-lg-2 px-0">
-                <div class="sidebar p-3">
-                    <div class="text-center mb-4">
-                        <h4 class="text-white mb-0">
-                            <i class="fas fa-users"></i> <?php echo APP_NAME; ?>
-                        </h4>
+
+<style>
+    .card {
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+    }
+    .table {
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    .btn-action {
+        border-radius: 20px;
+        padding: 6px 12px;
+        font-size: 0.875rem;
+    }
+    .contact-card {
+        transition: transform 0.3s ease;
+    }
+    .contact-card:hover {
+        transform: translateY(-2px);
+    }
+</style>
+
+<!-- Filters and Actions -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <form class="row g-3">
+                    <div class="col-md-4">
+                        <select name="type" class="form-select" onchange="this.form.submit()">
+                            <option value="">All Types</option>
+                            <option value="lead" <?php echo $type_filter === 'lead' ? 'selected' : ''; ?>>Leads</option>
+                            <option value="customer" <?php echo $type_filter === 'customer' ? 'selected' : ''; ?>>Customers</option>
+                        </select>
                     </div>
-                    
-                    <nav class="nav flex-column">
-                        <a class="nav-link" href="/index.php">
-                            <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+                    <div class="col-md-4">
+                        <select name="status" class="form-select" onchange="this.form.submit()">
+                            <option value="">All Statuses</option>
+                            <option value="new" <?php echo $status_filter === 'new' ? 'selected' : ''; ?>>New</option>
+                            <option value="qualified" <?php echo $status_filter === 'qualified' ? 'selected' : ''; ?>>Qualified</option>
+                            <option value="active" <?php echo $status_filter === 'active' ? 'selected' : ''; ?>>Active</option>
+                            <option value="inactive" <?php echo $status_filter === 'inactive' ? 'selected' : ''; ?>>Inactive</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-outline-primary">
+                            <i class="fas fa-filter me-2"></i>Filter
+                        </button>
+                        <a href="/index.php?page=contacts" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-2"></i>Clear
                         </a>
-                        <a class="nav-link active" href="/index.php?page=contacts">
-                            <i class="fas fa-address-book me-2"></i> Contacts
-                        </a>
-                        <a class="nav-link" href="/index.php?page=deals">
-                            <i class="fas fa-handshake me-2"></i> Deals
-                        </a>
-                        <?php if ($auth->isAdmin()): ?>
-                        <a class="nav-link" href="/index.php?page=users">
-                            <i class="fas fa-users-cog me-2"></i> Users
-                        </a>
-                        <?php endif; ?>
-                        <a class="nav-link" href="/index.php?page=reports">
-                            <i class="fas fa-chart-bar me-2"></i> Reports
-                        </a>
-                    </nav>
-                </div>
+                    </div>
+                </form>
             </div>
-            
-            <!-- Main Content -->
-            <div class="col-md-9 col-lg-10 px-0">
-                <div class="main-content p-4">
-                    <!-- Top Navigation -->
-                    <nav class="navbar navbar-expand-lg navbar-light bg-white rounded-3 mb-4 shadow-sm">
-                        <div class="container-fluid">
-                            <span class="navbar-brand mb-0 h1">Contacts</span>
-                            <div class="navbar-nav ms-auto">
-                                <div class="nav-item dropdown">
-                                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                                        <i class="fas fa-user-circle"></i> 
-                                        <?php echo htmlspecialchars($user['first_name'] . ' ' . $user['last_name']); ?>
-                                    </a>
-                                    <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Settings</a></li>
-                                        <li><hr class="dropdown-divider"></li>
-                                        <li><a class="dropdown-item" href="/logout.php"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </nav>
-                    
-                    <!-- Filters and Actions -->
-                    <div class="card mb-4">
-                        <div class="card-body">
-                            <div class="row align-items-center">
-                                <div class="col-md-8">
-                                    <form class="row g-3">
-                                        <div class="col-md-4">
-                                            <select name="type" class="form-select" onchange="this.form.submit()">
-                                                <option value="">All Types</option>
-                                                <option value="lead" <?php echo $type_filter === 'lead' ? 'selected' : ''; ?>>Leads</option>
-                                                <option value="customer" <?php echo $type_filter === 'customer' ? 'selected' : ''; ?>>Customers</option>
-                                            </select>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <select name="status" class="form-select" onchange="this.form.submit()">
-                                                <option value="">All Statuses</option>
-                                                <option value="new" <?php echo $status_filter === 'new' ? 'selected' : ''; ?>>New</option>
-                                                <option value="qualified" <?php echo $status_filter === 'qualified' ? 'selected' : ''; ?>>Qualified</option>
-                                                <option value="active" <?php echo $status_filter === 'active' ? 'selected' : ''; ?>>Active</option>
-                                                <option value="inactive" <?php echo $status_filter === 'inactive' ? 'selected' : ''; ?>>Inactive</option>
-                                            </select>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <button type="submit" class="btn btn-outline-primary">
-                                                <i class="fas fa-filter me-2"></i>Filter
-                                            </button>
-                                            <a href="/index.php?page=contacts" class="btn btn-outline-secondary">
-                                                <i class="fas fa-times me-2"></i>Clear
-                                            </a>
-                                        </div>
-                                    </form>
-                                </div>
-                                <div class="col-md-4 text-end">
-                                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addContactModal">
-                                        <i class="fas fa-plus me-2"></i>Add Contact
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
+            <div class="col-md-4 text-end">
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addContactModal">
+                    <i class="fas fa-plus me-2"></i>Add Contact
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Contacts List -->
+<div class="row">
+    <?php foreach ($contacts as $contact): ?>
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card contact-card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h5 class="card-title mb-1">
+                            <?php echo htmlspecialchars($contact['first_name'] . ' ' . $contact['last_name']); ?>
+                        </h5>
+                        <p class="text-muted mb-0"><?php echo htmlspecialchars($contact['email']); ?></p>
                     </div>
-                    
-                    <!-- Contacts List -->
-                    <div class="row">
-                        <?php foreach ($contacts as $contact): ?>
-                        <div class="col-md-6 col-lg-4 mb-4">
-                            <div class="card contact-card h-100">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-start mb-3">
-                                        <div>
-                                            <h5 class="card-title mb-1">
-                                                <?php echo htmlspecialchars($contact['first_name'] . ' ' . $contact['last_name']); ?>
-                                            </h5>
-                                            <p class="text-muted mb-0"><?php echo htmlspecialchars($contact['email']); ?></p>
-                                        </div>
-                                        <div class="dropdown">
-                                            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown">
-                                                <i class="fas fa-ellipsis-v"></i>
-                                            </button>
-                                            <ul class="dropdown-menu">
-                                                <li><a class="dropdown-item" href="#" onclick="editContact(<?php echo $contact['id']; ?>)">
-                                                    <i class="fas fa-edit me-2"></i>Edit
-                                                </a></li>
-                                                <?php if ($contact['contact_type'] === 'lead'): ?>
-                                                <li><a class="dropdown-item" href="#" onclick="convertContact(<?php echo $contact['id']; ?>)">
-                                                    <i class="fas fa-exchange-alt me-2"></i>Convert to Customer
-                                                </a></li>
-                                                <?php endif; ?>
-                                                <li><hr class="dropdown-divider"></li>
-                                                <li><a class="dropdown-item text-danger" href="#" onclick="deleteContact(<?php echo $contact['id']; ?>)">
-                                                    <i class="fas fa-trash me-2"></i>Delete
-                                                </a></li>
-                                            </ul>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="mb-3">
-                                        <span class="badge bg-<?php echo $contact['contact_type'] === 'lead' ? 'warning' : 'success'; ?> me-2">
-                                            <?php echo ucfirst($contact['contact_type']); ?>
-                                        </span>
-                                        <span class="badge bg-secondary"><?php echo ucfirst($contact['contact_status']); ?></span>
-                                    </div>
-                                    
-                                    <?php if ($contact['company']): ?>
-                                    <p class="card-text mb-2">
-                                        <i class="fas fa-building me-2 text-muted"></i>
-                                        <?php echo htmlspecialchars($contact['company']); ?>
-                                    </p>
-                                    <?php endif; ?>
-                                    
-                                    <?php if ($contact['phone']): ?>
-                                    <p class="card-text mb-2">
-                                        <i class="fas fa-phone me-2 text-muted"></i>
-                                        <?php echo htmlspecialchars($contact['phone']); ?>
-                                    </p>
-                                    <?php endif; ?>
-                                    
-                                    <?php if ($contact['evm_address']): ?>
-                                    <p class="card-text mb-2">
-                                        <i class="fab fa-ethereum me-2 text-muted"></i>
-                                        <small class="text-muted"><?php echo substr($contact['evm_address'], 0, 10) . '...'; ?></small>
-                                    </p>
-                                    <?php endif; ?>
-                                    
-                                    <?php if ($contact['twitter_handle']): ?>
-                                    <p class="card-text mb-2">
-                                        <i class="fab fa-twitter me-2 text-muted"></i>
-                                        <?php echo htmlspecialchars($contact['twitter_handle']); ?>
-                                    </p>
-                                    <?php endif; ?>
-                                    
-                                    <div class="text-muted small">
-                                        <i class="fas fa-calendar me-1"></i>
-                                        Added <?php echo date('M j, Y', strtotime($contact['created_at'])); ?>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <?php endforeach; ?>
-                        
-                        <?php if (empty($contacts)): ?>
-                        <div class="col-12">
-                            <div class="text-center py-5">
-                                <i class="fas fa-users fa-3x text-muted mb-3"></i>
-                                <h4 class="text-muted">No contacts found</h4>
-                                <p class="text-muted">Get started by adding your first contact.</p>
-                                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addContactModal">
-                                    <i class="fas fa-plus me-2"></i>Add Contact
-                                </button>
-                            </div>
-                        </div>
-                        <?php endif; ?>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" onclick="editContact(<?php echo $contact['id']; ?>)">
+                                <i class="fas fa-edit me-2"></i>Edit
+                            </a></li>
+                            <li><a class="dropdown-item" href="#" onclick="viewContact(<?php echo $contact['id']; ?>)">
+                                <i class="fas fa-eye me-2"></i>View
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="#" onclick="deleteContact(<?php echo $contact['id']; ?>)">
+                                <i class="fas fa-trash me-2"></i>Delete
+                            </a></li>
+                        </ul>
                     </div>
+                </div>
+                
+                <div class="mb-3">
+                    <?php if ($contact['phone']): ?>
+                    <p class="mb-1"><i class="fas fa-phone me-2 text-muted"></i><?php echo htmlspecialchars($contact['phone']); ?></p>
+                    <?php endif; ?>
+                    
+                    <?php if ($contact['company']): ?>
+                    <p class="mb-1"><i class="fas fa-building me-2 text-muted"></i><?php echo htmlspecialchars($contact['company']); ?></p>
+                    <?php endif; ?>
+                    
+                    <?php if ($contact['position']): ?>
+                    <p class="mb-1"><i class="fas fa-briefcase me-2 text-muted"></i><?php echo htmlspecialchars($contact['position']); ?></p>
+                    <?php endif; ?>
+                </div>
+                
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="badge bg-<?php echo $contact['contact_type'] === 'lead' ? 'warning' : 'success'; ?> me-2">
+                            <?php echo ucfirst($contact['contact_type']); ?>
+                        </span>
+                        <span class="badge bg-secondary">
+                            <?php echo ucfirst($contact['contact_status']); ?>
+                        </span>
+                    </div>
+                    <small class="text-muted">
+                        <?php echo date('M j, Y', strtotime($contact['created_at'])); ?>
+                    </small>
                 </div>
             </div>
         </div>
     </div>
-    
-    <!-- Add Contact Modal -->
-    <div class="modal fade" id="addContactModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
+    <?php endforeach; ?>
+</div>
+
+<?php if (empty($contacts)): ?>
+<div class="text-center py-5">
+    <i class="fas fa-users fa-3x text-muted mb-3"></i>
+    <h5>No Contacts Found</h5>
+    <p class="text-muted">Get started by adding your first contact.</p>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addContactModal">
+        <i class="fas fa-plus me-2"></i>Add Contact
+    </button>
+</div>
+<?php endif; ?>
+
+<!-- Add Contact Modal -->
+<div class="modal fade" id="addContactModal" tabindex="-1" aria-labelledby="addContactModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="addContactForm">
                 <div class="modal-header">
-                    <h5 class="modal-title">Add New Contact</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <h5 class="modal-title" id="addContactModalLabel">Add New Contact</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form id="addContactForm">
-                    <div class="modal-body">
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">First Name *</label>
-                                <input type="text" class="form-control" name="first_name" required>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Last Name *</label>
-                                <input type="text" class="form-control" name="last_name" required>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="first_name" class="form-label">First Name *</label>
+                                <input type="text" class="form-control" id="first_name" name="first_name" required>
                             </div>
                         </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Email *</label>
-                                <input type="email" class="form-control" name="email" required>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Phone</label>
-                                <input type="tel" class="form-control" name="phone">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="last_name" class="form-label">Last Name *</label>
+                                <input type="text" class="form-control" id="last_name" name="last_name" required>
                             </div>
                         </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Company</label>
-                                <input type="text" class="form-control" name="company">
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email *</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="phone" class="form-label">Phone</label>
+                        <input type="tel" class="form-control" id="phone" name="phone">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="company" class="form-label">Company</label>
+                                <input type="text" class="form-control" id="company" name="company">
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Contact Type</label>
-                                <select class="form-select" name="contact_type">
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="position" class="form-label">Position</label>
+                                <input type="text" class="form-control" id="position" name="position">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="contact_type" class="form-label">Type</label>
+                                <select class="form-select" id="contact_type" name="contact_type" required>
                                     <option value="lead">Lead</option>
                                     <option value="customer">Customer</option>
                                 </select>
                             </div>
                         </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">EVM Address</label>
-                                <input type="text" class="form-control" name="evm_address" placeholder="0x...">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="contact_status" class="form-label">Status</label>
+                                <select class="form-select" id="contact_status" name="contact_status" required>
+                                    <option value="new">New</option>
+                                    <option value="qualified">Qualified</option>
+                                    <option value="active">Active</option>
+                                    <option value="inactive">Inactive</option>
+                                </select>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Twitter Handle</label>
-                                <input type="text" class="form-control" name="twitter_handle" placeholder="@username">
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">LinkedIn Profile</label>
-                                <input type="url" class="form-control" name="linkedin_profile">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Telegram Username</label>
-                                <input type="text" class="form-control" name="telegram_username">
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label class="form-label">Notes</label>
-                            <textarea class="form-control" name="notes" rows="3"></textarea>
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Add Contact</button>
+                    <div class="mb-3">
+                        <label for="source" class="form-label">Source</label>
+                        <select class="form-select" id="source" name="source">
+                            <option value="">Select Source</option>
+                            <option value="website">Website</option>
+                            <option value="referral">Referral</option>
+                            <option value="social_media">Social Media</option>
+                            <option value="email_campaign">Email Campaign</option>
+                            <option value="cold_call">Cold Call</option>
+                            <option value="other">Other</option>
+                        </select>
                     </div>
-                </form>
-            </div>
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Contact</button>
+                </div>
+            </form>
         </div>
     </div>
+</div>
+
+<!-- Edit Contact Modal -->
+<div class="modal fade" id="editContactModal" tabindex="-1" aria-labelledby="editContactModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="editContactForm">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editContactModalLabel">Edit Contact</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="edit_contact_id" name="contact_id">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="edit_first_name" class="form-label">First Name *</label>
+                                <input type="text" class="form-control" id="edit_first_name" name="first_name" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="edit_last_name" class="form-label">Last Name *</label>
+                                <input type="text" class="form-control" id="edit_last_name" name="last_name" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_email" class="form-label">Email *</label>
+                        <input type="email" class="form-control" id="edit_email" name="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_phone" class="form-label">Phone</label>
+                        <input type="tel" class="form-control" id="edit_phone" name="phone">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="edit_company" class="form-label">Company</label>
+                                <input type="text" class="form-control" id="edit_company" name="company">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="edit_position" class="form-label">Position</label>
+                                <input type="text" class="form-control" id="edit_position" name="position">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="edit_contact_type" class="form-label">Type</label>
+                                <select class="form-select" id="edit_contact_type" name="contact_type" required>
+                                    <option value="lead">Lead</option>
+                                    <option value="customer">Customer</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="edit_contact_status" class="form-label">Status</label>
+                                <select class="form-select" id="edit_contact_status" name="contact_status" required>
+                                    <option value="new">New</option>
+                                    <option value="qualified">Qualified</option>
+                                    <option value="active">Active</option>
+                                    <option value="inactive">Inactive</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_source" class="form-label">Source</label>
+                        <select class="form-select" id="edit_source" name="source">
+                            <option value="">Select Source</option>
+                            <option value="website">Website</option>
+                            <option value="referral">Referral</option>
+                            <option value="social_media">Social Media</option>
+                            <option value="email_campaign">Email Campaign</option>
+                            <option value="cold_call">Cold Call</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="edit_notes" name="notes" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Contact</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Handle form submissions
+document.getElementById('addContactForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const data = Object.fromEntries(formData.entries());
     
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Add contact form submission
-        document.getElementById('addContactForm').addEventListener('submit', function(e) {
-            e.preventDefault();
+    fetch('/api/v1/contacts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + result.error);
+        }
+    })
+    .catch(error => {
+        alert('Network error: ' + error.message);
+    });
+});
+
+document.getElementById('editContactForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const data = Object.fromEntries(formData.entries());
+    const contactId = data.contact_id;
+    delete data.contact_id;
+    
+    fetch(`/api/v1/contacts/${contactId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + result.error);
+        }
+    })
+    .catch(error => {
+        alert('Network error: ' + error.message);
+    });
+});
+
+function editContact(contactId) {
+    // Fetch contact data and populate form
+    fetch(`/api/v1/contacts/${contactId}`)
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            const contact = result.contact;
+            document.getElementById('edit_contact_id').value = contact.id;
+            document.getElementById('edit_first_name').value = contact.first_name;
+            document.getElementById('edit_last_name').value = contact.last_name;
+            document.getElementById('edit_email').value = contact.email;
+            document.getElementById('edit_phone').value = contact.phone || '';
+            document.getElementById('edit_company').value = contact.company || '';
+            document.getElementById('edit_position').value = contact.position || '';
+            document.getElementById('edit_contact_type').value = contact.contact_type;
+            document.getElementById('edit_contact_status').value = contact.contact_status;
+            document.getElementById('edit_source').value = contact.source || '';
+            document.getElementById('edit_notes').value = contact.notes || '';
             
-            const formData = new FormData(this);
-            const data = Object.fromEntries(formData);
-            
-            fetch('/api/v1/contacts', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(data)
-            })
-            .then(response => response.json())
-            .then(result => {
-                if (result.id) {
-                    location.reload();
-                } else {
-                    alert('Error: ' + result.error);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('An error occurred while adding the contact.');
-            });
+            new bootstrap.Modal(document.getElementById('editContactModal')).show();
+        } else {
+            alert('Error: ' + result.error);
+        }
+    })
+    .catch(error => {
+        alert('Network error: ' + error.message);
+    });
+}
+
+function viewContact(contactId) {
+    // Redirect to contact detail page or show in modal
+    alert('View contact functionality - Contact ID: ' + contactId);
+}
+
+function deleteContact(contactId) {
+    if (confirm('Are you sure you want to delete this contact? This action cannot be undone.')) {
+        fetch(`/api/v1/contacts/${contactId}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + result.error);
+            }
+        })
+        .catch(error => {
+            alert('Network error: ' + error.message);
         });
-        
-        function editContact(id) {
-            // TODO: Implement edit functionality
-            alert('Edit functionality coming soon!');
-        }
-        
-        function convertContact(id) {
-            if (confirm('Convert this lead to a customer?')) {
-                fetch(`/api/v1/contacts/${id}/convert`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                })
-                .then(response => response.json())
-                .then(result => {
-                    if (result.id) {
-                        location.reload();
-                    } else {
-                        alert('Error: ' + result.error);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('An error occurred while converting the contact.');
-                });
-            }
-        }
-        
-        function deleteContact(id) {
-            if (confirm('Are you sure you want to delete this contact?')) {
-                fetch(`/api/v1/contacts/${id}`, {
-                    method: 'DELETE'
-                })
-                .then(response => {
-                    if (response.ok) {
-                        location.reload();
-                    } else {
-                        alert('Error deleting contact');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('An error occurred while deleting the contact.');
-                });
-            }
-        }
-    </script>
-</body>
-</html> 
+    }
+}
+</script>
+
+<?php
+renderFooter();
+?> 
