@@ -412,7 +412,10 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
             $contact = $db->fetchOne("SELECT * FROM contacts WHERE id = ?", [$contactId]);
             
             http_response_code(201);
-            echo json_encode($contact);
+            echo json_encode([
+                'success' => true,
+                'contact' => $contact
+            ]);
             break;
             
         case 'PUT':
