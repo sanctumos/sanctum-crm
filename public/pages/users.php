@@ -160,10 +160,20 @@ function renderUsersTable() {
             <td><span class="badge bg-${user.role === 'admin' ? 'danger' : 'secondary'} role-badge">${user.role}</span></td>
             <td><span class="badge bg-${user.is_active ? 'success' : 'warning'}">${user.is_active ? 'Active' : 'Inactive'}</span></td>
             <td>
-                <code class="small">${user.api_key ? user.api_key.substring(0, 8) + '...' : 'None'}</code>
-                <button class="btn btn-sm btn-outline-primary ms-1" onclick="regenerateApiKey(${user.id})" title="Regenerate API Key">
-                    <i class="fas fa-sync-alt"></i>
-                </button>
+                <div class="d-flex align-items-center">
+                    <code class="small" id="api-key-${user.id}">${user.api_key ? user.api_key.substring(0, 8) + '...' : 'None'}</code>
+                    ${user.api_key ? `
+                        <button class="btn btn-sm btn-outline-secondary ms-1" onclick="toggleApiKey(${user.id})" title="Show/Hide API Key" id="toggle-btn-${user.id}">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-info ms-1" onclick="copyApiKey(${user.id})" title="Copy API Key" id="copy-btn-${user.id}">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    ` : ''}
+                    <button class="btn btn-sm btn-outline-primary ms-1" onclick="regenerateApiKey(${user.id})" title="Regenerate API Key">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
             </td>
             <td>
                 <button class="btn btn-sm btn-outline-primary" onclick="editUser(${user.id})" title="Edit">
@@ -305,6 +315,60 @@ async function deleteUser(userId) {
     } catch (err) {
         showAlert('Network error while deleting user', 'danger');
     }
+}
+
+function toggleApiKey(userId) {
+    const user = users.find(u => u.id == userId);
+    if (!user || !user.api_key) return;
+    
+    const apiKeyElement = document.getElementById(`api-key-${userId}`);
+    const toggleBtn = document.getElementById(`toggle-btn-${userId}`);
+    const icon = toggleBtn.querySelector('i');
+    
+    if (apiKeyElement.textContent.includes('...')) {
+        // Show full API key
+        apiKeyElement.textContent = user.api_key;
+        icon.className = 'fas fa-eye-slash';
+        toggleBtn.title = 'Hide API Key';
+        toggleBtn.classList.remove('btn-outline-secondary');
+        toggleBtn.classList.add('btn-outline-warning');
+    } else {
+        // Hide API key
+        apiKeyElement.textContent = user.api_key.substring(0, 8) + '...';
+        icon.className = 'fas fa-eye';
+        toggleBtn.title = 'Show API Key';
+        toggleBtn.classList.remove('btn-outline-warning');
+        toggleBtn.classList.add('btn-outline-secondary');
+    }
+}
+
+function copyApiKey(userId) {
+    const user = users.find(u => u.id == userId);
+    if (!user || !user.api_key) return;
+    
+    navigator.clipboard.writeText(user.api_key).then(() => {
+        const copyBtn = document.getElementById(`copy-btn-${userId}`);
+        const icon = copyBtn.querySelector('i');
+        const originalIcon = icon.className;
+        const originalTitle = copyBtn.title;
+        
+        // Visual feedback
+        icon.className = 'fas fa-check';
+        copyBtn.title = 'Copied!';
+        copyBtn.classList.remove('btn-outline-info');
+        copyBtn.classList.add('btn-outline-success');
+        
+        setTimeout(() => {
+            icon.className = originalIcon;
+            copyBtn.title = originalTitle;
+            copyBtn.classList.remove('btn-outline-success');
+            copyBtn.classList.add('btn-outline-info');
+        }, 2000);
+        
+        showAlert('API key copied to clipboard!', 'success');
+    }).catch(() => {
+        showAlert('Failed to copy API key to clipboard', 'danger');
+    });
 }
 
 function showAlert(message, type) {
