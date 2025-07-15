@@ -6,17 +6,31 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
     renderFooter();
     return;
 }
+
 $contactId = (int)$_GET['id'];
 $contact = $db->fetchOne('SELECT * FROM contacts WHERE id = ?', [$contactId]);
-renderHeader('View Contact');
+
 if (!$contact) {
+    renderHeader('View Contact');
     echo '<div class="alert alert-danger mt-4">Contact not found.</div>';
     renderFooter();
     return;
 }
+
+renderHeader('View Contact');
 ?>
 <div class="container mt-4">
-    <a href="/index.php?page=contacts" class="btn btn-secondary mb-3">&larr; Back to Contacts</a>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <a href="/index.php?page=contacts" class="btn btn-secondary">&larr; Back to Contacts</a>
+        <div class="btn-group">
+            <a href="/index.php?page=edit_contact&id=<?php echo $contactId; ?>" class="btn btn-primary">
+                <i class="fas fa-edit me-2"></i>Edit Contact
+            </a>
+        </div>
+    </div>
+    
+
+    <!-- View Mode -->
     <div class="card shadow-sm">
         <div class="card-body">
             <h3 class="card-title mb-2">
@@ -77,5 +91,6 @@ if (!$contact) {
         </div>
     </div>
 </div>
+
 <?php
 renderFooter(); 

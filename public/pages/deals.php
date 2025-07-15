@@ -22,6 +22,44 @@ renderHeader('Deals');
     .probability { font-size: 0.9em; }
     .filter-section { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
     .view-toggle .btn { margin-right: 10px; }
+    
+    /* Select2 custom styling */
+    .select2-container {
+        width: 100% !important;
+        display: block !important;
+    }
+    .select2-selection {
+        border: 1px solid #ced4da !important;
+        border-radius: 0.375rem !important;
+        height: 38px !important;
+        background-color: #fff !important;
+    }
+    .select2-selection--single {
+        line-height: 36px !important;
+        padding: 0.375rem 0.75rem !important;
+    }
+    .select2-selection__rendered {
+        line-height: 36px !important;
+        padding-left: 0 !important;
+    }
+    .select2-selection__arrow {
+        height: 36px !important;
+    }
+    .select2-dropdown {
+        border: 1px solid #ced4da !important;
+        border-radius: 0.375rem !important;
+        z-index: 9999 !important;
+    }
+    .select2-container--open {
+        z-index: 9999 !important;
+    }
+    /* Force Select2 to be visible in modal */
+    .modal .select2-container {
+        z-index: 9999 !important;
+    }
+    .modal .select2-dropdown {
+        z-index: 9999 !important;
+    }
 </style>
 
 <div class="deals-card">
@@ -216,7 +254,39 @@ function setupEventListeners() {
         currentDealId = null;
         document.getElementById('dealModalLabel').textContent = 'Add Deal';
         document.getElementById('dealForm').reset();
-        new bootstrap.Modal(document.getElementById('dealModal')).show();
+        
+        const modal = new bootstrap.Modal(document.getElementById('dealModal'));
+        
+        // Initialize Select2 after modal is fully shown
+        document.getElementById('dealModal').addEventListener('shown.bs.modal', function() {
+            console.log('Modal shown, initializing Select2...');
+            console.log('Contacts loaded:', contacts.length);
+            console.log('Contact select element:', document.getElementById('contact_id'));
+            console.log('Contact select options:', document.getElementById('contact_id').options.length);
+            
+            if ($('#contact_id').data('select2')) {
+                $('#contact_id').select2('destroy');
+            }
+            
+            try {
+                // Hide the original select first
+                $('#contact_id').hide();
+                
+                $('#contact_id').select2({
+                    placeholder: 'Search for a contact...',
+                    allowClear: true,
+                    width: '100%',
+                    dropdownParent: $('#dealModal')
+                });
+                console.log('Select2 initialized successfully');
+                console.log('Select2 container created:', $('.select2-container').length);
+                console.log('Select2 container visible:', $('.select2-container').is(':visible'));
+            } catch (error) {
+                console.error('Select2 initialization failed:', error);
+            }
+        });
+        
+        modal.show();
     });
     
     document.getElementById('dealForm').addEventListener('submit', function(e) {
@@ -250,6 +320,7 @@ async function loadDeals() {
 
 async function loadContacts() {
     try {
+        console.log('Loading contacts...');
         const response = await fetch('/api/v1/contacts', {
             credentials: 'include'
         });
@@ -257,7 +328,10 @@ async function loadContacts() {
         
         if (response.ok) {
             contacts = result.contacts || [];
+            console.log('Contacts loaded:', contacts.length, contacts);
             populateContactSelect();
+        } else {
+            console.error('Failed to load contacts:', result.error);
         }
     } catch (err) {
         console.error('Failed to load contacts:', err);
@@ -290,6 +364,11 @@ function populateContactSelect() {
         option.textContent = `${contact.first_name} ${contact.last_name} (${contact.email})`;
         select.appendChild(option);
     });
+    
+    // If Select2 is already initialized, update it
+    if ($('#contact_id').data('select2')) {
+        $('#contact_id').trigger('change');
+    }
 }
 
 function populateUserSelects() {
@@ -487,7 +566,33 @@ function editDeal(dealId) {
     document.getElementById('expected_close_date').value = deal.expected_close_date || '';
     document.getElementById('description').value = deal.description || '';
     
-    new bootstrap.Modal(document.getElementById('dealModal')).show();
+    const modal = new bootstrap.Modal(document.getElementById('dealModal'));
+    
+    // Initialize Select2 after modal is fully shown
+    document.getElementById('dealModal').addEventListener('shown.bs.modal', function() {
+        console.log('Modal shown, initializing Select2 for edit...');
+        
+        if ($('#contact_id').data('select2')) {
+            $('#contact_id').select2('destroy');
+        }
+        
+                    try {
+                // Hide the original select first
+                $('#contact_id').hide();
+                
+                $('#contact_id').select2({
+                    placeholder: 'Search for a contact...',
+                    allowClear: true,
+                    width: '100%',
+                    dropdownParent: $('#dealModal')
+                });
+                console.log('Select2 initialized successfully for edit');
+            } catch (error) {
+                console.error('Select2 initialization failed for edit:', error);
+            }
+    });
+    
+    modal.show();
 }
 
 async function deleteDeal(dealId) {

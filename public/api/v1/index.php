@@ -416,7 +416,6 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
             break;
             
         case 'PUT':
-        case 'POST':
             if (!$id) {
                 debugLog("contact PUT: missing id");
                 http_response_code(400);
@@ -488,7 +487,10 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
             debugLog("contact update result=$result");
             
             $contact = $db->fetchOne("SELECT * FROM contacts WHERE id = ?", [$id]);
-            echo json_encode($contact);
+            echo json_encode([
+                'success' => true,
+                'contact' => $contact
+            ]);
             break;
             
         case 'DELETE':

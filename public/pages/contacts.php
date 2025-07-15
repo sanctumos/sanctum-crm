@@ -14,7 +14,12 @@ $contact_id = $_GET['id'] ?? null;
 // Get filter parameters
 $type_filter = $_GET['type'] ?? '';
 $status_filter = $_GET['status'] ?? '';
-$view_mode = $_GET['view'] ?? 'cards'; // Default to cards view
+
+// Handle view mode with session persistence
+if (isset($_GET['view'])) {
+    $_SESSION['contacts_view_mode'] = $_GET['view'];
+}
+$view_mode = $_SESSION['contacts_view_mode'] ?? 'cards'; // Default to cards view
 
 // Build query
 $where = "1=1";
@@ -142,23 +147,10 @@ renderHeader('Contacts');
                         </h5>
                         <p class="text-muted mb-0"><?php echo htmlspecialchars($contact['email']); ?></p>
                     </div>
-                    <div class="dropdown">
-                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-ellipsis-v"></i>
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="/index.php?page=view_contact&id=<?php echo $contact['id']; ?>">
-                                <i class="fas fa-eye me-2"></i>View
-                            </a></li>
-                            <li><a class="dropdown-item" href="#" onclick="editContact(<?php echo $contact['id']; ?>)">
-                                <i class="fas fa-edit me-2"></i>Edit
-                            </a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-danger" href="#" onclick="deleteContact(<?php echo $contact['id']; ?>)">
-                                <i class="fas fa-trash me-2"></i>Delete
-                            </a></li>
-                        </ul>
-                    </div>
+                    <a href="/index.php?page=view_contact&id=<?php echo $contact['id']; ?>" 
+                       class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-eye me-1"></i>View
+                    </a>
                 </div>
                 
                 <div class="mb-3">
@@ -241,10 +233,10 @@ renderHeader('Contacts');
                                    class="btn btn-sm btn-outline-primary" title="View">
                                     <i class="fas fa-eye"></i>
                                 </a>
-                                <button onclick="editContact(<?php echo $contact['id']; ?>)" 
-                                        class="btn btn-sm btn-outline-secondary" title="Edit">
+                                <a href="/index.php?page=edit_contact&id=<?php echo $contact['id']; ?>" 
+                                   class="btn btn-sm btn-outline-secondary" title="Edit">
                                     <i class="fas fa-edit"></i>
-                                </button>
+                                </a>
                                 <button onclick="deleteContact(<?php echo $contact['id']; ?>)" 
                                         class="btn btn-sm btn-outline-danger" title="Delete">
                                     <i class="fas fa-trash"></i>
