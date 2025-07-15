@@ -14,6 +14,7 @@ $contact_id = $_GET['id'] ?? null;
 // Get filter parameters
 $type_filter = $_GET['type'] ?? '';
 $status_filter = $_GET['status'] ?? '';
+$view_mode = $_GET['view'] ?? 'cards'; // Default to cards view
 
 // Build query
 $where = "1=1";
@@ -57,6 +58,22 @@ renderHeader('Contacts');
     .contact-card:hover {
         transform: translateY(-2px);
     }
+    .view-toggle .btn {
+        border-radius: 6px;
+    }
+    .view-toggle .btn.active {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+        color: white;
+    }
+    .table th {
+        background-color: #f8f9fa;
+        border-bottom: 2px solid #dee2e6;
+        font-weight: 600;
+    }
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.02);
+    }
 </style>
 
 <!-- Filters and Actions -->
@@ -92,6 +109,16 @@ renderHeader('Contacts');
                 </form>
             </div>
             <div class="col-md-4 text-end">
+                <div class="btn-group me-2 view-toggle" role="group" aria-label="View mode">
+                    <a href="?<?php echo http_build_query(array_merge($_GET, ['view' => 'cards'])); ?>" 
+                       class="btn btn-outline-secondary <?php echo $view_mode === 'cards' ? 'active' : ''; ?>">
+                        <i class="fas fa-th-large"></i>
+                    </a>
+                    <a href="?<?php echo http_build_query(array_merge($_GET, ['view' => 'list'])); ?>" 
+                       class="btn btn-outline-secondary <?php echo $view_mode === 'list' ? 'active' : ''; ?>">
+                        <i class="fas fa-list"></i>
+                    </a>
+                </div>
                 <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addContactModal">
                     <i class="fas fa-plus me-2"></i>Add Contact
                 </button>
@@ -100,7 +127,9 @@ renderHeader('Contacts');
     </div>
 </div>
 
-<!-- Contacts List -->
+<!-- Contacts Display -->
+<?php if ($view_mode === 'cards'): ?>
+<!-- Cards View -->
 <div class="row">
     <?php foreach ($contacts as $contact): ?>
     <div class="col-md-6 col-lg-4 mb-4">
@@ -118,10 +147,12 @@ renderHeader('Contacts');
                             <i class="fas fa-ellipsis-v"></i>
                         </button>
                         <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="/index.php?page=view_contact&id=<?php echo $contact['id']; ?>">
+                                <i class="fas fa-eye me-2"></i>View
+                            </a></li>
                             <li><a class="dropdown-item" href="#" onclick="editContact(<?php echo $contact['id']; ?>)">
                                 <i class="fas fa-edit me-2"></i>Edit
                             </a></li>
-                            <li><a class="dropdown-item" href="/index.php?page=view_contact&id=<?php echo $contact['id']; ?>" class="dropdown-item">View</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item text-danger" href="#" onclick="deleteContact(<?php echo $contact['id']; ?>)">
                                 <i class="fas fa-trash me-2"></i>Delete
@@ -162,6 +193,72 @@ renderHeader('Contacts');
     </div>
     <?php endforeach; ?>
 </div>
+
+<?php else: ?>
+<!-- List View -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Company</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($contacts as $contact): ?>
+                    <tr>
+                        <td>
+                            <strong><?php echo htmlspecialchars($contact['first_name'] . ' ' . $contact['last_name']); ?></strong>
+                            <?php if (!empty($contact['position'])): ?>
+                            <br><small class="text-muted"><?php echo htmlspecialchars($contact['position']); ?></small>
+                            <?php endif; ?>
+                        </td>
+                        <td><?php echo htmlspecialchars($contact['email']); ?></td>
+                        <td><?php echo $contact['phone'] ? htmlspecialchars($contact['phone']) : '-'; ?></td>
+                        <td><?php echo $contact['company'] ? htmlspecialchars($contact['company']) : '-'; ?></td>
+                        <td>
+                            <span class="badge bg-<?php echo $contact['contact_type'] === 'lead' ? 'warning' : 'success'; ?>">
+                                <?php echo ucfirst($contact['contact_type']); ?>
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary">
+                                <?php echo ucfirst($contact['contact_status']); ?>
+                            </span>
+                        </td>
+                        <td><?php echo date('M j, Y', strtotime($contact['created_at'])); ?></td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="/index.php?page=view_contact&id=<?php echo $contact['id']; ?>" 
+                                   class="btn btn-sm btn-outline-primary" title="View">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <button onclick="editContact(<?php echo $contact['id']; ?>)" 
+                                        class="btn btn-sm btn-outline-secondary" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button onclick="deleteContact(<?php echo $contact['id']; ?>)" 
+                                        class="btn btn-sm btn-outline-danger" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 
 <?php if (empty($contacts)): ?>
 <div class="text-center py-5">

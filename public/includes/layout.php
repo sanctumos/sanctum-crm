@@ -57,6 +57,7 @@ function renderHeader($title = null) {
             .sidebar {
                 min-height: 100vh;
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                transition: transform 0.3s ease;
             }
             .sidebar .nav-link {
                 color: rgba(255, 255, 255, 0.8);
@@ -107,14 +108,73 @@ function renderHeader($title = null) {
                 padding: 8px 16px;
                 font-size: 0.875rem;
             }
+            
+            /* Mobile hamburger menu styles */
+            .hamburger-btn {
+                display: none;
+                background: none;
+                border: none;
+                color: #333;
+                font-size: 1.5rem;
+                padding: 0.5rem;
+                cursor: pointer;
+            }
+            
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 1040;
+            }
+            
+            @media (max-width: 767.98px) {
+                .hamburger-btn {
+                    display: block;
+                }
+                
+                .sidebar {
+                    position: fixed;
+                    top: 0;
+                    left: -100%;
+                    width: 280px;
+                    height: 100vh;
+                    z-index: 1050;
+                    transform: translateX(0);
+                }
+                
+                .sidebar.show {
+                    left: 0;
+                }
+                
+                .sidebar-overlay.show {
+                    display: block;
+                }
+                
+                .main-content {
+                    margin-left: 0;
+                    width: 100%;
+                }
+                
+                .col-md-9, .col-lg-10 {
+                    flex: 0 0 100%;
+                    max-width: 100%;
+                }
+            }
         </style>
     </head>
     <body>
+        <!-- Sidebar Overlay for Mobile -->
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+        
         <div class="container-fluid">
             <div class="row">
                 <!-- Sidebar -->
                 <div class="col-md-3 col-lg-2 px-0">
-                    <div class="sidebar p-3">
+                    <div class="sidebar p-3" id="sidebar">
                         <div class="text-center mb-4">
                             <h4 class="text-white mb-0">
                                 <i class="fas fa-users"></i> <?php echo APP_NAME; ?>
@@ -152,6 +212,9 @@ function renderHeader($title = null) {
                         <!-- Top Navigation -->
                         <nav class="navbar navbar-expand-lg navbar-light bg-white rounded-3 mb-4 shadow-sm">
                             <div class="container-fluid">
+                                <button class="hamburger-btn" id="hamburgerBtn">
+                                    <i class="fas fa-bars"></i>
+                                </button>
                                 <span class="navbar-brand mb-0 h1"><?php echo $title ?? 'Dashboard'; ?></span>
                                 <div class="navbar-nav ms-auto">
                                     <div class="nav-item dropdown">
@@ -178,6 +241,47 @@ function renderFooter() {
             </div>
         </div>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        <script>
+            // Mobile hamburger menu functionality
+            document.addEventListener('DOMContentLoaded', function() {
+                const hamburgerBtn = document.getElementById('hamburgerBtn');
+                const sidebar = document.getElementById('sidebar');
+                const sidebarOverlay = document.getElementById('sidebarOverlay');
+                
+                function toggleSidebar() {
+                    sidebar.classList.toggle('show');
+                    sidebarOverlay.classList.toggle('show');
+                }
+                
+                function closeSidebar() {
+                    sidebar.classList.remove('show');
+                    sidebarOverlay.classList.remove('show');
+                }
+                
+                // Hamburger button click
+                hamburgerBtn.addEventListener('click', toggleSidebar);
+                
+                // Overlay click to close
+                sidebarOverlay.addEventListener('click', closeSidebar);
+                
+                // Close sidebar when clicking on nav links (mobile)
+                const navLinks = sidebar.querySelectorAll('.nav-link');
+                navLinks.forEach(link => {
+                    link.addEventListener('click', function() {
+                        if (window.innerWidth <= 767.98) {
+                            closeSidebar();
+                        }
+                    });
+                });
+                
+                // Close sidebar on window resize if screen becomes larger
+                window.addEventListener('resize', function() {
+                    if (window.innerWidth > 767.98) {
+                        closeSidebar();
+                    }
+                });
+            });
+        </script>
     </body>
     </html>
     <?php

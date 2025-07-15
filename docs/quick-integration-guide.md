@@ -12,13 +12,32 @@ This guide provides ready-to-use code snippets for integrating with the FreeOpsD
 
 ## 🔑 Authentication
 
-All API requests require authentication using your API key:
+All API requests require authentication using your API key with **Bearer token format**:
 
 ```javascript
 const headers = {
   'Content-Type': 'application/json',
   'Authorization': `Bearer YOUR_API_KEY`
 };
+```
+
+### ⚠️ Common Authentication Error
+
+**IMPORTANT**: Always use the `Bearer ` prefix before your API key. This is a common mistake that causes 401 Unauthorized errors.
+
+❌ **Wrong:**
+```javascript
+'Authorization': 'YOUR_API_KEY'
+```
+
+✅ **Correct:**
+```javascript
+'Authorization': 'Bearer YOUR_API_KEY'
+```
+
+**Error you'll see if wrong:**
+```
+HTTP/1.1 401 Unauthorized
 ```
 
 ## 📝 Common Integration Examples
@@ -333,7 +352,11 @@ curl -X POST https://crm.freeopsdao.com/api/v1/contacts \
 ### Common Error Codes
 
 - **401 Unauthorized** - Invalid or missing API key
+  - **Most common cause**: Missing `Bearer ` prefix in Authorization header
+  - **Fix**: Use `Authorization: Bearer YOUR_API_KEY` instead of `Authorization: YOUR_API_KEY`
 - **400 Bad Request** - Missing required fields or invalid data
+  - **Most common cause**: Missing `last_name` field
+  - **Fix**: Always provide `last_name`, use fallback like "No Last Name Provided" if unknown
 - **409 Conflict** - Contact with this email already exists
 - **429 Too Many Requests** - Rate limit exceeded
 - **500 Server Error** - Internal server error
@@ -345,10 +368,116 @@ For creating contacts, these fields are required:
 - `last_name` (string) 
 - `email` (valid email format)
 
+### ⚠️ Common Field Issues
+
+**Last Name is Mandatory**: If you don't have a last name, provide a fallback value:
+
+❌ **Wrong:**
+```javascript
+{
+  first_name: 'John',
+  email: 'john@example.com'
+  // Missing last_name will cause 400 error
+}
+```
+
+✅ **Correct:**
+```javascript
+{
+  first_name: 'John',
+  last_name: 'No Last Name Provided', // Fallback for missing data
+  email: 'john@example.com'
+}
+```
+
+**Other fallback options:**
+- `last_name: 'Unknown'`
+- `last_name: 'N/A'`
+- `last_name: 'Not Provided'`
+- `last_name: 'Anonymous'`
+
 ### Rate Limits
 
 - **1000 requests per hour** per API key
 - **1MB maximum** request body size
+
+### 🔧 Authentication Troubleshooting
+
+If you're getting 401 Unauthorized errors, check these common issues:
+
+1. **Missing Bearer prefix** (most common):
+   ```javascript
+   // ❌ Wrong
+   headers: { 'Authorization': 'your-api-key-here' }
+   
+   // ✅ Correct  
+   headers: { 'Authorization': 'Bearer your-api-key-here' }
+   ```
+
+2. **Invalid API key**:
+   - Verify your API key is correct
+   - Check for extra spaces or characters
+   - Ensure the key hasn't been regenerated
+
+3. **Wrong header name**:
+   ```javascript
+   // ❌ Wrong
+   headers: { 'Auth': 'Bearer your-api-key' }
+   
+   // ✅ Correct
+   headers: { 'Authorization': 'Bearer your-api-key' }
+   ```
+
+4. **Case sensitivity**:
+   ```javascript
+   // ❌ Wrong
+   headers: { 'authorization': 'Bearer your-api-key' }
+   
+   // ✅ Correct
+   headers: { 'Authorization': 'Bearer your-api-key' }
+   ```
+
+### 🔧 Field Validation Troubleshooting
+
+If you're getting 400 Bad Request errors, check these common field issues:
+
+1. **Missing last_name field** (most common):
+   ```javascript
+   // ❌ Wrong - will cause 400 error
+   const contactData = {
+     first_name: 'John',
+     email: 'john@example.com'
+   };
+   
+   // ✅ Correct - always include last_name
+   const contactData = {
+     first_name: 'John',
+     last_name: 'No Last Name Provided', // Required field
+     email: 'john@example.com'
+   };
+   ```
+
+2. **Invalid email format**:
+   ```javascript
+   // ❌ Wrong
+   email: 'not-an-email'
+   
+   // ✅ Correct
+   email: 'user@example.com'
+   ```
+
+3. **Empty required fields**:
+   ```javascript
+   // ❌ Wrong
+   first_name: '',
+   last_name: '',
+   email: ''
+   
+   // ✅ Correct
+   first_name: 'John',
+   last_name: 'Doe',
+   email: 'john@example.com'
+   ```
 
 ## 📞 Support
 
