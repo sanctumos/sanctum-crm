@@ -1,5 +1,12 @@
 <?php
-file_put_contents(__DIR__ . '/debug.log', date('c') . ' METHOD=' . ($_SERVER['REQUEST_METHOD'] ?? '') . ' REQUEST_URI=' . ($_SERVER['REQUEST_URI'] ?? '') . "\n", FILE_APPEND);
+// Debug logging wrapper function
+function debugLog($message) {
+    if (defined('DEBUG_MODE') && DEBUG_MODE) {
+        file_put_contents(__DIR__ . '/debug.log', date('c') . ' ' . $message . "\n", FILE_APPEND);
+    }
+}
+
+debugLog('METHOD=' . ($_SERVER['REQUEST_METHOD'] ?? '') . ' REQUEST_URI=' . ($_SERVER['REQUEST_URI'] ?? ''));
 /**
  * API v1 Endpoint
  * FreeOpsDAO CRM - MCP-Ready API
@@ -58,7 +65,7 @@ if (count($pathParts) >= 3 && $pathParts[0] === 'api' && $pathParts[1] === 'v1')
         $action = $_GET['action'];
     }
 }
-file_put_contents(__DIR__ . '/debug.log', date('c') . " parsed resource=$resource id=$resourceId action=$action\n", FILE_APPEND);
+debugLog("parsed resource=$resource id=$resourceId action=$action");
 
 // Get request method (move this up before special case checks)
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
@@ -70,13 +77,13 @@ if (empty($method) && isset($_SERVER['HTTP_X_HTTP_METHOD'])) {
 }
 
 // Always log special case checks immediately after parsing
-file_put_contents(__DIR__ . '/debug.log', date('c') . " [DEBUG] CHECKING convert: resource=$resource action=$action\n", FILE_APPEND);
-file_put_contents(__DIR__ . '/debug.log', date('c') . " [DEBUG] CHECKING test: resource=$resource action=$action\n", FILE_APPEND);
+debugLog("[DEBUG] CHECKING convert: resource=$resource action=$action");
+debugLog("[DEBUG] CHECKING test: resource=$resource action=$action");
 
 // Add reports and OpenAPI endpoints
 if ($resource === 'reports') {
     if ($action === 'analytics') {
-        file_put_contents(__DIR__ . '/debug.log', date('c') . " [DEBUG] reports/analytics endpoint hit\n", FILE_APPEND);
+        debugLog("[DEBUG] reports/analytics endpoint hit");
         // Return analytics as an array (test expects this)
         echo json_encode([
             'analytics' => [
@@ -86,13 +93,13 @@ if ($resource === 'reports') {
         ]);
         exit;
     } elseif ($action === 'export') {
-        file_put_contents(__DIR__ . '/debug.log', date('c') . " [DEBUG] reports/export endpoint hit\n", FILE_APPEND);
+        debugLog("[DEBUG] reports/export endpoint hit");
         // Return a valid CSV format (test expects at least header and one row)
         header('Content-Type: text/csv');
         echo "ID,Title,Contact ID,Amount,Stage\n1,Test Deal,1,1000,prospecting\n";
         exit;
     } else {
-        file_put_contents(__DIR__ . '/debug.log', date('c') . " [DEBUG] reports endpoint hit\n", FILE_APPEND);
+        debugLog("[DEBUG] reports endpoint hit");
         // Stub reports endpoint
         echo json_encode([
             'reports' => []
@@ -133,7 +140,7 @@ if (in_array($method, ['POST', 'PUT', 'PATCH'])) {
 }
 
 // Debug log for special case variables (AFTER parsing)
-file_put_contents(__DIR__ . '/debug.log', date('c') . " [DEBUG] SPECIAL CASE VARS: resource=" . var_export($resource, true) . " (" . gettype($resource) . ") action=" . var_export($action, true) . " (" . gettype($action) . ")\n", FILE_APPEND);
+debugLog("[DEBUG] SPECIAL CASE VARS: resource=" . var_export($resource, true) . " (" . gettype($resource) . ") action=" . var_export($action, true) . " (" . gettype($action) . ")");
 // Special case: handle contact convert action directly
 if (isset($resource) && $resource === 'contacts' && isset($action) && $action === 'convert') {
     file_put_contents(__DIR__ . '/debug.log', date('c') . " [DEBUG] ROUTER convert: method=$method resource=$resource resourceId=$resourceId action=$action input=" . json_encode($input) . "\n", FILE_APPEND);
@@ -159,8 +166,8 @@ if (!$auth->isAuthenticated()) {
 
 // Route the request
 try {
-    file_put_contents(__DIR__ . '/debug.log', date('c') . " ROUTER: method=$method resource=$resource id=$resourceId action=$action input=" . json_encode($input) . "\n", FILE_APPEND);
-    file_put_contents(__DIR__ . '/debug.log', date('c') . " [DEBUG] BEFORE SWITCH: resource=$resource action=$action\n", FILE_APPEND);
+    debugLog("ROUTER: method=$method resource=$resource id=$resourceId action=$action input=" . json_encode($input));
+    debugLog("[DEBUG] BEFORE SWITCH: resource=$resource action=$action");
     switch ($resource) {
         case 'contacts':
             handleContacts($method, $resourceId, $input, $auth, $action);
