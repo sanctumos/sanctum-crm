@@ -22,7 +22,7 @@ require_once __DIR__ . '/../../includes/auth.php';
 
 // Set JSON content type
 if (!defined('CRM_TESTING')) header('Content-Type: application/json');
-if (!defined('CRM_TESTING')) header('Access-Control-Allow-Origin: *');
+if (!defined('CRM_TESTING')) header('Access-Control-Allow-Origin: ' . APP_URL);
 if (!defined('CRM_TESTING')) header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 if (!defined('CRM_TESTING')) header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
 
@@ -123,6 +123,17 @@ if ($resource === 'openapi.json') {
 // Get request body for POST/PUT requests (move this up before special case checks)
 $input = null;
 if (in_array($method, ['POST', 'PUT', 'PATCH'])) {
+    // Check request size
+    $contentLength = $_SERVER['CONTENT_LENGTH'] ?? 0;
+    if ($contentLength > API_MAX_PAYLOAD_SIZE) {
+        http_response_code(413);
+        echo json_encode([
+            'error' => 'Request too large',
+            'code' => 413
+        ]);
+        exit;
+    }
+    
     $rawInput = file_get_contents('php://input');
     if (trim($rawInput) === '') {
         $input = [];
@@ -154,7 +165,50 @@ if (isset($resource) && $resource === 'webhooks' && isset($action) && $action ==
     exit;
 }
 
-// Rate limiting (basic implementation)
+// Rate limiting implementation
+function checkRateLimit($auth) {
+    $userId = $auth->getUserId();
+    $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+    $key = "rate_limit:$userId:$ip";
+    
+    // Simple in-memory rate limiting (consider Redis for production)
+    $currentTime = time();
+    $window = 3600; // 1 hour
+    $maxRequests = API_RATE_LIMIT;
+    
+    // Check if we have rate limit data
+    if (!isset($_SESSION['rate_limit'][$key])) {
+        $_SESSION['rate_limit'][$key] = ['count' => 0, 'window_start' => $currentTime];
+    }
+    
+    $rateData = &$_SESSION['rate_limit'][$key];
+    
+    // Reset if window has passed
+    if ($currentTime - $rateData['window_start'] > $window) {
+        $rateData = ['count' => 0, 'window_start' => $currentTime];
+    }
+    
+    // Check if limit exceeded
+    if ($rateData['count'] >= $maxRequests) {
+        http_response_code(429);
+        echo json_encode([
+            'error' => 'Rate limit exceeded',
+            'code' => 429,
+            'retry_after' => $window - ($currentTime - $rateData['window_start'])
+        ]);
+        exit;
+    }
+    
+    // Increment counter
+    $rateData['count']++;
+}
+
+// Apply rate limiting
+if ($auth->isAuthenticated()) {
+    checkRateLimit($auth);
+}
+
+// Authentication check
 if (!$auth->isAuthenticated()) {
     http_response_code(401);
     echo json_encode([
@@ -193,8 +247,7 @@ try {
             http_response_code(404);
             echo json_encode([
                 'error' => 'Resource not found',
-                'code' => 404,
-                'available_resources' => ['contacts', 'deals', 'users', 'webhooks', 'commands']
+                'code' => 404
             ]);
     }
 } catch (Exception $e) {
@@ -327,30 +380,30 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
                 return;
             }
             
-            // Prepare contact data
+            // Prepare contact data with sanitization
             $contactData = [
-                'first_name' => $input['first_name'],
-                'last_name' => $input['last_name'],
-                'email' => $input['email'],
-                'phone' => $input['phone'] ?? null,
-                'company' => $input['company'] ?? null,
-                'address' => $input['address'] ?? null,
-                'city' => $input['city'] ?? null,
-                'state' => $input['state'] ?? null,
-                'zip_code' => $input['zip_code'] ?? null,
-                'country' => $input['country'] ?? null,
-                'evm_address' => $input['evm_address'] ?? null,
-                'twitter_handle' => $input['twitter_handle'] ?? null,
-                'linkedin_profile' => $input['linkedin_profile'] ?? null,
-                'telegram_username' => $input['telegram_username'] ?? null,
-                'discord_username' => $input['discord_username'] ?? null,
-                'github_username' => $input['github_username'] ?? null,
-                'website' => $input['website'] ?? null,
-                'contact_type' => $input['contact_type'] ?? 'lead',
-                'contact_status' => $input['contact_status'] ?? 'new',
-                'source' => $input['source'] ?? null,
+                'first_name' => sanitizeInput($input['first_name']),
+                'last_name' => sanitizeInput($input['last_name']),
+                'email' => $input['email'], // Already validated
+                'phone' => sanitizeInput($input['phone'] ?? null),
+                'company' => sanitizeInput($input['company'] ?? null),
+                'address' => sanitizeInput($input['address'] ?? null),
+                'city' => sanitizeInput($input['city'] ?? null),
+                'state' => sanitizeInput($input['state'] ?? null),
+                'zip_code' => sanitizeInput($input['zip_code'] ?? null),
+                'country' => sanitizeInput($input['country'] ?? null),
+                'evm_address' => !empty($input['evm_address']) && validateEVMAddress($input['evm_address']) ? $input['evm_address'] : null,
+                'twitter_handle' => sanitizeInput($input['twitter_handle'] ?? null),
+                'linkedin_profile' => sanitizeInput($input['linkedin_profile'] ?? null),
+                'telegram_username' => sanitizeInput($input['telegram_username'] ?? null),
+                'discord_username' => sanitizeInput($input['discord_username'] ?? null),
+                'github_username' => sanitizeInput($input['github_username'] ?? null),
+                'website' => sanitizeInput($input['website'] ?? null),
+                'contact_type' => sanitizeInput($input['contact_type'] ?? 'lead'),
+                'contact_status' => sanitizeInput($input['contact_status'] ?? 'new'),
+                'source' => sanitizeInput($input['source'] ?? null),
                 'assigned_to' => $input['assigned_to'] ?? null,
-                'notes' => $input['notes'] ?? null
+                'notes' => sanitizeInput($input['notes'] ?? null)
             ];
             
             $contactId = $db->insert('contacts', $contactData);

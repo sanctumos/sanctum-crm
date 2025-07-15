@@ -1,195 +1,185 @@
-# Quick Integration Guide - FreeOpsDAO CRM
+# FreeOpsDAO CRM - API Integration Guide
 
-## Project Structure (Web Root)
+## 🚀 Quick Start
 
-```
-crm.freeopsdao.com/
-├── public/                  # Web root (all public files)
-│   ├── index.php
-│   ├── login.php
-│   ├── logout.php
-│   ├── .htaccess
-│   ├── api/
-│   │   └── v1/
-│   │       └── index.php
-│   ├── pages/
-│   │   ├── dashboard.php
-│   │   ├── contacts.php
-│   │   └── error.php
-│   └── assets/
-│       ├── js/
-│       └── css/
-├── includes/                # PHP includes (private)
-│   ├── config.php
-│   ├── database.php
-│   └── auth.php
-├── db/                      # SQLite DB (private)
-│   └── crm.db
-├── tests/                   # Test suite (private)
-├── docs/                    # Documentation
-└── README.md
-```
-
-**Note:** All API endpoints are under `/public/api/v1/`.
-
-## 🚀 Quick Start for Developers
-
-This guide provides ready-to-use code snippets for common integration scenarios.
+This guide provides ready-to-use code snippets for integrating with the FreeOpsDAO CRM API.
 
 ## 📋 Prerequisites
 
-1. **Get API Key**: Contact the CRM administrator for your API key
-2. **Base URL**: `https://your-crm-domain.com/api/v1/`
-3. **Test First**: Use the examples below to test your integration
+1. **API Key**: Contact the CRM administrator for your API key
+2. **Base URL**: `https://crm.freeopsdao.com/api/v1/`
+3. **Authentication**: Use Bearer token in Authorization header
 
-## 🎯 Common Integration Scenarios
+## 🔑 Authentication
+
+All API requests require authentication using your API key:
+
+```javascript
+const headers = {
+  'Content-Type': 'application/json',
+  'Authorization': `Bearer YOUR_API_KEY`
+};
+```
+
+## 📝 Common Integration Examples
 
 ### 1. Contact Form Integration
 
-#### HTML Form
-```html
-<form id="crmContactForm">
-  <input type="text" name="first_name" placeholder="First Name" required>
-  <input type="text" name="last_name" placeholder="Last Name" required>
-  <input type="email" name="email" placeholder="Email" required>
-  <input type="text" name="company" placeholder="Company">
-  <input type="tel" name="phone" placeholder="Phone">
-  <button type="submit">Submit</button>
-</form>
-```
-
-#### JavaScript Handler
 ```javascript
 const CRM_API_KEY = 'your_api_key_here';
-const CRM_BASE_URL = 'https://your-crm-domain.com/api/v1';
+const CRM_BASE_URL = 'https://crm.freeopsdao.com/api/v1';
 
-document.getElementById('crmContactForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
+async function createContact(contactData) {
+  const response = await fetch(`${CRM_BASE_URL}/contacts`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${CRM_API_KEY}`
+    },
+    body: JSON.stringify(contactData)
+  });
   
-  const formData = new FormData(e.target);
-  const contactData = {
-    first_name: formData.get('first_name'),
-    last_name: formData.get('last_name'),
-    email: formData.get('email'),
-    company: formData.get('company'),
-    phone: formData.get('phone'),
-    source: 'website_form'
-  };
-  
-  try {
-    const response = await fetch(`${CRM_BASE_URL}/contacts`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${CRM_API_KEY}`
-      },
-      body: JSON.stringify(contactData)
-    });
-    
-    if (response.ok) {
-      alert('Thank you! We\'ll be in touch soon.');
-      e.target.reset();
-    } else {
-      const error = await response.json();
-      alert('Error: ' + (error.error || 'Something went wrong'));
-    }
-  } catch (error) {
-    alert('Network error. Please try again.');
+  if (response.ok) {
+    return await response.json();
+  } else {
+    const error = await response.json();
+    throw new Error(error.error || 'API Error');
   }
-});
+}
+
+// Example usage
+const newContact = {
+  first_name: 'John',
+  last_name: 'Doe',
+  email: 'john.doe@example.com',
+  company: 'Acme Corp',
+  phone: '+1234567890',
+  source: 'website_form'
+};
+
+createContact(newContact)
+  .then(contact => console.log('Contact created:', contact.id))
+  .catch(error => console.error('Error:', error));
 ```
 
-### 2. Newsletter Signup Integration
+### 2. WordPress Integration
 
-#### WordPress Hook Example
 ```php
 // Add to functions.php
-add_action('wp_ajax_newsletter_signup', 'handle_newsletter_signup');
-add_action('wp_ajax_nopriv_newsletter_signup', 'handle_newsletter_signup');
-
-function handle_newsletter_signup() {
-    $email = sanitize_email($_POST['email']);
-    $first_name = sanitize_text_field($_POST['first_name']);
-    $last_name = sanitize_text_field($_POST['last_name']);
-    
-    // Your existing newsletter logic here
-    
-    // Also create CRM contact
-    $crm_data = array(
-        'first_name' => $first_name,
-        'last_name' => $last_name,
-        'email' => $email,
-        'contact_type' => 'lead',
-        'source' => 'newsletter_signup'
-    );
-    
-    $crm_response = wp_remote_post('https://your-crm-domain.com/api/v1/contacts', array(
+function create_crm_contact($contact_data) {
+    $response = wp_remote_post('https://crm.freeopsdao.com/api/v1/contacts', array(
         'headers' => array(
             'Content-Type' => 'application/json',
             'Authorization' => 'Bearer ' . CRM_API_KEY
         ),
-        'body' => json_encode($crm_data)
+        'body' => json_encode($contact_data)
     ));
     
+    if (is_wp_error($response)) {
+        return false;
+    }
+    
+    return json_decode(wp_remote_retrieve_body($response), true);
+}
+
+// Hook into form submission
+add_action('wp_ajax_contact_form', 'handle_contact_form');
+function handle_contact_form() {
+    $crm_data = array(
+        'first_name' => sanitize_text_field($_POST['first_name']),
+        'last_name' => sanitize_text_field($_POST['last_name']),
+        'email' => sanitize_email($_POST['email']),
+        'source' => 'wordpress_form'
+    );
+    
+    $result = create_crm_contact($crm_data);
     wp_die();
 }
 ```
 
-### 3. Event Registration Integration
+### 3. React Component
 
-#### React Component Example
 ```jsx
 import React, { useState } from 'react';
 
-const EventRegistration = () => {
+const ContactForm = () => {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
-    eventName: 'Blockchain Summit 2025'
+    company: ''
   });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Your existing event registration logic
-    const eventResult = await registerForEvent(formData);
-    
-    // Also create CRM contact
-    const crmData = {
+    const contactData = {
       first_name: formData.firstName,
       last_name: formData.lastName,
       email: formData.email,
-      source: 'event_registration',
-      notes: `Registered for: ${formData.eventName}`
+      company: formData.company,
+      source: 'react_form'
     };
     
     try {
-      await fetch('https://your-crm-domain.com/api/v1/contacts', {
+      const response = await fetch('https://crm.freeopsdao.com/api/v1/contacts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${process.env.REACT_APP_CRM_API_KEY}`
         },
-        body: JSON.stringify(crmData)
+        body: JSON.stringify(contactData)
       });
+      
+      if (response.ok) {
+        alert('Contact created successfully!');
+        setFormData({ firstName: '', lastName: '', email: '', company: '' });
+      } else {
+        const error = await response.json();
+        alert('Error: ' + error.error);
+      }
     } catch (error) {
-      console.error('CRM integration failed:', error);
-      // Don't fail the event registration if CRM fails
+      alert('Network error. Please try again.');
     }
   };
 
   return (
     <form onSubmit={handleSubmit}>
-      {/* Your form fields */}
+      <input
+        type="text"
+        placeholder="First Name"
+        value={formData.firstName}
+        onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+        required
+      />
+      <input
+        type="text"
+        placeholder="Last Name"
+        value={formData.lastName}
+        onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+        required
+      />
+      <input
+        type="email"
+        placeholder="Email"
+        value={formData.email}
+        onChange={(e) => setFormData({...formData, email: e.target.value})}
+        required
+      />
+      <input
+        type="text"
+        placeholder="Company"
+        value={formData.company}
+        onChange={(e) => setFormData({...formData, company: e.target.value})}
+      />
+      <button type="submit">Submit</button>
     </form>
   );
 };
 ```
 
-### 4. E-commerce Integration
+### 4. E-commerce Webhook
 
-#### Shopify Webhook Example
 ```javascript
 // Shopify webhook handler
 app.post('/webhooks/customer/create', async (req, res) => {
@@ -208,7 +198,7 @@ app.post('/webhooks/customer/create', async (req, res) => {
   };
   
   try {
-    await fetch('https://your-crm-domain.com/api/v1/contacts', {
+    await fetch('https://crm.freeopsdao.com/api/v1/contacts', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -224,9 +214,8 @@ app.post('/webhooks/customer/create', async (req, res) => {
 });
 ```
 
-### 5. Social Media Integration
+### 5. Discord Bot Integration
 
-#### Discord Bot Example
 ```javascript
 // Discord.js bot
 client.on('guildMemberAdd', async (member) => {
@@ -241,7 +230,7 @@ client.on('guildMemberAdd', async (member) => {
   };
   
   try {
-    await fetch('https://your-crm-domain.com/api/v1/contacts', {
+    await fetch('https://crm.freeopsdao.com/api/v1/contacts', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -257,9 +246,9 @@ client.on('guildMemberAdd', async (member) => {
 
 ## 🔧 Testing Your Integration
 
-### Test Script
+### Quick Test Script
+
 ```javascript
-// test-integration.js
 async function testCrmIntegration() {
   const testContact = {
     first_name: 'Test',
@@ -269,7 +258,7 @@ async function testCrmIntegration() {
   };
   
   try {
-    const response = await fetch('https://your-crm-domain.com/api/v1/contacts', {
+    const response = await fetch('https://crm.freeopsdao.com/api/v1/contacts', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -294,8 +283,9 @@ testCrmIntegration();
 ```
 
 ### cURL Test
+
 ```bash
-curl -X POST https://your-crm-domain.com/api/v1/contacts \
+curl -X POST https://crm.freeopsdao.com/api/v1/contacts \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -306,65 +296,67 @@ curl -X POST https://your-crm-domain.com/api/v1/contacts \
   }'
 ```
 
+## 📊 Available Endpoints
+
+### Contacts
+- `POST /contacts` - Create new contact
+- `GET /contacts` - List contacts
+- `GET /contacts/{id}` - Get specific contact
+- `PUT /contacts/{id}` - Update contact
+- `DELETE /contacts/{id}` - Delete contact
+- `POST /contacts/{id}/convert` - Convert lead to customer
+
+### Deals
+- `POST /deals` - Create new deal
+- `GET /deals` - List deals
+- `GET /deals/{id}` - Get specific deal
+- `PUT /deals/{id}` - Update deal
+- `DELETE /deals/{id}` - Delete deal
+
+### Users (Admin Only)
+- `GET /users` - List users
+- `POST /users` - Create user
+- `GET /users/{id}` - Get user
+- `PUT /users/{id}` - Update user
+- `DELETE /users/{id}` - Delete user
+
+### Webhooks
+- `POST /webhooks` - Create webhook
+- `GET /webhooks` - List webhooks
+- `GET /webhooks/{id}` - Get webhook
+- `PUT /webhooks/{id}` - Update webhook
+- `DELETE /webhooks/{id}` - Delete webhook
+- `POST /webhooks/{id}/test` - Test webhook
+
 ## 🛠 Troubleshooting
 
-### Common Issues
+### Common Error Codes
 
-1. **401 Unauthorized**
-   - Check your API key is correct
-   - Ensure API key is included in Authorization header
+- **401 Unauthorized** - Invalid or missing API key
+- **400 Bad Request** - Missing required fields or invalid data
+- **409 Conflict** - Contact with this email already exists
+- **429 Too Many Requests** - Rate limit exceeded
+- **500 Server Error** - Internal server error
 
-2. **400 Bad Request**
-   - Verify required fields (first_name, last_name, email)
-   - Check email format is valid
+### Required Fields
 
-3. **409 Conflict**
-   - Contact with this email already exists
-   - Use GET /contacts?email=... to check first
+For creating contacts, these fields are required:
+- `first_name` (string)
+- `last_name` (string) 
+- `email` (valid email format)
 
-4. **500 Server Error**
-   - Check CRM system is running
-   - Contact CRM administrator
+### Rate Limits
 
-### Debug Mode
-```javascript
-// Enable debug logging
-const DEBUG = true;
+- **1000 requests per hour** per API key
+- **1MB maximum** request body size
 
-async function createContact(contactData) {
-  if (DEBUG) console.log('Sending contact data:', contactData);
-  
-  const response = await fetch('https://your-crm-domain.com/api/v1/contacts', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${API_KEY}`
-    },
-    body: JSON.stringify(contactData)
-  });
-  
-  if (DEBUG) console.log('Response status:', response.status);
-  
-  if (response.ok) {
-    const result = await response.json();
-    if (DEBUG) console.log('Success:', result);
-    return result;
-  } else {
-    const error = await response.json();
-    if (DEBUG) console.error('Error:', error);
-    throw new Error(error.error || 'API Error');
-  }
-}
-```
+## 📞 Support
 
-## 📞 Need Help?
-
-- **Test your integration** with the examples above
-- **Check the full API spec** in `docs/api-integration-spec.md`
-- **Contact the CRM admin** for API key and support
-- **Review error logs** for detailed debugging information
+- **API Documentation**: See `docs/api-integration-spec.md` for complete API reference
+- **Contact**: Reach out to the CRM administrator for API keys and support
+- **Status**: Check system status at `https://crm.freeopsdao.com/api/v1/diagnostic`
 
 ---
 
-**Quick Guide Version**: 1.0.0  
+**API Version**: v1.0.0  
 **Last Updated**: January 14, 2025 
