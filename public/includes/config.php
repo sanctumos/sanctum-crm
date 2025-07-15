@@ -12,8 +12,8 @@ if (!defined('CRM_LOADED')) {
 // Application Configuration
 define('APP_NAME', 'FreeOpsDAO CRM');
 define('APP_VERSION', '1.0.0');
-define('APP_URL', 'http://localhost:8000'); // Change for production
-define('DEBUG_MODE', true); // Set to false in production
+define('APP_URL', 'https://crm.freeopsdao.com'); // Production URL
+define('DEBUG_MODE', false); // Set to false in production
 
 // Database Configuration
 define('DB_PATH', dirname(dirname(__DIR__)) . '/db/crm.db');
@@ -61,7 +61,7 @@ date_default_timezone_set('UTC');
 // Session Configuration - Only set if not already sent
 if (!headers_sent()) {
     ini_set('session.cookie_httponly', 1);
-    ini_set('session.cookie_secure', 0); // Set to 1 in production with HTTPS
+    ini_set('session.cookie_secure', 1); // Set to 1 for HTTPS production
     ini_set('session.use_strict_mode', 1);
     ini_set('session.cookie_samesite', 'Lax');
 }
