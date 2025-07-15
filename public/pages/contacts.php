@@ -373,6 +373,7 @@ document.getElementById('addContactForm').addEventListener('submit', function(e)
     fetch('/api/v1/contacts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(data)
     })
     .then(response => response.json())
@@ -398,6 +399,7 @@ document.getElementById('editContactForm').addEventListener('submit', function(e
     fetch(`/api/v1/contacts/${contactId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(data)
     })
     .then(response => response.json())
@@ -415,7 +417,9 @@ document.getElementById('editContactForm').addEventListener('submit', function(e
 
 function editContact(contactId) {
     // Fetch contact data and populate form
-    fetch(`/api/v1/contacts/${contactId}`)
+    fetch(`/api/v1/contacts/${contactId}`, {
+        credentials: 'include'
+    })
     .then(response => response.json())
     .then(result => {
         if (result.success) {
@@ -450,7 +454,8 @@ function viewContact(contactId) {
 function deleteContact(contactId) {
     if (confirm('Are you sure you want to delete this contact? This action cannot be undone.')) {
         fetch(`/api/v1/contacts/${contactId}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            credentials: 'include'
         })
         .then(response => response.json())
         .then(result => {

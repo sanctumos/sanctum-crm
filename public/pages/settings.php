@@ -73,6 +73,7 @@ document.getElementById('settingsForm').addEventListener('submit', async functio
         const response = await fetch('/api/v1/settings.php', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify(data)
         });
         const result = await response.json();

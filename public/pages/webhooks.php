@@ -153,7 +153,9 @@ function setupEventListeners() {
 
 async function loadWebhooks() {
     try {
-        const response = await fetch('/api/v1/webhooks');
+        const response = await fetch('/api/v1/webhooks', {
+            credentials: 'include'
+        });
         const result = await response.json();
         
         if (response.ok) {
@@ -250,6 +252,7 @@ async function saveWebhook() {
         const response = await fetch(url, {
             method: method,
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify(data)
         });
         
@@ -312,7 +315,8 @@ async function sendTestWebhook() {
     try {
         const response = await fetch(`/api/v1/webhooks/${currentTestWebhookId}/test`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include'
         });
         
         const result = await response.json();
@@ -344,6 +348,7 @@ async function toggleWebhookStatus(webhookId) {
         const response = await fetch(`/api/v1/webhooks/${webhookId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify({ is_active: !webhook.is_active })
         });
         
@@ -365,7 +370,8 @@ async function deleteWebhook(webhookId) {
     
     try {
         const response = await fetch(`/api/v1/webhooks/${webhookId}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            credentials: 'include'
         });
         
         if (response.ok) {

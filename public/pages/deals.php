@@ -232,7 +232,9 @@ function setupEventListeners() {
 
 async function loadDeals() {
     try {
-        const response = await fetch('/api/v1/deals');
+        const response = await fetch('/api/v1/deals', {
+            credentials: 'include'
+        });
         const result = await response.json();
         
         if (response.ok) {
@@ -248,7 +250,9 @@ async function loadDeals() {
 
 async function loadContacts() {
     try {
-        const response = await fetch('/api/v1/contacts');
+        const response = await fetch('/api/v1/contacts', {
+            credentials: 'include'
+        });
         const result = await response.json();
         
         if (response.ok) {
@@ -262,7 +266,9 @@ async function loadContacts() {
 
 async function loadUsers() {
     try {
-        const response = await fetch('/api/v1/users');
+        const response = await fetch('/api/v1/users', {
+            credentials: 'include'
+        });
         const result = await response.json();
         
         if (response.ok) {
@@ -445,6 +451,7 @@ async function saveDeal() {
         const response = await fetch(url, {
             method: method,
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify(data)
         });
         
@@ -488,7 +495,8 @@ async function deleteDeal(dealId) {
     
     try {
         const response = await fetch(`/api/v1/deals/${dealId}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            credentials: 'include'
         });
         
         if (response.ok) {

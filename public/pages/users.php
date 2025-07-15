@@ -130,7 +130,9 @@ function setupEventListeners() {
 
 async function loadUsers() {
     try {
-        const response = await fetch('/api/v1/users');
+        const response = await fetch('/api/v1/users', {
+            credentials: 'include'
+        });
         const result = await response.json();
         
         if (response.ok) {
@@ -195,6 +197,7 @@ async function saveUser() {
         const response = await fetch(url, {
             method: method,
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify(data)
         });
         
@@ -242,6 +245,7 @@ async function toggleUserStatus(userId) {
         const response = await fetch(`/api/v1/users/${userId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify({ is_active: !user.is_active })
         });
         
@@ -265,6 +269,7 @@ async function regenerateApiKey(userId) {
         const response = await fetch(`/api/v1/users/${userId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify({ regenerate_api_key: true })
         });
         
@@ -286,7 +291,8 @@ async function deleteUser(userId) {
     
     try {
         const response = await fetch(`/api/v1/users/${userId}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            credentials: 'include'
         });
         
         if (response.ok) {

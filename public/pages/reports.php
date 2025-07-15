@@ -193,9 +193,9 @@ async function generateReport() {
         
         // Load all data
         const [dealsResponse, contactsResponse, usersResponse] = await Promise.all([
-            fetch('/api/v1/deals'),
-            fetch('/api/v1/contacts'),
-            fetch('/api/v1/users')
+            fetch('/api/v1/deals', { credentials: 'include' }),
+            fetch('/api/v1/contacts', { credentials: 'include' }),
+            fetch('/api/v1/users', { credentials: 'include' })
         ]);
         
         const dealsData = await dealsResponse.json();
