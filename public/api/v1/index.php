@@ -143,13 +143,13 @@ if (in_array($method, ['POST', 'PUT', 'PATCH'])) {
 debugLog("[DEBUG] SPECIAL CASE VARS: resource=" . var_export($resource, true) . " (" . gettype($resource) . ") action=" . var_export($action, true) . " (" . gettype($action) . ")");
 // Special case: handle contact convert action directly
 if (isset($resource) && $resource === 'contacts' && isset($action) && $action === 'convert') {
-    file_put_contents(__DIR__ . '/debug.log', date('c') . " [DEBUG] ROUTER convert: method=$method resource=$resource resourceId=$resourceId action=$action input=" . json_encode($input) . "\n", FILE_APPEND);
+    debugLog("[DEBUG] ROUTER convert: method=$method resource=$resource resourceId=$resourceId action=$action input=" . json_encode($input));
     handleContacts($method, $resourceId, $input, $auth, $action);
     exit;
 }
 // Special case: handle webhook test action directly
 if (isset($resource) && $resource === 'webhooks' && isset($action) && $action === 'test') {
-    file_put_contents(__DIR__ . '/debug.log', date('c') . " [DEBUG] ROUTER test: method=$method resource=$resource resourceId=$resourceId action=$action input=" . json_encode($input) . "\n", FILE_APPEND);
+    debugLog("[DEBUG] ROUTER test: method=$method resource=$resource resourceId=$resourceId action=$action input=" . json_encode($input));
     handleWebhooks($method, $resourceId, $input, $auth, $action);
     exit;
 }
@@ -210,14 +210,14 @@ try {
  * Handle contacts endpoints
  */
 function handleContacts($method, $id, $input, $auth, $action = null) {
-    file_put_contents(__DIR__ . '/debug.log', date('c') . " [DEBUG] handleContacts ENTRY: method=$method id=$id action=$action input=" . json_encode($input) . "\n", FILE_APPEND);
+    debugLog("[DEBUG] handleContacts ENTRY: method=$method id=$id action=$action input=" . json_encode($input));
     $db = Database::getInstance();
     
     // Special case: convert action
     if ($action === 'convert') {
-        file_put_contents(__DIR__ . '/debug.log', date('c') . " [DEBUG] convert action: id=$id\n", FILE_APPEND);
+        debugLog("[DEBUG] convert action: id=$id");
         if (!$id) {
-            file_put_contents(__DIR__ . '/debug.log', date('c') . " [ERROR] convert: missing id\n", FILE_APPEND);
+            debugLog("[ERROR] convert: missing id");
             http_response_code(400);
             echo json_encode([
                 'error' => 'Contact ID required for convert',
@@ -227,7 +227,7 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
         }
         $existing = $db->fetchOne("SELECT * FROM contacts WHERE id = ?", [$id]);
         if (!$existing) {
-            file_put_contents(__DIR__ . '/debug.log', date('c') . " [ERROR] convert: contact not found id=$id\n", FILE_APPEND);
+            debugLog("[ERROR] convert: contact not found id=$id");
             http_response_code(404);
             echo json_encode([
                 'error' => 'Contact not found',
@@ -243,7 +243,7 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
         ];
         $db->update('contacts', $updateData, 'id = ?', [$id]);
         $contact = $db->fetchOne("SELECT * FROM contacts WHERE id = ?", [$id]);
-        file_put_contents(__DIR__ . '/debug.log', date('c') . " [DEBUG] convert: success id=$id\n", FILE_APPEND);
+        debugLog("[DEBUG] convert: success id=$id");
         http_response_code(200);
         echo json_encode($contact);
         return;
@@ -292,7 +292,7 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
             break;
             
         case 'POST':
-            file_put_contents(__DIR__ . '/debug.log', date('c') . " contacts POST input=" . json_encode($input) . "\n", FILE_APPEND);
+            debugLog("contacts POST input=" . json_encode($input));
             // Create new contact
             $required = ['first_name', 'last_name', 'email'];
             foreach ($required as $field) {
@@ -365,7 +365,7 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
         case 'PUT':
         case 'POST':
             if (!$id) {
-                file_put_contents(__DIR__ . '/debug.log', date('c') . " contact PUT: missing id\n", FILE_APPEND);
+                debugLog("contact PUT: missing id");
                 http_response_code(400);
                 echo json_encode([
                     'error' => 'Contact ID required for update',
@@ -375,9 +375,9 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
             }
             
             // Check if contact exists
-            file_put_contents(__DIR__ . '/debug.log', date('c') . " contact PUT: checking existence for id=$id\n", FILE_APPEND);
+            debugLog("contact PUT: checking existence for id=$id");
             $existing = $db->fetchOne("SELECT * FROM contacts WHERE id = ?", [$id]);
-            file_put_contents(__DIR__ . '/debug.log', date('c') . " contact PUT: existence result=" . json_encode($existing) . "\n", FILE_APPEND);
+            debugLog("contact PUT: existence result=" . json_encode($existing));
             if (!$existing) {
                 http_response_code(404);
                 echo json_encode([
@@ -389,7 +389,7 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
             
             // Handle special convert action
             if (isset($action) && $action === 'convert') {
-                file_put_contents(__DIR__ . '/debug.log', date('c') . " contact convert: id=$id action=$action\n", FILE_APPEND);
+                debugLog("contact convert: id=$id action=$action");
                 $updateData = [
                     'contact_type' => 'customer',
                     'contact_status' => 'active',
@@ -397,14 +397,14 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
                     'updated_at' => getCurrentTimestamp()
                 ];
                 
-                file_put_contents(__DIR__ . '/debug.log', date('c') . " contact convert update data=" . json_encode($updateData) . "\n", FILE_APPEND);
+                debugLog("contact convert update data=" . json_encode($updateData));
                 
                 $result = $db->update('contacts', $updateData, 'id = :id', ['id' => $id]);
                 
-                file_put_contents(__DIR__ . '/debug.log', date('c') . " contact convert result=$result\n", FILE_APPEND);
+                debugLog("contact convert result=$result");
                 
                 $contact = $db->fetchOne("SELECT * FROM contacts WHERE id = ?", [$id]);
-                file_put_contents(__DIR__ . '/debug.log', date('c') . " contact convert final contact=" . json_encode($contact) . "\n", FILE_APPEND);
+                debugLog("contact convert final contact=" . json_encode($contact));
                 echo json_encode($contact);
                 return;
             }
@@ -428,11 +428,11 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
             
             $updateData['updated_at'] = getCurrentTimestamp();
             
-            file_put_contents(__DIR__ . '/debug.log', date('c') . " contact update data=" . json_encode($updateData) . " id=$id\n", FILE_APPEND);
+            debugLog("contact update data=" . json_encode($updateData) . " id=$id");
             
             $result = $db->update('contacts', $updateData, 'id = :id', ['id' => $id]);
             
-            file_put_contents(__DIR__ . '/debug.log', date('c') . " contact update result=$result\n", FILE_APPEND);
+            debugLog("contact update result=$result");
             
             $contact = $db->fetchOne("SELECT * FROM contacts WHERE id = ?", [$id]);
             echo json_encode($contact);
@@ -474,7 +474,7 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
  * Handle deals endpoints
  */
 function handleDeals($method, $id, $input, $auth) {
-    file_put_contents(__DIR__ . '/debug.log', date('c') . " handleDeals method=$method id=$id input=" . json_encode($input) . "\n", FILE_APPEND);
+    debugLog("handleDeals method=$method id=$id input=" . json_encode($input));
     $db = Database::getInstance();
     
     switch ($method) {
@@ -505,7 +505,7 @@ function handleDeals($method, $id, $input, $auth) {
             break;
             
         case 'POST':
-            file_put_contents(__DIR__ . '/debug.log', date('c') . " deals POST input=" . json_encode($input) . "\n", FILE_APPEND);
+            debugLog("deals POST input=" . json_encode($input));
             if (empty($input['title']) || empty($input['contact_id'])) {
                 http_response_code(400);
                 echo json_encode([
@@ -559,11 +559,11 @@ function handleDeals($method, $id, $input, $auth) {
             
             $updateData['updated_at'] = getCurrentTimestamp();
             
-            file_put_contents(__DIR__ . '/debug.log', date('c') . " deal update data=" . json_encode($updateData) . " id=$id\n", FILE_APPEND);
+            debugLog("deal update data=" . json_encode($updateData) . " id=$id");
             
             $result = $db->update('deals', $updateData, 'id = :id', ['id' => $id]);
             
-            file_put_contents(__DIR__ . '/debug.log', date('c') . " deal update result=$result\n", FILE_APPEND);
+            debugLog("deal update result=$result");
             
             $deal = $db->fetchOne("SELECT * FROM deals WHERE id = ?", [$id]);
             echo json_encode($deal);
@@ -716,14 +716,14 @@ function handleUsers($method, $id, $input, $auth) {
  * Handle webhooks endpoints
  */
 function handleWebhooks($method, $id, $input, $auth, $action = null) {
-    file_put_contents(__DIR__ . '/debug.log', date('c') . " [DEBUG] handleWebhooks ENTRY: method=$method id=$id action=$action input=" . json_encode($input) . "\n", FILE_APPEND);
+    debugLog("[DEBUG] handleWebhooks ENTRY: method=$method id=$id action=$action input=" . json_encode($input));
     $db = Database::getInstance();
     
     // Special case: test action
     if ($action === 'test') {
-        file_put_contents(__DIR__ . '/debug.log', date('c') . " [DEBUG] test action: id=$id\n", FILE_APPEND);
+        debugLog("[DEBUG] test action: id=$id");
         if (!$id) {
-            file_put_contents(__DIR__ . '/debug.log', date('c') . " [ERROR] test: missing id\n", FILE_APPEND);
+            debugLog("[ERROR] test: missing id");
             http_response_code(400);
             echo json_encode([
                 'error' => 'Webhook ID required for test',
@@ -733,7 +733,7 @@ function handleWebhooks($method, $id, $input, $auth, $action = null) {
         }
         $webhook = $db->fetchOne("SELECT * FROM webhooks WHERE id = ?", [$id]);
         if (!$webhook) {
-            file_put_contents(__DIR__ . '/debug.log', date('c') . " [ERROR] test: webhook not found id=$id\n", FILE_APPEND);
+            debugLog("[ERROR] test: webhook not found id=$id");
             http_response_code(404);
             echo json_encode([
                 'error' => 'Webhook not found',
@@ -742,7 +742,7 @@ function handleWebhooks($method, $id, $input, $auth, $action = null) {
             return;
         }
         // Simulate sending a test webhook
-        file_put_contents(__DIR__ . '/debug.log', date('c') . " [DEBUG] test: success id=$id\n", FILE_APPEND);
+        debugLog("[DEBUG] test: success id=$id");
         http_response_code(200);
         echo json_encode([
             'success' => true,
