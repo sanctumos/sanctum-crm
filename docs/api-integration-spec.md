@@ -162,16 +162,19 @@ curl -X POST https://crm.freeopsdao.com/api/v1/contacts \
 ### Success Response
 ```json
 {
-  "id": 123,
-  "first_name": "John",
-  "last_name": "Doe",
-  "email": "john.doe@example.com",
-  "company": "Acme Corp",
-  "phone": "+1-555-0123",
-  "contact_type": "lead",
-  "contact_status": "new",
-  "source": "website_form",
-  "created_at": "2025-01-14T12:00:00Z"
+  "success": true,
+  "contact": {
+    "id": 123,
+    "first_name": "John",
+    "last_name": "Doe",
+    "email": "john.doe@example.com",
+    "company": "Acme Corp",
+    "phone": "+1-555-0123",
+    "contact_type": "lead",
+    "contact_status": "new",
+    "source": "website_form",
+    "created_at": "2025-01-14T12:00:00Z"
+  }
 }
 ```
 
@@ -497,6 +500,437 @@ async function checkCrmHealth() {
 }
 ```
 
+## 🔧 Integration FAQ - Common Issues & Solutions
+
+This FAQ addresses the most common problems encountered when integrating with the FreeOpsDAO CRM API, based on real troubleshooting experience.
+
+---
+
+### ❓ **Q: I'm getting "SSL certificate problem: unable to get local issuer certificate" errors**
+
+**A:** This is a common local development issue where PHP can't verify the SSL certificate.
+
+**Solution:**
+```php
+// Disable SSL verification for local testing
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+```
+
+**Note:** Only disable SSL verification in development environments. For production, ensure proper SSL certificates are configured.
+
+---
+
+### ❓ **Q: The API returns "Invalid JSON response: Syntax error" even though the request looks correct**
+
+**A:** The FreeOpsDAO CRM server has a known issue where it may concatenate multiple error responses before the actual success response.
+
+**Problem Response:**
+```json
+{"error":"Internal server error","code":500,"details":null}{"error":"Internal server error","code":500,"details":null}{"success":true,"contact":{"id":16,...}}
+```
+
+**Solution:**
+```php
+// Extract the actual success response from malformed JSON
+$cleanResponse = $response;
+if (strpos($response, '{"success":true') !== false) {
+    $successStart = strpos($response, '{"success":true');
+    if ($successStart !== false) {
+        $cleanResponse = substr($response, $successStart);
+    }
+}
+$result = json_decode($cleanResponse, true);
+```
+
+---
+
+### ❓ **Q: My contact creation is failing with HTTP 500 errors**
+
+**A:** Check these common causes:
+
+1. **Missing required fields:**
+   ```php
+   // Required fields
+   $data = [
+       'first_name' => 'John',      // Required
+       'last_name' => 'Doe',        // Required  
+       'email' => 'john@example.com' // Required
+   ];
+   ```
+
+2. **Wrong field names:**
+   ```php
+   // Correct field names (not 'firstName', 'lastName')
+   'first_name' => 'John',
+   'last_name' => 'Doe',
+   ```
+
+3. **Missing source field:**
+   ```php
+   // Always include source
+   'source' => 'website_form'
+   ```
+
+---
+
+### ❓ **Q: The API returns HTTP 201 but my code still fails to parse the response**
+
+**A:** The API response structure is different from what you might expect.
+
+**Actual Response Structure:**
+```json
+{
+  "success": true,
+  "contact": {
+    "id": 16,
+    "first_name": "John",
+    "last_name": "Doe",
+    "email": "john@example.com",
+    // ... other fields
+  }
+}
+```
+
+**Correct Parsing:**
+```php
+if ($httpCode === 201) {
+    if (isset($result['success']) && $result['success'] === true && isset($result['contact'])) {
+        return ['success' => true, 'data' => $result['contact']];
+    }
+}
+```
+
+---
+
+### ❓ **Q: How do I handle authentication errors?**
+
+**A:** Check your API key and authentication method.
+
+**Common Issues:**
+- **Invalid API key:** Verify the key is correct and active
+- **Wrong header format:** Use `Authorization: Bearer YOUR_API_KEY`
+- **Missing header:** Always include the Authorization header
+
+**Debug Authentication:**
+```php
+// Test basic connection first
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_URL, 'https://crm.freeopsdao.com/api/v1/contacts');
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    'Authorization: Bearer ' . CRM_API_KEY,
+    'Content-Type: application/json'
+]);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+$response = curl_exec($ch);
+$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+// HTTP 401 = Authentication failed
+// HTTP 403 = Access forbidden
+// HTTP 200 = Authentication successful
+```
+
+---
+
+### ❓ **Q: What's the correct endpoint URL structure?**
+
+**A:** Use the exact URL structure from the documentation.
+
+**Correct URLs:**
+```php
+// Base URL
+define('CRM_BASE_URL', 'https://crm.freeopsdao.com/api/v1/');
+
+// Contact creation
+$url = CRM_BASE_URL . 'contacts';  // https://crm.freeopsdao.com/api/v1/contacts
+
+// Contact lookup
+$url = CRM_BASE_URL . 'contacts?email=john@example.com';
+```
+
+**Common Mistakes:**
+- ❌ `https://crm.freeopsdao.com/api/v1/contacts/` (trailing slash)
+- ❌ `https://crm.freeopsdao.com/api/v1/contact` (singular)
+- ❌ `https://crm.freeopsdao.com/contacts` (missing /api/v1/)
+
+---
+
+### ❓ **Q: How do I validate that my integration is working?**
+
+**A:** Use this step-by-step testing approach:
+
+1. **Test Basic Connection:**
+   ```php
+   // Simple GET request to verify API is reachable
+   $response = file_get_contents('https://crm.freeopsdao.com/api/v1/contacts');
+   ```
+
+2. **Test Authentication:**
+   ```php
+   // Should return HTTP 200 if authenticated
+   $ch = curl_init();
+   curl_setopt($ch, CURLOPT_URL, 'https://crm.freeopsdao.com/api/v1/contacts');
+   curl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: Bearer ' . API_KEY]);
+   curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+   $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+   ```
+
+3. **Test Contact Creation:**
+   ```php
+   // Minimal test contact
+   $testData = [
+       'first_name' => 'Test',
+       'last_name' => 'User', 
+       'email' => 'test-' . time() . '@example.com',
+       'source' => 'website_form'
+   ];
+   ```
+
+---
+
+### ❓ **Q: What are the required vs optional fields?**
+
+**A:** Here's the complete field breakdown:
+
+**Required Fields:**
+```php
+$required = [
+    'first_name',  // string
+    'last_name',   // string
+    'email'        // string, unique
+];
+```
+
+**Optional Fields:**
+```php
+$optional = [
+    'phone',              // string
+    'company',            // string
+    'address',            // string
+    'city',               // string
+    'state',              // string
+    'zip_code',           // string
+    'country',            // string
+    'evm_address',        // string (Ethereum address)
+    'twitter_handle',     // string
+    'linkedin_profile',   // string
+    'telegram_username',  // string
+    'discord_username',   // string
+    'github_username',    // string
+    'website',            // string
+    'contact_type',       // 'lead'|'customer' (default: 'lead')
+    'contact_status',     // 'new'|'qualified'|'active'|'inactive' (default: 'new')
+    'source',             // string (e.g., 'website_form', 'event', 'referral')
+    'notes'               // string
+];
+```
+
+---
+
+### ❓ **Q: How do I handle duplicate email errors?**
+
+**A:** The API returns HTTP 409 for duplicate emails.
+
+**Error Response:**
+```json
+{
+  "error": "Contact with this email already exists",
+  "code": 409
+}
+```
+
+**Handling:**
+```php
+if ($httpCode === 409) {
+    // Contact already exists - you might want to update instead
+    return ['success' => false, 'error' => 'Contact already exists'];
+}
+```
+
+**Prevention:**
+```php
+// Check if contact exists before creating
+$checkUrl = CRM_BASE_URL . 'contacts?email=' . urlencode($email);
+$existing = json_decode(file_get_contents($checkUrl), true);
+if (!empty($existing['contacts'])) {
+    // Contact already exists
+}
+```
+
+---
+
+### ❓ **Q: What's the best way to debug API issues?**
+
+**A:** Use comprehensive logging and testing:
+
+**1. Enable Detailed Logging:**
+```php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+ini_set('log_errors', 1);
+
+// Log all API interactions
+error_log("CRM API Request - URL: $url");
+error_log("CRM API Data: " . json_encode($data));
+error_log("CRM API HTTP Code: " . $httpCode);
+error_log("CRM API Response: " . $response);
+```
+
+**2. Test with Minimal Data:**
+```php
+// Start with just required fields
+$minimalData = [
+    'first_name' => 'Test',
+    'last_name' => 'User',
+    'email' => 'test-' . time() . '@example.com'
+];
+```
+
+**3. Use Standalone Test Scripts:**
+```php
+// Create separate test files to isolate issues
+// test/crm_test.php - for debugging specific problems
+```
+
+---
+
+### ❓ **Q: How do I handle rate limiting?**
+
+**A:** The API may have rate limits. Implement proper error handling:
+
+**Rate Limit Response:**
+```json
+{
+  "error": "Rate limit exceeded",
+  "code": 429
+}
+```
+
+**Handling:**
+```php
+if ($httpCode === 429) {
+    // Wait before retrying
+    sleep(5);
+    // Implement exponential backoff for retries
+}
+```
+
+**Best Practices:**
+- Implement reasonable delays between requests
+- Use exponential backoff for retries
+- Cache responses when possible
+- Monitor your request frequency
+
+---
+
+### ❓ **Q: What's the difference between the guide examples and actual API behavior?**
+
+**A:** The API has some quirks not mentioned in the documentation:
+
+**Guide vs Reality:**
+| Guide Says | Actual Behavior |
+|------------|-----------------|
+| Returns contact directly | Returns `{"success":true,"contact":{...}}` |
+| Clean JSON responses | May concatenate error responses before success |
+| HTTP 200 for success | HTTP 201 for contact creation |
+| Simple error format | Complex malformed JSON responses |
+
+**Always handle both cases:**
+```php
+// Handle both clean and malformed responses
+if (strpos($response, '{"success":true') !== false) {
+    // Extract success response from malformed JSON
+    $successStart = strpos($response, '{"success":true');
+    $cleanResponse = substr($response, $successStart);
+} else {
+    $cleanResponse = $response;
+}
+```
+
+---
+
+## 🛠 **Complete Working Example**
+
+Here's a complete, tested implementation:
+
+```php
+function createCrmContact($contactData) {
+    try {
+        $url = 'https://crm.freeopsdao.com/api/v1/contacts';
+        
+        // Validate required fields
+        if (empty($contactData['first_name']) || empty($contactData['last_name']) || empty($contactData['email'])) {
+            return ['success' => false, 'error' => 'Missing required fields'];
+        }
+        
+        // Prepare data
+        $data = [
+            'first_name' => trim($contactData['first_name']),
+            'last_name' => trim($contactData['last_name']),
+            'email' => trim($contactData['email']),
+            'source' => 'website_form'
+        ];
+        
+        // Add optional fields
+        if (!empty($contactData['phone'])) $data['phone'] = trim($contactData['phone']);
+        if (!empty($contactData['company'])) $data['company'] = trim($contactData['company']);
+        if (!empty($contactData['notes'])) $data['notes'] = trim($contactData['notes']);
+        
+        // Make API request
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json',
+            'Authorization: Bearer ' . CRM_API_KEY
+        ]);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // For local testing
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false); // For local testing
+        
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        curl_close($ch);
+        
+        if ($error) {
+            return ['success' => false, 'error' => 'Network error: ' . $error];
+        }
+        
+        // Handle malformed JSON response
+        $cleanResponse = $response;
+        if (strpos($response, '{"success":true') !== false) {
+            $successStart = strpos($response, '{"success":true');
+            $cleanResponse = substr($response, $successStart);
+        }
+        
+        $result = json_decode($cleanResponse, true);
+        if ($result === null) {
+            return ['success' => false, 'error' => 'Invalid JSON response'];
+        }
+        
+        if ($httpCode === 201) {
+            if (isset($result['success']) && $result['success'] === true && isset($result['contact'])) {
+                return ['success' => true, 'data' => $result['contact']];
+            } else {
+                return ['success' => false, 'error' => 'Unexpected response structure'];
+            }
+        } else {
+            $errorMsg = 'API Error (HTTP ' . $httpCode . ')';
+            if (isset($result['error'])) $errorMsg .= ': ' . $result['error'];
+            return ['success' => false, 'error' => $errorMsg];
+        }
+        
+    } catch (Exception $e) {
+        return ['success' => false, 'error' => 'Exception: ' . $e->getMessage()];
+    }
+}
+```
+
+---
+
 ## 📞 Support
 
 For technical support or questions about this integration:
@@ -511,9 +945,10 @@ For technical support or questions about this integration:
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0.0 | 2025-01-14 | Initial specification |
+| 1.1.0 | 2025-01-18 | Added comprehensive FAQ with real troubleshooting findings |
 
 ---
 
-**Last Updated**: January 14, 2025  
+**Last Updated**: January 18, 2025  
 **API Version**: v1  
 **Maintainer**: FreeOpsDAO Development Team 
