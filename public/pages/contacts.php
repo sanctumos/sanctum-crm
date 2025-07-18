@@ -465,12 +465,20 @@ document.getElementById('addContactForm').addEventListener('submit', function(e)
         credentials: 'include',
         body: JSON.stringify(data)
     })
-    .then(response => response.json())
+    .then(response => {
+        if (response.ok) {
+            return response.json();
+        } else {
+            return response.json().then(error => {
+                throw new Error(error.error || 'Failed to create contact');
+            });
+        }
+    })
     .then(result => {
         if (result.success) {
             location.reload();
         } else {
-            alert('Error: ' + result.error);
+            alert('Error: ' + (result.error || 'Unknown error'));
         }
     })
     .catch(error => {
@@ -491,12 +499,20 @@ document.getElementById('editContactForm').addEventListener('submit', function(e
         credentials: 'include',
         body: JSON.stringify(data)
     })
-    .then(response => response.json())
+    .then(response => {
+        if (response.ok) {
+            return response.json();
+        } else {
+            return response.json().then(error => {
+                throw new Error(error.error || 'Failed to update contact');
+            });
+        }
+    })
     .then(result => {
         if (result.success) {
             location.reload();
         } else {
-            alert('Error: ' + result.error);
+            alert('Error: ' + (result.error || 'Unknown error'));
         }
     })
     .catch(error => {
@@ -509,7 +525,15 @@ function editContact(contactId) {
     fetch(`/api/v1/contacts/${contactId}`, {
         credentials: 'include'
     })
-    .then(response => response.json())
+    .then(response => {
+        if (response.ok) {
+            return response.json();
+        } else {
+            return response.json().then(error => {
+                throw new Error(error.error || 'Failed to fetch contact');
+            });
+        }
+    })
     .then(result => {
         if (result.success) {
             const contact = result.contact;
@@ -527,7 +551,7 @@ function editContact(contactId) {
             
             new bootstrap.Modal(document.getElementById('editContactModal')).show();
         } else {
-            alert('Error: ' + result.error);
+            alert('Error: ' + (result.error || 'Unknown error'));
         }
     })
     .catch(error => {
@@ -546,12 +570,20 @@ function deleteContact(contactId) {
             method: 'DELETE',
             credentials: 'include'
         })
-        .then(response => response.json())
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            } else {
+                return response.json().then(error => {
+                    throw new Error(error.error || 'Failed to delete contact');
+                });
+            }
+        })
         .then(result => {
             if (result.success) {
                 location.reload();
             } else {
-                alert('Error: ' + result.error);
+                alert('Error: ' + (result.error || 'Unknown error'));
             }
         })
         .catch(error => {

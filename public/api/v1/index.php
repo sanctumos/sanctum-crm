@@ -509,7 +509,11 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
             $deleted = $db->delete('contacts', 'id = ?', [$id]);
             
             if ($deleted) {
-                http_response_code(204);
+                http_response_code(200);
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Contact deleted successfully'
+                ]);
             } else {
                 http_response_code(404);
                 echo json_encode([
@@ -640,7 +644,11 @@ function handleDeals($method, $id, $input, $auth) {
             $deleted = $db->delete('deals', 'id = ?', [$id]);
             
             if ($deleted) {
-                http_response_code(204);
+                http_response_code(200);
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Deal deleted successfully'
+                ]);
             } else {
                 http_response_code(404);
                 echo json_encode([
@@ -956,7 +964,11 @@ function handleWebhooks($method, $id, $input, $auth, $action = null) {
             $deleted = $db->delete('webhooks', 'id = ?', [$id]);
             
             if ($deleted) {
-                http_response_code(204);
+                http_response_code(200);
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Webhook deleted successfully'
+                ]);
             } else {
                 http_response_code(404);
                 echo json_encode([
