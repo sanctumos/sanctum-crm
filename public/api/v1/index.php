@@ -751,7 +751,11 @@ function handleUsers($method, $id, $input, $auth) {
             
             try {
                 $auth->deleteUser($id);
-                http_response_code(204);
+                http_response_code(200);
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'User deleted successfully'
+                ]);
             } catch (Exception $e) {
                 http_response_code(400);
                 echo json_encode([

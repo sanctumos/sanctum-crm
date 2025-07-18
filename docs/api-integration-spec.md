@@ -39,10 +39,10 @@ crm.freeopsdao.com/
 ## 🔗 Base URL
 
 ```
-https://your-crm-domain.com/api/v1/
+https://crm.freeopsdao.com/api/v1/
 ```
 
-**Note**: Replace `your-crm-domain.com` with your actual CRM domain.
+**Note**: This is the production CRM API endpoint.
 
 ## 🔐 Authentication
 
@@ -56,7 +56,7 @@ Authorization: Bearer YOUR_API_KEY
 
 #### Method 2: Query Parameter
 ```
-https://your-crm-domain.com/api/v1/contacts?api_key=YOUR_API_KEY
+https://crm.freeopsdao.com/api/v1/contacts?api_key=YOUR_API_KEY
 ```
 
 ### Getting an API Key
@@ -127,7 +127,7 @@ Authorization: Bearer YOUR_API_KEY
 
 #### Basic Contact Creation
 ```bash
-curl -X POST https://your-crm-domain.com/api/v1/contacts \
+curl -X POST https://crm.freeopsdao.com/api/v1/contacts \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -142,7 +142,7 @@ curl -X POST https://your-crm-domain.com/api/v1/contacts \
 
 #### Web3 Contact with Social Media
 ```bash
-curl -X POST https://your-crm-domain.com/api/v1/contacts \
+curl -X POST https://crm.freeopsdao.com/api/v1/contacts \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -232,7 +232,7 @@ POST /api/v1/contacts/batch
 
 ### Check if Contact Exists
 ```
-GET /api/v1/contacts?email=john.doe@example.com
+GET https://crm.freeopsdao.com/api/v1/contacts?email=john.doe@example.com
 ```
 
 ### Response
@@ -255,7 +255,7 @@ GET /api/v1/contacts?email=john.doe@example.com
 ### JavaScript/Node.js
 ```javascript
 async function createContact(contactData) {
-  const response = await fetch('https://your-crm-domain.com/api/v1/contacts', {
+  const response = await fetch('https://crm.freeopsdao.com/api/v1/contacts', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -283,7 +283,7 @@ const newContact = await createContact({
 ### PHP
 ```php
 function createContact($contactData) {
-    $url = 'https://your-crm-domain.com/api/v1/contacts';
+    $url = 'https://crm.freeopsdao.com/api/v1/contacts';
     
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url);
@@ -313,7 +313,7 @@ import requests
 import json
 
 def create_contact(contact_data):
-    url = 'https://your-crm-domain.com/api/v1/contacts'
+    url = 'https://crm.freeopsdao.com/api/v1/contacts'
     headers = {
         'Content-Type': 'application/json',
         'Authorization': f'Bearer {API_KEY}'
@@ -489,7 +489,7 @@ function trackCrmIntegration(success, contactData, error = null) {
 ```javascript
 async function checkCrmHealth() {
   try {
-    const response = await fetch('https://your-crm-domain.com/api/v1/health');
+    const response = await fetch('https://crm.freeopsdao.com/api/v1/health');
     return response.ok;
   } catch (error) {
     return false;

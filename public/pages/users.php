@@ -305,11 +305,12 @@ async function deleteUser(userId) {
             credentials: 'include'
         });
         
+        const result = await response.json();
+        
         if (response.ok) {
             showAlert('User deleted successfully!', 'success');
             loadUsers();
         } else {
-            const result = await response.json();
             showAlert('Failed to delete user: ' + (result.error || 'Unknown error'), 'danger');
         }
     } catch (err) {
