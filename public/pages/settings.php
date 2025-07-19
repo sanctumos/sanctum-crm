@@ -1,7 +1,7 @@
 <?php
 /**
- * User Settings Page
- * FreeOpsDAO CRM
+ * Settings Page
+ * FreeOpsDAO CRM - System Settings (Admin Only)
  */
 
 // Remove any require_once for auth.php and layout.php
@@ -10,90 +10,103 @@ $auth = new Auth();
 $auth->requireAuth();
 $user = $auth->getUser();
 
-// Render the page using the template system
+// Check if user is admin
+if (!$auth->isAdmin()) {
+    header('Location: /index.php');
+    exit;
+}
+
+// Get database instance
+$db = Database::getInstance();
+
+// Handle form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $showDefaultCredentials = isset($_POST['show_default_credentials']) ? 1 : 0;
+    
+    // Update settings in database
+    $db->update('settings', [
+        'show_default_credentials' => $showDefaultCredentials,
+        'updated_at' => getCurrentTimestamp()
+    ], 'id = 1');
+    
+    $success = 'Settings updated successfully!';
+}
+
+// Get current settings
+$settings = $db->fetchOne("SELECT * FROM settings WHERE id = 1");
+if (!$settings) {
+    // Create default settings if they don't exist
+    $db->insert('settings', [
+        'show_default_credentials' => 1,
+        'created_at' => getCurrentTimestamp(),
+        'updated_at' => getCurrentTimestamp()
+    ]);
+    $settings = ['show_default_credentials' => 1];
+}
+
+// Render the page
 renderHeader('Settings');
 ?>
 
-<style>
-    .settings-card { max-width: 500px; margin: 0 auto; }
-    .avatar { width: 64px; height: 64px; border-radius: 50%; background: #e9ecef; display: flex; align-items: center; justify-content: center; font-size: 2rem; color: #667eea; }
-</style>
-
-<div class="settings-card">
-    <div class="card shadow-sm">
-        <div class="card-header bg-primary text-white">
-            <h4 class="mb-0"><i class="fas fa-cog"></i> User Settings</h4>
-        </div>
-        <div class="card-body">
-            <div class="text-center mb-4">
-                <div class="avatar mb-2"><i class="fas fa-user"></i></div>
-                <div><strong><?php echo htmlspecialchars($user['username']); ?></strong> <span class="badge bg-secondary text-uppercase"><?php echo htmlspecialchars($user['role']); ?></span></div>
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-cog me-2"></i>System Settings</h5>
             </div>
-            <form id="settingsForm">
-                <div class="mb-3">
-                    <label for="first_name" class="form-label">First Name</label>
-                    <input type="text" class="form-control" id="first_name" name="first_name" value="<?php echo htmlspecialchars($user['first_name']); ?>" required>
+            <div class="card-body">
+                <?php if (isset($success)): ?>
+                    <div class="alert alert-success" role="alert">
+                        <i class="fas fa-check-circle"></i> <?php echo htmlspecialchars($success); ?>
+                    </div>
+                <?php endif; ?>
+                
+                <form method="POST" action="">
+                    <div class="mb-4">
+                        <h6 class="mb-3">Login Page Settings</h6>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="show_default_credentials" 
+                                   name="show_default_credentials" 
+                                   <?php echo ($settings['show_default_credentials'] ?? 1) ? 'checked' : ''; ?>>
+                            <label class="form-check-label" for="show_default_credentials">
+                                Show default login credentials on login page
+                            </label>
+                        </div>
+                        <small class="text-muted">
+                            When enabled, the login page will display "Default credentials: admin / admin123" 
+                            to help with initial setup and testing.
+                        </small>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Save Settings
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>About Settings</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">
+                    These settings control system-wide behavior and are only accessible to administrators.
+                </p>
+                
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-shield-alt me-2"></i>Security Note</h6>
+                    <p class="mb-0 small">
+                        Consider disabling the default credentials display in production environments 
+                        for enhanced security.
+                    </p>
                 </div>
-                <div class="mb-3">
-                    <label for="last_name" class="form-label">Last Name</label>
-                    <input type="text" class="form-control" id="last_name" name="last_name" value="<?php echo htmlspecialchars($user['last_name']); ?>" required>
-                </div>
-                <div class="mb-3">
-                    <label for="email" class="form-label">Email</label>
-                    <input type="email" class="form-control" id="email" name="email" value="<?php echo htmlspecialchars($user['email']); ?>" required>
-                </div>
-                <div class="mb-3">
-                    <label for="password" class="form-label">New Password <small class="text-muted">(leave blank to keep current)</small></label>
-                    <input type="password" class="form-control" id="password" name="password" autocomplete="new-password">
-                </div>
-                <div id="settingsAlert" class="alert d-none" role="alert"></div>
-                <div class="d-flex justify-content-between">
-                    <a href="/index.php" class="btn btn-outline-secondary"><i class="fas fa-arrow-left"></i> Back</a>
-                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Changes</button>
-                </div>
-            </form>
+            </div>
         </div>
     </div>
 </div>
-
-<script>
-document.getElementById('settingsForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    const alertBox = document.getElementById('settingsAlert');
-    alertBox.classList.add('d-none');
-    alertBox.classList.remove('alert-success', 'alert-danger');
-    const data = {
-        first_name: document.getElementById('first_name').value,
-        last_name: document.getElementById('last_name').value,
-        email: document.getElementById('email').value,
-    };
-    const password = document.getElementById('password').value;
-    if (password) data.password = password;
-    try {
-        const response = await fetch('/api/v1/settings.php', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify(data)
-        });
-        const result = await response.json();
-        if (response.ok && result.success) {
-            alertBox.textContent = 'Settings updated successfully!';
-            alertBox.classList.add('alert', 'alert-success');
-            alertBox.classList.remove('d-none');
-            document.getElementById('password').value = '';
-        } else {
-            alertBox.textContent = result.error || 'Failed to update settings.';
-            alertBox.classList.add('alert', 'alert-danger');
-            alertBox.classList.remove('d-none');
-        }
-    } catch (err) {
-        alertBox.textContent = 'Network error.';
-        alertBox.classList.add('alert', 'alert-danger');
-        alertBox.classList.remove('d-none');
-    }
-});
-</script>
 
 <?php
 renderFooter();

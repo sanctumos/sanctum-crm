@@ -130,6 +130,14 @@ class Database {
                     completed_at DATETIME,
                     FOREIGN KEY (user_id) REFERENCES users(id)
                 )
+            ",
+            'settings' => "
+                CREATE TABLE IF NOT EXISTS settings (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    show_default_credentials BOOLEAN DEFAULT 1,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
             "
         ];
         foreach ($tables as $table => $sql) {
@@ -149,6 +157,7 @@ class Database {
             $this->db->exec("UPDATE users SET updated_at = COALESCE(created_at, datetime('now'))");
         }
         $this->createDefaultAdmin();
+        $this->createDefaultSettings();
     }
     private function createDefaultAdmin() {
         $result = $this->db->querySingle("SELECT COUNT(*) as count FROM users");
@@ -170,6 +179,19 @@ class Database {
             }
         }
     }
+    
+    private function createDefaultSettings() {
+        $result = $this->db->querySingle("SELECT COUNT(*) as count FROM settings");
+        if ($result == 0) {
+            $sql = "INSERT INTO settings (show_default_credentials, created_at, updated_at) VALUES (?, ?, ?)";
+            $stmt = $this->db->prepare($sql);
+            $stmt->bindValue(1, 1, SQLITE3_INTEGER);
+            $stmt->bindValue(2, getCurrentTimestamp(), SQLITE3_TEXT);
+            $stmt->bindValue(3, getCurrentTimestamp(), SQLITE3_TEXT);
+            $stmt->execute();
+        }
+    }
+    
     public function getConnection() {
         return $this->db;
     }

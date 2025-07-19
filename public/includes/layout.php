@@ -196,6 +196,9 @@ function renderHeader($title = null) {
                             <a class="nav-link <?php echo $currentPage === 'users' ? 'active' : ''; ?>" href="/index.php?page=users">
                                 <i class="fas fa-users-cog me-2"></i> Users
                             </a>
+                            <a class="nav-link <?php echo $currentPage === 'settings' ? 'active' : ''; ?>" href="/index.php?page=settings">
+                                <i class="fas fa-cog me-2"></i> Settings
+                            </a>
                             <?php endif; ?>
                             <a class="nav-link <?php echo $currentPage === 'reports' ? 'active' : ''; ?>" href="/index.php?page=reports">
                                 <i class="fas fa-chart-bar me-2"></i> Reports

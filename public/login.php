@@ -15,6 +15,11 @@ require_once __DIR__ . '/includes/auth.php';
 // Initialize authentication
 $auth = new Auth();
 
+// Get database instance to check settings
+$db = Database::getInstance();
+$settings = $db->fetchOne("SELECT * FROM settings WHERE id = 1");
+$showDefaultCredentials = $settings ? ($settings['show_default_credentials'] ?? 1) : 1;
+
 // Check if already logged in
 if ($auth->isAuthenticated()) {
     header('Location: /index.php');
@@ -155,11 +160,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </button>
                         </form>
                         
+                        <?php if ($showDefaultCredentials): ?>
                         <div class="text-center mt-4">
                             <small class="text-muted">
                                 Default credentials: admin / admin123
                             </small>
                         </div>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
