@@ -139,9 +139,8 @@ Edit `includes/config.php` to customize:
 
 ## 📚 Documentation
 
-- [Complete System Documentation](docs/basic-crm-system.md)
-- [API Reference](docs/api-reference.md) (coming soon)
-- [Database Schema](docs/database-schema.md) (coming soon)
+- **[📖 Comprehensive Documentation](docs/COMPREHENSIVE_DOCUMENTATION.md)** - Complete system documentation including API reference, integration guides, deployment instructions, and troubleshooting
+- [OpenAPI Specification](public/api/openapi.json) - Machine-readable API specification
 
 ## 🤝 Contributing
 
