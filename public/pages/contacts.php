@@ -444,6 +444,9 @@ renderHeader('Contacts');
                     </div>
                 </div>
                 <div class="modal-footer">
+                    <button type="button" class="btn btn-danger me-auto" onclick="deleteContactFromModal()">
+                        <i class="fas fa-trash me-2"></i>Delete Contact
+                    </button>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary">Update Contact</button>
                 </div>
@@ -581,6 +584,39 @@ function deleteContact(contactId) {
         })
         .then(result => {
             if (result.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + (result.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            alert('Network error: ' + error.message);
+        });
+    }
+}
+
+function deleteContactFromModal() {
+    const contactId = document.getElementById('edit_contact_id').value;
+    if (contactId && confirm('Are you sure you want to delete this contact? This action cannot be undone.')) {
+        fetch(`/api/v1/contacts/${contactId}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            } else {
+                return response.json().then(error => {
+                    throw new Error(error.error || 'Failed to delete contact');
+                });
+            }
+        })
+        .then(result => {
+            if (result.success) {
+                // Close the modal first
+                const modal = bootstrap.Modal.getInstance(document.getElementById('editContactModal'));
+                modal.hide();
+                // Then reload the page
                 location.reload();
             } else {
                 alert('Error: ' + (result.error || 'Unknown error'));
