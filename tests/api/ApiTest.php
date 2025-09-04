@@ -157,10 +157,15 @@ class ApiTest {
         
         if ($response['code'] === 200) {
             $data = json_decode($response['body'], true);
-            if ($data['first_name'] === 'Updated' && $data['contact_status'] === 'qualified') {
-                echo "PASS\n";
+            if ($data && isset($data['contact'])) {
+                $contact = $data['contact'];
+                if ($contact['first_name'] === 'Updated' && $contact['contact_status'] === 'qualified') {
+                    echo "PASS\n";
+                } else {
+                    echo "FAIL - Update not reflected (first_name: {$contact['first_name']}, contact_status: {$contact['contact_status']})\n";
+                }
             } else {
-                echo "FAIL - Update not reflected (first_name: {$data['first_name']}, contact_status: {$data['contact_status']})\n";
+                echo "FAIL - Invalid response format\n";
             }
         } else {
             echo "FAIL - HTTP " . $response['code'] . "\n";

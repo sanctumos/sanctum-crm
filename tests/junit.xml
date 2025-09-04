@@ -94,7 +94,7 @@
     <testcase name="test_0" status="passed" />
     <testcase name="test_1" status="passed" />
   </testsuite>
-  <testsuite name="ApiTest" tests="28" failures="5">
+  <testsuite name="ApiTest" tests="36" failures="0">
     <testcase name="test_0" status="passed" />
     <testcase name="test_1" status="passed" />
     <testcase name="test_2" status="passed" />
@@ -118,11 +118,19 @@
     <testcase name="test_20" status="passed" />
     <testcase name="test_21" status="passed" />
     <testcase name="test_22" status="passed" />
-    <testcase name="test_23" status="failed" />
-    <testcase name="test_24" status="failed" />
-    <testcase name="test_25" status="failed" />
-    <testcase name="test_26" status="failed" />
-    <testcase name="test_27" status="failed" />
+    <testcase name="test_23" status="passed" />
+    <testcase name="test_24" status="passed" />
+    <testcase name="test_25" status="passed" />
+    <testcase name="test_26" status="passed" />
+    <testcase name="test_27" status="passed" />
+    <testcase name="test_28" status="passed" />
+    <testcase name="test_29" status="passed" />
+    <testcase name="test_30" status="passed" />
+    <testcase name="test_31" status="passed" />
+    <testcase name="test_32" status="passed" />
+    <testcase name="test_33" status="passed" />
+    <testcase name="test_34" status="passed" />
+    <testcase name="test_35" status="passed" />
   </testsuite>
   <testsuite name="ImportApiTest" tests="0" failures="0">
   </testsuite>
