@@ -96,6 +96,51 @@ renderHeader('Import Contacts');
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- Name Splitting Section -->
+                    <div class="mt-4" id="nameSplitSection" style="display: none;">
+                        <div class="card border-info">
+                            <div class="card-header bg-info text-white">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-cut me-2"></i>Split Full Name
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted mb-3">If you have a "Full Name" column, you can split it into First Name and Last Name:</p>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <label for="fullNameColumn" class="form-label">Full Name Column</label>
+                                        <select class="form-select" id="fullNameColumn">
+                                            <option value="">Select a column...</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="splitDelimiter" class="form-label">Split By</label>
+                                        <select class="form-select" id="splitDelimiter">
+                                            <option value=" ">Space (First Last)</option>
+                                            <option value=",">Comma (Last, First)</option>
+                                            <option value="|">Pipe (First|Last)</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Preview</label>
+                                        <div class="form-control-plaintext" id="nameSplitPreview">
+                                            <small class="text-muted">Select a column to see preview</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mt-3">
+                                    <button type="button" class="btn btn-outline-info" id="applyNameSplit">
+                                        <i class="fas fa-cut me-1"></i> Apply Name Split
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary" id="clearNameSplit">
+                                        <i class="fas fa-times me-1"></i> Clear Split
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="mt-3">
                         <button type="button" class="btn btn-success" id="nextToStep3">
                             <i class="fas fa-arrow-right"></i> Next: Set Source
@@ -245,6 +290,7 @@ let csvData = [];
 let fieldMapping = {};
 let importSource = '';
 let importNotes = '';
+let nameSplitConfig = null; // { column: 'full_name', delimiter: ' ', firstPart: 0, lastPart: 1 }
 
 // Step 1: Upload CSV
 document.getElementById('csvUploadForm').addEventListener('submit', function(e) {
@@ -295,9 +341,29 @@ function populateCSVColumns() {
             div.innerHTML = `<strong>${header}</strong><br><small class="text-muted">Sample: ${csvData[0][header] || 'N/A'}</small>`;
             csvColumnsDiv.appendChild(div);
         });
+        
+        // Populate name split dropdown
+        populateNameSplitDropdown(headers);
     }
     
     populateContactFields();
+}
+
+function populateNameSplitDropdown(headers) {
+    const dropdown = document.getElementById('fullNameColumn');
+    dropdown.innerHTML = '<option value="">Select a column...</option>';
+    
+    headers.forEach(header => {
+        const option = document.createElement('option');
+        option.value = header;
+        option.textContent = header;
+        dropdown.appendChild(option);
+    });
+    
+    // Show name split section if there are columns
+    if (headers.length > 0) {
+        document.getElementById('nameSplitSection').style.display = 'block';
+    }
 }
 
 function populateContactFields() {
@@ -328,6 +394,136 @@ function populateContactFields() {
     });
     
     setupDragAndDrop();
+    setupNameSplitHandlers();
+}
+
+function setupNameSplitHandlers() {
+    // Name split column change
+    document.getElementById('fullNameColumn').addEventListener('change', function() {
+        updateNameSplitPreview();
+    });
+    
+    // Split delimiter change
+    document.getElementById('splitDelimiter').addEventListener('change', function() {
+        updateNameSplitPreview();
+    });
+    
+    // Apply name split
+    document.getElementById('applyNameSplit').addEventListener('click', function() {
+        applyNameSplit();
+    });
+    
+    // Clear name split
+    document.getElementById('clearNameSplit').addEventListener('click', function() {
+        clearNameSplit();
+    });
+}
+
+function updateNameSplitPreview() {
+    const column = document.getElementById('fullNameColumn').value;
+    const delimiter = document.getElementById('splitDelimiter').value;
+    const preview = document.getElementById('nameSplitPreview');
+    
+    if (!column || !csvData.length) {
+        preview.innerHTML = '<small class="text-muted">Select a column to see preview</small>';
+        return;
+    }
+    
+    const sampleValue = csvData[0][column] || '';
+    if (!sampleValue) {
+        preview.innerHTML = '<small class="text-muted">No sample data available</small>';
+        return;
+    }
+    
+    const parts = sampleValue.split(delimiter);
+    if (parts.length >= 2) {
+        const firstPart = parts[0].trim();
+        const lastPart = parts[1].trim();
+        preview.innerHTML = `<strong>First:</strong> "${firstPart}"<br><strong>Last:</strong> "${lastPart}"`;
+    } else {
+        preview.innerHTML = '<small class="text-warning">Not enough parts to split</small>';
+    }
+}
+
+function applyNameSplit() {
+    const column = document.getElementById('fullNameColumn').value;
+    const delimiter = document.getElementById('splitDelimiter').value;
+    
+    if (!column) {
+        alert('Please select a column to split');
+        return;
+    }
+    
+    // Determine which part is first and last based on delimiter
+    let firstPartIndex = 0;
+    let lastPartIndex = 1;
+    
+    if (delimiter === ',') {
+        // For "Last, First" format
+        firstPartIndex = 1;
+        lastPartIndex = 0;
+    }
+    
+    nameSplitConfig = {
+        column: column,
+        delimiter: delimiter,
+        firstPart: firstPartIndex,
+        lastPart: lastPartIndex
+    };
+    
+    // Auto-map the split fields
+    fieldMapping['first_name'] = column + '_split_first';
+    fieldMapping['last_name'] = column + '_split_last';
+    
+    // Update the UI to show the mapping
+    updateFieldMappingDisplay();
+    
+    // Show success message
+    alert('Name split applied! First Name and Last Name have been automatically mapped.');
+}
+
+function clearNameSplit() {
+    nameSplitConfig = null;
+    
+    // Clear the auto-mapped fields if they were set by name split
+    if (fieldMapping['first_name'] && fieldMapping['first_name'].includes('_split_first')) {
+        delete fieldMapping['first_name'];
+    }
+    if (fieldMapping['last_name'] && fieldMapping['last_name'].includes('_split_last')) {
+        delete fieldMapping['last_name'];
+    }
+    
+    // Reset the dropdowns
+    document.getElementById('fullNameColumn').value = '';
+    document.getElementById('splitDelimiter').value = ' ';
+    document.getElementById('nameSplitPreview').innerHTML = '<small class="text-muted">Select a column to see preview</small>';
+    
+    // Update the UI
+    updateFieldMappingDisplay();
+}
+
+function updateFieldMappingDisplay() {
+    // Update the contact fields display to show current mappings
+    const contactFields = document.querySelectorAll('#contactFields .droppable');
+    contactFields.forEach(field => {
+        const fieldName = field.dataset.field;
+        if (fieldMapping[fieldName]) {
+            const mapping = fieldMapping[fieldName];
+            if (mapping.includes('_split_')) {
+                // This is a split field
+                const originalColumn = mapping.replace('_split_first', '').replace('_split_last', '');
+                field.innerHTML = `<strong>${field.innerHTML.split('<br>')[0]}</strong><br><small class="text-info">Split from: ${originalColumn}</small>`;
+            } else {
+                // Regular mapping
+                field.innerHTML = `<strong>${field.innerHTML.split('<br>')[0]}</strong><br><small class="text-success">Mapped to: ${mapping}</small>`;
+            }
+        } else {
+            // Reset to original state
+            const fieldLabel = field.innerHTML.split('<br>')[0];
+            const required = fieldLabel.includes('*') ? ' <span class="text-danger">*</span>' : '';
+            field.innerHTML = `<strong>${fieldLabel}</strong>${required}<br><small class="text-muted">Drop CSV column here</small>`;
+        }
+    });
 }
 
 function setupDragAndDrop() {
@@ -366,7 +562,7 @@ function setupDragAndDrop() {
             fieldMapping[field] = column;
             
             // Update UI
-            this.innerHTML = `<strong>${this.innerHTML.split('<br>')[0]}</strong><br><small class="text-success">Mapped to: ${column}</small>`;
+            updateFieldMappingDisplay();
         });
     });
 }
@@ -422,7 +618,8 @@ document.getElementById('startImport').addEventListener('click', function() {
         csvData: csvData,
         fieldMapping: fieldMapping,
         source: importSource,
-        notes: importNotes
+        notes: importNotes,
+        nameSplitConfig: nameSplitConfig
     };
     
     fetch('/api/v1/contacts/import', {

@@ -368,6 +368,7 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
             $fieldMapping = $input['fieldMapping'];
             $source = $input['source'] ?? 'CSV Import';
             $notes = $input['notes'] ?? '';
+            $nameSplitConfig = $input['nameSplitConfig'] ?? null;
             
             $successCount = 0;
             $errorCount = 0;
@@ -381,6 +382,21 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
                     foreach ($fieldMapping as $field => $column) {
                         if (isset($row[$column]) && !empty($row[$column])) {
                             $contactData[$field] = $row[$column];
+                        }
+                    }
+                    
+                    // Handle name splitting if configured
+                    if ($nameSplitConfig && isset($row[$nameSplitConfig['column']])) {
+                        $fullName = $row[$nameSplitConfig['column']];
+                        $parts = explode($nameSplitConfig['delimiter'], $fullName);
+                        
+                        if (count($parts) >= 2) {
+                            $firstPart = trim($parts[$nameSplitConfig['firstPart']]);
+                            $lastPart = trim($parts[$nameSplitConfig['lastPart']]);
+                            
+                            // Override first_name and last_name with split values
+                            $contactData['first_name'] = $firstPart;
+                            $contactData['last_name'] = $lastPart;
                         }
                     }
                     
