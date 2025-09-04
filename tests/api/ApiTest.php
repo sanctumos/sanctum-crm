@@ -40,6 +40,7 @@ class ApiTest {
         $this->testAuthentication();
         $this->testJsonResponses();
         $this->testOpenApiDocumentation();
+        $this->testImportEndpoints();
         
         echo "All API tests completed!\n";
     }
@@ -808,6 +809,95 @@ class ApiTest {
             'code' => $httpCode,
             'body' => $response
         ];
+    }
+    
+    public function testImportEndpoints() {
+        echo "  Testing Import API endpoints...\n";
+        
+        // Test CSV import endpoint
+        $csvData = [
+            [
+                'Full Name' => 'John Doe',
+                'Email' => 'john@example.com',
+                'Phone' => '+1234567890',
+                'Company' => 'Test Corp'
+            ],
+            [
+                'Full Name' => 'Jane Smith',
+                'Email' => 'jane@example.com',
+                'Phone' => '+0987654321',
+                'Company' => 'Another Corp'
+            ]
+        ];
+        
+        $fieldMapping = [
+            'first_name' => 'Full Name',
+            'last_name' => 'Full Name',
+            'email' => 'Email',
+            'phone' => 'Phone',
+            'company' => 'Company'
+        ];
+        
+        $nameSplitConfig = [
+            'column' => 'Full Name',
+            'delimiter' => ' ',
+            'firstPart' => 0,
+            'lastPart' => 1
+        ];
+        
+        $importData = [
+            'csvData' => $csvData,
+            'fieldMapping' => $fieldMapping,
+            'source' => 'API Test',
+            'notes' => 'API endpoint test',
+            'nameSplitConfig' => $nameSplitConfig
+        ];
+        
+        $response = $this->makeRequest('POST', '/api/v1/contacts/import', $importData);
+        
+        if ($response['code'] === 200) {
+            $data = json_decode($response['body'], true);
+            if (isset($data['success']) && $data['success'] === true) {
+                echo "    ✓ Import endpoint works\n";
+                
+                if (isset($data['totalProcessed']) && $data['totalProcessed'] === 2) {
+                    echo "    ✓ All records processed\n";
+                } else {
+                    echo "    ✗ Record count mismatch\n";
+                }
+                
+                if (isset($data['successCount']) && $data['successCount'] === 2) {
+                    echo "    ✓ All records imported successfully\n";
+                } else {
+                    echo "    ✗ Some records failed to import\n";
+                }
+            } else {
+                echo "    ✗ Import failed: " . ($data['error'] ?? 'Unknown error') . "\n";
+            }
+        } else {
+            echo "    ✗ Import endpoint failed with code: " . $response['code'] . "\n";
+        }
+        
+        // Test contact creation without email
+        $contactData = [
+            'first_name' => 'Test',
+            'last_name' => 'NoEmail',
+            'phone' => '+1111111111',
+            'company' => 'Test Company'
+        ];
+        
+        $response = $this->makeRequest('POST', '/api/v1/contacts', $contactData);
+        
+        if ($response['code'] === 201) {
+            $data = json_decode($response['body'], true);
+            if (isset($data['first_name']) && $data['first_name'] === 'Test') {
+                echo "    ✓ Contact creation without email works\n";
+            } else {
+                echo "    ✗ Contact creation without email failed\n";
+            }
+        } else {
+            echo "    ✗ Contact creation without email failed with code: " . $response['code'] . "\n";
+        }
     }
 }
 

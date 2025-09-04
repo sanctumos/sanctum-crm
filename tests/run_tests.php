@@ -47,7 +47,8 @@ class TestRunner {
             'DatabaseTest.php' => 'DatabaseTest',
             'WebhookTest.php' => 'WebhookTest',
             'UserManagementTest.php' => 'UserManagementTest',
-            'ReportsTest.php' => 'ReportsTest'
+            'ReportsTest.php' => 'ReportsTest',
+            'ImportTest.php' => 'ImportTest'
         ];
         
         foreach ($unitTests as $file => $class) {
@@ -62,7 +63,8 @@ class TestRunner {
         echo "=========\n";
         
         $apiTests = [
-            'ApiTest.php' => 'ApiTest'
+            'ApiTest.php' => 'ApiTest',
+            'ImportApiTest.php' => 'ImportApiTest'
         ];
         
         foreach ($apiTests as $file => $class) {
@@ -77,7 +79,8 @@ class TestRunner {
         echo "=================\n";
         
         $integrationTests = [
-            'IntegrationTest.php' => 'IntegrationTest'
+            'IntegrationTest.php' => 'IntegrationTest',
+            'ImportIntegrationTest.php' => 'ImportIntegrationTest'
         ];
         
         foreach ($integrationTests as $file => $class) {
@@ -260,7 +263,8 @@ class TestRunner {
         $testFiles = [
             'auth.php' => ['AuthTest.php', 'UserManagementTest.php'],
             'database.php' => ['DatabaseTest.php'],
-            'config.php' => ['WebhookTest.php', 'ReportsTest.php']
+            'config.php' => ['WebhookTest.php', 'ReportsTest.php'],
+            'layout.php' => ['ImportTest.php', 'ImportApiTest.php', 'ImportIntegrationTest.php']
         ];
         
         return isset($testFiles[$filename]);

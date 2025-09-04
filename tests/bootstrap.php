@@ -11,6 +11,20 @@ if (!defined('CRM_LOADED')) define('CRM_LOADED', true);
 // Use test database
 if (!defined('DB_PATH')) define('DB_PATH', __DIR__ . '/../db/test_crm.db');
 
+// Ensure test database exists
+$testDbPath = __DIR__ . '/../db/test_crm.db';
+if (!file_exists($testDbPath)) {
+    // Create test database directory if it doesn't exist
+    $dbDir = dirname($testDbPath);
+    if (!is_dir($dbDir)) {
+        mkdir($dbDir, 0755, true);
+    }
+    
+    // Initialize test database
+    $db = new SQLite3($testDbPath);
+    $db->close();
+}
+
 // Include required files
 require_once __DIR__ . '/../public/includes/config.php';
 require_once __DIR__ . '/../public/includes/database.php';

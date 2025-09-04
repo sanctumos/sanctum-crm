@@ -24,6 +24,7 @@ class DatabaseTest {
         $this->testDelete();
         $this->testTransactions();
         $this->testTableInfo();
+        $this->testEmailNullableMigration();
         
         echo "All Database tests completed!\n";
     }
@@ -224,6 +225,41 @@ class DatabaseTest {
                 echo "PASS (" . count($tableInfo) . " columns)\n";
             } else {
                 echo "FAIL - No table info returned\n";
+            }
+        } catch (Exception $e) {
+            echo "FAIL - " . $e->getMessage() . "\n";
+        }
+    }
+    
+    public function testEmailNullableMigration() {
+        echo "  Testing email nullable migration... ";
+        
+        try {
+            // Test inserting contact without email
+            $contactData = [
+                'first_name' => 'Test',
+                'last_name' => 'NoEmail',
+                'email' => null, // Explicitly null
+                'contact_type' => 'lead',
+                'contact_status' => 'new',
+                'source' => 'test',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+            
+            $contactId = $this->db->insert('contacts', $contactData);
+            
+            if ($contactId) {
+                // Verify the contact was inserted
+                $contact = $this->db->fetchOne("SELECT * FROM contacts WHERE id = ?", [$contactId]);
+                
+                if ($contact && $contact['email'] === null) {
+                    echo "PASS\n";
+                } else {
+                    echo "FAIL - Email not nullable\n";
+                }
+            } else {
+                echo "FAIL - Could not insert contact without email\n";
             }
         } catch (Exception $e) {
             echo "FAIL - " . $e->getMessage() . "\n";
