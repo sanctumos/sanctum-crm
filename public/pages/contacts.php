@@ -125,7 +125,7 @@ renderHeader('Contacts');
                             <i class="fas fa-list"></i>
                         </a>
                     </div>
-                    <a href="/pages/import_contacts.php" class="btn btn-success">
+                    <a href="/?page=import_contacts" class="btn btn-success">
                         <i class="fas fa-file-import me-2"></i>Import CSV
                     </a>
                     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addContactModal">

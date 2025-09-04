@@ -9,8 +9,11 @@ if (!defined('CRM_LOADED')) {
     die('Direct access not permitted');
 }
 
-// Get current user
-$user = $auth->getUser();
+// Get current user (if auth is available)
+$user = null;
+if (isset($auth) && $auth instanceof Auth) {
+    $user = $auth->getUser();
+}
 
 // Get current page for navigation highlighting
 $currentPage = $_GET['page'] ?? 'dashboard';

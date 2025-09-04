@@ -4,28 +4,15 @@
  * Best Jobs in TA - Contact Import Interface
  */
 
-// Define CRM loaded constant
-define('CRM_LOADED', true);
+// Get database instance
+$db = Database::getInstance();
 
-// Include required files
-require_once __DIR__ . '/../includes/config.php';
-require_once __DIR__ . '/../includes/database.php';
-require_once __DIR__ . '/../includes/auth.php';
+// Handle import actions
+$action = $_GET['action'] ?? 'form';
+$import_id = $_GET['id'] ?? null;
 
-// Initialize authentication
-$auth = new Auth();
-
-// Check if user is authenticated
-if (!$auth->isAuthenticated()) {
-    header('Location: /login.php');
-    exit;
-}
-
-// Get current page
-$page = 'import_contacts';
-
-// Include layout
-require_once __DIR__ . '/../includes/layout.php';
+// Render the page using the template system
+renderHeader('Import Contacts');
 ?>
 
 <div class="container-fluid">
@@ -33,7 +20,7 @@ require_once __DIR__ . '/../includes/layout.php';
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h1 class="h3 mb-0">Import Contacts</h1>
-                <a href="/pages/contacts.php" class="btn btn-outline-secondary">
+                <a href="/?page=contacts" class="btn btn-outline-secondary">
                     <i class="fas fa-arrow-left"></i> Back to Contacts
                 </a>
             </div>
@@ -274,7 +261,7 @@ document.getElementById('csvUploadForm').addEventListener('submit', function(e) 
     const formData = new FormData();
     formData.append('csvFile', file);
     
-    fetch('/api/v1/contacts/import/upload', {
+    fetch('/api/v1/contacts/import', {
         method: 'POST',
         body: formData
     })
@@ -438,7 +425,7 @@ document.getElementById('startImport').addEventListener('click', function() {
         notes: importNotes
     };
     
-    fetch('/api/v1/contacts/import/process', {
+    fetch('/api/v1/contacts/import', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -516,4 +503,4 @@ function showStep(stepNumber) {
 }
 </script>
 
-<?php require_once __DIR__ . '/../includes/layout.php'; ?>
+<?php renderFooter(); ?>
