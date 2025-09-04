@@ -22,7 +22,15 @@ require_once __DIR__ . '/../../includes/auth.php';
 
 // Set JSON content type
 if (!defined('CRM_TESTING')) header('Content-Type: application/json');
-if (!defined('CRM_TESTING')) header('Access-Control-Allow-Origin: ' . APP_URL);
+if (!defined('CRM_TESTING')) {
+    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+    $allowed_origins = ['https://bestjobsinta.com', 'https://www.bestjobsinta.com'];
+    if (in_array($origin, $allowed_origins)) {
+        header('Access-Control-Allow-Origin: ' . $origin);
+    } else {
+        header('Access-Control-Allow-Origin: https://bestjobsinta.com');
+    }
+}
 if (!defined('CRM_TESTING')) header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 if (!defined('CRM_TESTING')) header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
 
@@ -216,6 +224,13 @@ if (!$auth->isAuthenticated()) {
         'code' => 401
     ]);
     exit;
+}
+
+// Debug logging for authentication
+debugLog("AUTH DEBUG: User authenticated: " . ($auth->isAuthenticated() ? 'Yes' : 'No'));
+if ($auth->isAuthenticated()) {
+    $user = $auth->getUser();
+    debugLog("AUTH DEBUG: User: " . $user['username'] . ", Role: " . $user['role'] . ", Is Admin: " . ($auth->isAdmin() ? 'Yes' : 'No'));
 }
 
 // Route the request
@@ -694,11 +709,20 @@ function handleUsers($method, $id, $input, $auth) {
                 }
                 echo json_encode($user);
             } else {
-                $users = $auth->getAllUsers();
-                echo json_encode([
-                    'users' => $users,
-                    'count' => count($users)
-                ]);
+                try {
+                    $users = $auth->getAllUsers();
+                    echo json_encode([
+                        'users' => $users,
+                        'count' => count($users)
+                    ]);
+                } catch (Exception $e) {
+                    debugLog("USERS ERROR: " . $e->getMessage());
+                    http_response_code(500);
+                    echo json_encode([
+                        'error' => 'Failed to load users: ' . $e->getMessage(),
+                        'code' => 500
+                    ]);
+                }
             }
             break;
             
