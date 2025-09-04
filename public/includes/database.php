@@ -37,6 +37,10 @@ class Database {
     }
     
     private function initializeTables() {
+        $this->createTables();
+    }
+    
+    private function createTables() {
         $tables = [
             'users' => "
                 CREATE TABLE IF NOT EXISTS users (
@@ -156,6 +160,10 @@ class Database {
             $this->db->exec("ALTER TABLE users ADD COLUMN updated_at DATETIME");
             $this->db->exec("UPDATE users SET updated_at = COALESCE(created_at, datetime('now'))");
         }
+        
+        // MIGRATION: Make email nullable in contacts table
+        $this->migrateContactsEmailNullable();
+        
         $this->createDefaultAdmin();
         $this->createDefaultSettings();
     }
@@ -189,6 +197,87 @@ class Database {
             $stmt->bindValue(2, getCurrentTimestamp(), SQLITE3_TEXT);
             $stmt->bindValue(3, getCurrentTimestamp(), SQLITE3_TEXT);
             $stmt->execute();
+        }
+    }
+    
+    private function migrateContactsEmailNullable() {
+        // Check if email is still NOT NULL in contacts table
+        $columns = $this->getTableInfo('contacts');
+        $emailColumn = null;
+        foreach ($columns as $col) {
+            if ($col['name'] === 'email') {
+                $emailColumn = $col;
+                break;
+            }
+        }
+        
+        if ($emailColumn && $emailColumn['notnull'] == 1) {
+            // Email is still NOT NULL, we need to recreate the table
+            try {
+                // Create a backup of existing data
+                $this->db->exec("CREATE TABLE contacts_backup AS SELECT * FROM contacts");
+                
+                // Drop the old table
+                $this->db->exec("DROP TABLE contacts");
+                
+                // Create new table with nullable email
+                $this->db->exec("
+                    CREATE TABLE contacts (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        first_name VARCHAR(50) NOT NULL,
+                        last_name VARCHAR(50) NOT NULL,
+                        email VARCHAR(100) UNIQUE,
+                        phone VARCHAR(20),
+                        company VARCHAR(100),
+                        position VARCHAR(100),
+                        address TEXT,
+                        city VARCHAR(50),
+                        state VARCHAR(50),
+                        zip_code VARCHAR(20),
+                        country VARCHAR(50),
+                        evm_address VARCHAR(42),
+                        twitter_handle VARCHAR(50),
+                        linkedin_profile VARCHAR(255),
+                        telegram_username VARCHAR(50),
+                        discord_username VARCHAR(50),
+                        github_username VARCHAR(50),
+                        website VARCHAR(255),
+                        contact_type VARCHAR(10) DEFAULT 'lead',
+                        contact_status VARCHAR(20) DEFAULT 'new',
+                        source VARCHAR(50),
+                        assigned_to INTEGER,
+                        notes TEXT,
+                        first_purchase_date DATE,
+                        total_purchases DECIMAL(10,2) DEFAULT 0.00,
+                        last_purchase_date DATE,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    )
+                ");
+                
+                // Copy data back
+                $this->db->exec("INSERT INTO contacts SELECT * FROM contacts_backup");
+                
+                // Drop backup table
+                $this->db->exec("DROP TABLE contacts_backup");
+                
+                if (DEBUG_MODE) {
+                    error_log("Migrated contacts table to make email nullable");
+                }
+            } catch (Exception $e) {
+                if (DEBUG_MODE) {
+                    error_log("Migration failed: " . $e->getMessage());
+                }
+                // If migration fails, try to restore from backup
+                try {
+                    $this->db->exec("DROP TABLE IF EXISTS contacts");
+                    $this->db->exec("ALTER TABLE contacts_backup RENAME TO contacts");
+                } catch (Exception $e2) {
+                    if (DEBUG_MODE) {
+                        error_log("Backup restoration failed: " . $e2->getMessage());
+                    }
+                }
+            }
         }
     }
     

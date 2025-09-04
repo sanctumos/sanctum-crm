@@ -293,8 +293,8 @@ renderHeader('Contacts');
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label for="email" class="form-label">Email *</label>
-                        <input type="email" class="form-control" id="email" name="email" required>
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" name="email">
                     </div>
                     <div class="mb-3">
                         <label for="phone" class="form-label">Phone</label>
@@ -388,8 +388,8 @@ renderHeader('Contacts');
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label for="edit_email" class="form-label">Email *</label>
-                        <input type="email" class="form-control" id="edit_email" name="email" required>
+                        <label for="edit_email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="edit_email" name="email">
                     </div>
                     <div class="mb-3">
                         <label for="edit_phone" class="form-label">Phone</label>

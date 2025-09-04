@@ -380,6 +380,11 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
                     
                     // Map CSV columns to contact fields
                     foreach ($fieldMapping as $field => $column) {
+                        // Skip name split fields - they'll be handled separately
+                        if (strpos($column, '_split_') !== false) {
+                            continue;
+                        }
+                        
                         if (isset($row[$column]) && !empty($row[$column])) {
                             $contactData[$field] = $row[$column];
                         }
@@ -394,7 +399,7 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
                             $firstPart = trim($parts[$nameSplitConfig['firstPart']]);
                             $lastPart = trim($parts[$nameSplitConfig['lastPart']]);
                             
-                            // Override first_name and last_name with split values
+                            // Set first_name and last_name with split values
                             $contactData['first_name'] = $firstPart;
                             $contactData['last_name'] = $lastPart;
                         }
@@ -408,25 +413,31 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
                     $contactData['created_at'] = getCurrentTimestamp();
                     $contactData['updated_at'] = getCurrentTimestamp();
                     
-                    // Validate required fields
-                    if (empty($contactData['first_name']) || empty($contactData['last_name']) || empty($contactData['email'])) {
+                    // Validate required fields (email is no longer required for lead enrichment)
+                    if (empty($contactData['first_name']) || empty($contactData['last_name'])) {
+                        $missingFields = [];
+                        if (empty($contactData['first_name'])) $missingFields[] = 'first_name';
+                        if (empty($contactData['last_name'])) $missingFields[] = 'last_name';
+                        
                         $errors[] = [
                             'row' => $index + 1,
-                            'message' => 'Missing required fields (first_name, last_name, or email)'
+                            'message' => 'Missing required fields: ' . implode(', ', $missingFields) . ' (Data: ' . json_encode($contactData) . ')'
                         ];
                         $errorCount++;
                         continue;
                     }
                     
-                    // Check for duplicate email
-                    $existing = $db->fetchOne("SELECT id FROM contacts WHERE email = ?", [$contactData['email']]);
-                    if ($existing) {
-                        $errors[] = [
-                            'row' => $index + 1,
-                            'message' => 'Contact with this email already exists'
-                        ];
-                        $errorCount++;
-                        continue;
+                    // Check for duplicate email (only if email is provided)
+                    if (!empty($contactData['email'])) {
+                        $existing = $db->fetchOne("SELECT id FROM contacts WHERE email = ?", [$contactData['email']]);
+                        if ($existing) {
+                            $errors[] = [
+                                'row' => $index + 1,
+                                'message' => 'Contact with this email already exists'
+                            ];
+                            $errorCount++;
+                            continue;
+                        }
                     }
                     
                     // Insert contact
@@ -505,7 +516,7 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
         case 'POST':
             debugLog("contacts POST input=" . json_encode($input));
             // Create new contact
-            $required = ['first_name', 'last_name', 'email'];
+            $required = ['first_name', 'last_name'];
             foreach ($required as $field) {
                 if (empty($input[$field])) {
                     http_response_code(400);

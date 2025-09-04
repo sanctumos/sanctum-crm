@@ -373,7 +373,7 @@ function populateContactFields() {
     const fields = [
         { name: 'first_name', label: 'First Name', required: true },
         { name: 'last_name', label: 'Last Name', required: true },
-        { name: 'email', label: 'Email', required: true },
+        { name: 'email', label: 'Email', required: false },
         { name: 'phone', label: 'Phone' },
         { name: 'company', label: 'Company' },
         { name: 'job_title', label: 'Job Title' },
@@ -471,9 +471,10 @@ function applyNameSplit() {
         lastPart: lastPartIndex
     };
     
-    // Auto-map the split fields
-    fieldMapping['first_name'] = column + '_split_first';
-    fieldMapping['last_name'] = column + '_split_last';
+    // Auto-map the split fields to the original column
+    // The actual splitting will be handled by the API using nameSplitConfig
+    fieldMapping['first_name'] = column;
+    fieldMapping['last_name'] = column;
     
     // Update the UI to show the mapping
     updateFieldMappingDisplay();
@@ -509,10 +510,10 @@ function updateFieldMappingDisplay() {
         const fieldName = field.dataset.field;
         if (fieldMapping[fieldName]) {
             const mapping = fieldMapping[fieldName];
-            if (mapping.includes('_split_')) {
+            // Check if this is a name split field
+            if (nameSplitConfig && (fieldName === 'first_name' || fieldName === 'last_name') && mapping === nameSplitConfig.column) {
                 // This is a split field
-                const originalColumn = mapping.replace('_split_first', '').replace('_split_last', '');
-                field.innerHTML = `<strong>${field.innerHTML.split('<br>')[0]}</strong><br><small class="text-info">Split from: ${originalColumn}</small>`;
+                field.innerHTML = `<strong>${field.innerHTML.split('<br>')[0]}</strong><br><small class="text-info">Split from: ${mapping}</small>`;
             } else {
                 // Regular mapping
                 field.innerHTML = `<strong>${field.innerHTML.split('<br>')[0]}</strong><br><small class="text-success">Mapped to: ${mapping}</small>`;
@@ -570,7 +571,7 @@ function setupDragAndDrop() {
 // Step 2 to Step 3
 document.getElementById('nextToStep3').addEventListener('click', function() {
     // Validate required fields are mapped
-    const requiredFields = ['first_name', 'last_name', 'email'];
+    const requiredFields = ['first_name', 'last_name'];
     const missingFields = requiredFields.filter(field => !fieldMapping[field]);
     
     if (missingFields.length > 0) {
