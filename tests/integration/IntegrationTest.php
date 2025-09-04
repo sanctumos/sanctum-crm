@@ -1,7 +1,7 @@
 <?php
 /**
  * Integration Tests
- * FreeOpsDAO CRM - System Integration Testing
+ * Best Jobs in TA - System Integration Testing
  */
 
 require_once __DIR__ . '/../bootstrap.php';

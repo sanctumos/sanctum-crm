@@ -1,12 +1,12 @@
 {
   "openapi": "3.0.0",
   "info": {
-    "title": "FreeOpsDAO CRM API",
+    "title": "Best Jobs in TA API",
     "description": "MCP-ready CRM API for managing contacts, deals, and users with Web3 integration",
     "version": "1.0.0",
     "contact": {
-      "name": "FreeOpsDAO",
-      "url": "https://freeopsdao.com"
+      "name": "Best Jobs in TA",
+      "url": "https://bestjobsinta.com"
     }
   },
   "servers": [

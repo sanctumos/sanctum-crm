@@ -1,7 +1,7 @@
 <?php
 /**
  * Database Management Class
- * FreeOpsDAO CRM - SQLite Database Handler (sqlite3 extension)
+ * Best Jobs in TA - SQLite Database Handler (sqlite3 extension)
  */
 
 // Prevent direct access
@@ -167,7 +167,7 @@ class Database {
             $sql = "INSERT INTO users (username, email, password_hash, first_name, last_name, role, api_key) VALUES (?, ?, ?, ?, ?, ?, ?)";
             $stmt = $this->db->prepare($sql);
             $stmt->bindValue(1, 'admin', SQLITE3_TEXT);
-            $stmt->bindValue(2, 'admin@freeopsdao.com', SQLITE3_TEXT);
+            $stmt->bindValue(2, 'admin@bestjobsinta.com', SQLITE3_TEXT);
             $stmt->bindValue(3, $adminPassword, SQLITE3_TEXT);
             $stmt->bindValue(4, 'Admin', SQLITE3_TEXT);
             $stmt->bindValue(5, 'User', SQLITE3_TEXT);

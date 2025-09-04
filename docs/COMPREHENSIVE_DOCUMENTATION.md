@@ -1,4 +1,4 @@
-# FreeOpsDAO CRM - Comprehensive Documentation
+# Best Jobs in TA - Comprehensive Documentation
 
 ## 📋 Table of Contents
 
@@ -24,7 +24,7 @@
 
 ### Project Structure
 ```
-crm.freeopsdao.com/
+bestjobsinta.com/
 ├── public/                  # Web root (all public files)
 │   ├── index.php           # Main entry point
 │   ├── login.php           # Authentication
@@ -167,8 +167,8 @@ CREATE TABLE webhooks (
 ### Quick Start (Development)
 ```bash
 # 1. Clone repository
-git clone https://github.com/actuallyrizzn/crm.freeopsdao.com.git
-cd crm.freeopsdao.com
+git clone https://github.com/actuallyrizzn/bestjobsinta.com.git
+cd bestjobsinta.com
 
 # 2. Set permissions
 chmod 755 -R public/
@@ -205,7 +205,7 @@ sudo chown $USER:$USER /var/www/crm
 
 # Clone repository
 cd /var/www/crm
-git clone https://github.com/actuallyrizzn/crm.freeopsdao.com.git .
+git clone https://github.com/actuallyrizzn/bestjobsinta.com.git .
 
 # Set proper ownership and permissions
 sudo chown -R www-data:www-data /var/www/crm
@@ -777,7 +777,7 @@ chmod 644 includes/config.php
 #### Environment Variables
 ```php
 // public/includes/config.php
-define('APP_NAME', 'FreeOpsDAO CRM');
+define('APP_NAME', 'Best Jobs in TA');
 define('APP_VERSION', '1.0.0');
 define('APP_URL', 'https://your-domain.com');
 define('DEBUG_MODE', false);
@@ -914,8 +914,8 @@ Check logs for detailed error information.
 ### Local Development Setup
 ```bash
 # Clone repository
-git clone https://github.com/actuallyrizzn/crm.freeopsdao.com.git
-cd crm.freeopsdao.com
+git clone https://github.com/actuallyrizzn/bestjobsinta.com.git
+cd bestjobsinta.com
 
 # Start development server
 cd public
@@ -987,4 +987,4 @@ php run_tests.php --filter=ApiTest
 
 **Last Updated**: January 2025  
 **Version**: 1.3.0  
-**Maintainer**: FreeOpsDAO Team 
+**Maintainer**: Best Jobs in TA Team 

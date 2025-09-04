@@ -1,7 +1,7 @@
 # API-First Database-Driven Application Stack Reference
 
 ## Overview
-This document outlines the proven stack architecture from the FreeOpsDAO CRM project, designed for building scalable, API-first database applications. This pattern is ideal for inventory systems, CRMs, ERPs, and other data-driven web applications.
+This document outlines the proven stack architecture from the Best Jobs in TA project, designed for building scalable, API-first database applications. This pattern is ideal for job boards, talent acquisition platforms, CRMs, ERPs, and other data-driven web applications.
 
 ## 🏗️ Architecture Pattern
 

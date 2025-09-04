@@ -1,7 +1,7 @@
 <?php
 /**
  * User Management Unit Tests
- * FreeOpsDAO CRM - Enhanced User Management Testing
+ * Best Jobs in TA - Enhanced User Management Testing
  */
 
 require_once __DIR__ . '/../bootstrap.php';

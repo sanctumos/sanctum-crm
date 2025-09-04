@@ -1,7 +1,7 @@
 <?php
 /**
  * API Test Script
- * FreeOpsDAO CRM - API Testing
+ * Best Jobs in TA - API Testing
  */
 
 // Define CRM loaded constant
@@ -12,7 +12,7 @@ require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/database.php';
 require_once __DIR__ . '/includes/auth.php';
 
-echo "<h1>FreeOpsDAO CRM - API Test</h1>\n";
+echo "<h1>Best Jobs in TA - API Test</h1>\n";
 
 try {
     // Initialize database

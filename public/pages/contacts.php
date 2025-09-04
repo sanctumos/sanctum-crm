@@ -1,7 +1,7 @@
 <?php
 /**
  * Contacts Page
- * FreeOpsDAO CRM - Contact Management
+ * Best Jobs in TA - Contact Management
  */
 
 // Get database instance

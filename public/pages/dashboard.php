@@ -1,7 +1,7 @@
 <?php
 /**
  * Dashboard Page
- * FreeOpsDAO CRM - Main Dashboard
+ * Best Jobs in TA - Main Dashboard
  */
 
 // Remove any require_once for auth.php and layout.php

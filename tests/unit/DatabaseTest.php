@@ -1,7 +1,7 @@
 <?php
 /**
  * Database Unit Tests
- * FreeOpsDAO CRM - Database Class Testing
+ * Best Jobs in TA - Database Class Testing
  */
 
 require_once __DIR__ . '/../bootstrap.php';

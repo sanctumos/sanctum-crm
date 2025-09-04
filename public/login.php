@@ -1,7 +1,7 @@
 <?php
 /**
  * Login Page
- * FreeOpsDAO CRM - Authentication
+ * Best Jobs in TA - Authentication
  */
 
 // Define CRM loaded constant

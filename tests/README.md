@@ -1,6 +1,6 @@
-# FreeOpsDAO CRM - Test Suite
+# Best Jobs in TA - Test Suite
 
-This directory contains a comprehensive test suite for the FreeOpsDAO CRM system, designed to ensure reliability and functionality across all components.
+This directory contains a comprehensive test suite for the Best Jobs in TA system, designed to ensure reliability and functionality across all components.
 
 ## 🧪 Test Structure
 
@@ -161,4 +161,4 @@ if (php_sapi_name() === 'cli' || isset($_GET['run'])) {
 
 **Test Suite Version**: 1.0.0  
 **Last Updated**: 2025  
-**Maintainer**: FreeOpsDAO Development Team 
+**Maintainer**: Best Jobs in TA Development Team 

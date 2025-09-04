@@ -1,7 +1,7 @@
 <?php
 /**
  * Settings Page
- * FreeOpsDAO CRM - System Settings (Admin Only)
+ * Best Jobs in TA - System Settings (Admin Only)
  */
 
 // Remove any require_once for auth.php and layout.php

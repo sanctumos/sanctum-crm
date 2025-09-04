@@ -9,7 +9,7 @@ function debugLog($message) {
 debugLog('METHOD=' . ($_SERVER['REQUEST_METHOD'] ?? '') . ' REQUEST_URI=' . ($_SERVER['REQUEST_URI'] ?? ''));
 /**
  * API v1 Endpoint
- * FreeOpsDAO CRM - MCP-Ready API
+ * Best Jobs in TA - MCP-Ready API
  */
 
 // Define CRM loaded constant
@@ -112,7 +112,7 @@ if ($resource === 'openapi.json') {
     echo json_encode([
         'openapi' => '3.0.0',
         'info' => [
-            'title' => 'FreeOpsDAO CRM API',
+            'title' => 'Best Jobs in TA API',
             'version' => '1.0.0'
         ],
         'paths' => new stdClass()

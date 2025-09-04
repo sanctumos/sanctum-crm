@@ -1,7 +1,7 @@
 <?php
 /**
  * User Settings API Endpoint
- * FreeOpsDAO CRM - /api/v1/settings
+ * Best Jobs in TA - /api/v1/settings
  */
 
 // Define CRM loaded constant

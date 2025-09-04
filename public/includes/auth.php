@@ -1,7 +1,7 @@
 <?php
 /**
  * Authentication System
- * FreeOpsDAO CRM - Authentication and Authorization
+ * Best Jobs in TA - Authentication and Authorization
  */
 
 // Prevent direct access

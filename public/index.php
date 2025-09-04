@@ -1,7 +1,7 @@
 <?php
 /**
  * Main Entry Point
- * FreeOpsDAO CRM - Web Interface
+ * Best Jobs in TA - Web Interface
  */
 
 // Define CRM loaded constant

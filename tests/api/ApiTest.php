@@ -1,7 +1,7 @@
 <?php
 /**
  * API Integration Tests
- * FreeOpsDAO CRM - API Endpoint Testing
+ * Best Jobs in TA - API Endpoint Testing
  */
 
 require_once __DIR__ . '/../bootstrap.php';

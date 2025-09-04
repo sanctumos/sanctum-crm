@@ -1,7 +1,7 @@
 <?php
 /**
  * Test Bootstrap
- * FreeOpsDAO CRM - Test Environment Setup
+ * Best Jobs in TA - Test Environment Setup
  */
 
 // Set test environment

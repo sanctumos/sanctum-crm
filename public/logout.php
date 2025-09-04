@@ -1,7 +1,7 @@
 <?php
 /**
  * Logout Handler
- * FreeOpsDAO CRM
+ * Best Jobs in TA
  */
 
 // Define CRM loaded constant

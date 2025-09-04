@@ -1,7 +1,7 @@
 <?php
 /**
  * CRM System Configuration
- * FreeOpsDAO CRM - Main Configuration File
+ * Best Jobs in TA - Main Configuration File
  */
 
 // Prevent direct access
@@ -10,9 +10,9 @@ if (!defined('CRM_LOADED')) {
 }
 
 // Application Configuration
-define('APP_NAME', 'FreeOpsDAO CRM');
+define('APP_NAME', 'Best Jobs in TA');
 define('APP_VERSION', '1.0.0');
-define('APP_URL', 'https://crm.freeopsdao.com'); // Production URL
+define('APP_URL', 'https://bestjobsinta.com'); // Production URL
 define('DEBUG_MODE', false); // Set to false in production
 
 // Database Configuration
@@ -39,8 +39,8 @@ define('SMTP_HOST', 'localhost');
 define('SMTP_PORT', 587);
 define('SMTP_USERNAME', '');
 define('SMTP_PASSWORD', '');
-define('SMTP_FROM_EMAIL', 'noreply@freeopsdao.com');
-define('SMTP_FROM_NAME', 'FreeOpsDAO CRM');
+define('SMTP_FROM_EMAIL', 'noreply@bestjobsinta.com');
+define('SMTP_FROM_NAME', 'Best Jobs in TA');
 
 // Web3 Configuration
 define('WEB3_ENABLED', true);
@@ -146,7 +146,7 @@ function sendWebhook($url, $payload) {
         CURLOPT_POSTFIELDS => json_encode($payload),
         CURLOPT_HTTPHEADER => [
             'Content-Type: application/json',
-            'User-Agent: FreeOpsDAO-CRM/1.0'
+            'User-Agent: BestJobsInTA/1.0'
         ],
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT => 10,

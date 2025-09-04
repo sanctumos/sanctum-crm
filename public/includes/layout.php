@@ -1,7 +1,7 @@
 <?php
 /**
  * Layout Template System
- * FreeOpsDAO CRM - Consistent page layout
+ * Best Jobs in TA - Consistent page layout
  */
 
 // Prevent direct access

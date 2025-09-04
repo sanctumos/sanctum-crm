@@ -1,4 +1,4 @@
-# FreeOpsDAO CRM - Activity Feed & Contact Claiming Feature Plan
+# Best Jobs in TA - Activity Feed & Contact Claiming Feature Plan
 
 ## 📋 Overview
 

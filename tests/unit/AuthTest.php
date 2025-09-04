@@ -1,7 +1,7 @@
 <?php
 /**
  * Authentication Unit Tests
- * FreeOpsDAO CRM - Auth Class Testing
+ * Best Jobs in TA - Auth Class Testing
  */
 
 require_once __DIR__ . '/../bootstrap.php';

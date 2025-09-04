@@ -1,6 +1,6 @@
-# FreeOpsDAO CRM System
+# Best Jobs in TA System
 
-A modern Customer Relationship Management (CRM) system built with PHP, Bootstrap UI, and SQLite, designed for Web3 and traditional businesses with MCP (Message Control Plane) integration capabilities.
+A modern job board and talent acquisition platform built with PHP, Bootstrap UI, and SQLite, designed for connecting top talent with the best opportunities in Technical Analysis and related fields.
 
 ## 🚀 Features
 
@@ -34,8 +34,8 @@ A modern Customer Relationship Management (CRM) system built with PHP, Bootstrap
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/actuallyrizzn/crm.freeopsdao.com.git
-cd crm.freeopsdao.com
+git clone https://github.com/actuallyrizzn/bestjobsinta.com.git
+cd bestjobsinta.com
 ```
 
 ### 2. Set Up Development Environment
@@ -66,7 +66,7 @@ php tests/api/ApiTest.php
 ## 📁 Project Structure
 
 ```
-crm.freeopsdao.com/
+bestjobsinta.com/
 ├── public/                  # Web root (all public files)
 │   ├── index.php
 │   ├── login.php
