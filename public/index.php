@@ -7,6 +7,12 @@
 // Define CRM loaded constant
 define('CRM_LOADED', true);
 
+// Handle API requests first
+if (preg_match('/^\/api\/v1\//', $_SERVER['REQUEST_URI'])) {
+    require __DIR__ . '/api/v1/index.php';
+    exit;
+}
+
 // Include required files
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/database.php';
