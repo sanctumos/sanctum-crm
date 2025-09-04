@@ -114,22 +114,24 @@ renderHeader('Contacts');
                 </form>
             </div>
             <div class="col-md-4 text-end">
-                <div class="btn-group me-2 view-toggle" role="group" aria-label="View mode">
-                    <a href="?<?php echo http_build_query(array_merge($_GET, ['view' => 'cards'])); ?>" 
-                       class="btn btn-outline-secondary <?php echo $view_mode === 'cards' ? 'active' : ''; ?>">
-                        <i class="fas fa-th-large"></i>
+                <div class="d-flex align-items-center justify-content-end gap-2">
+                    <div class="btn-group me-3 view-toggle" role="group" aria-label="View mode">
+                        <a href="?<?php echo http_build_query(array_merge($_GET, ['view' => 'cards'])); ?>" 
+                           class="btn btn-outline-secondary <?php echo $view_mode === 'cards' ? 'active' : ''; ?>">
+                            <i class="fas fa-th-large"></i>
+                        </a>
+                        <a href="?<?php echo http_build_query(array_merge($_GET, ['view' => 'list'])); ?>" 
+                           class="btn btn-outline-secondary <?php echo $view_mode === 'list' ? 'active' : ''; ?>">
+                            <i class="fas fa-list"></i>
+                        </a>
+                    </div>
+                    <a href="/pages/import_contacts.php" class="btn btn-success">
+                        <i class="fas fa-file-import me-2"></i>Import CSV
                     </a>
-                    <a href="?<?php echo http_build_query(array_merge($_GET, ['view' => 'list'])); ?>" 
-                       class="btn btn-outline-secondary <?php echo $view_mode === 'list' ? 'active' : ''; ?>">
-                        <i class="fas fa-list"></i>
-                    </a>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addContactModal">
+                        <i class="fas fa-plus me-2"></i>Add Contact
+                    </button>
                 </div>
-                <a href="/pages/import_contacts.php" class="btn btn-success me-2">
-                    <i class="fas fa-file-import me-2"></i>Import CSV
-                </a>
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addContactModal">
-                    <i class="fas fa-plus me-2"></i>Add Contact
-                </button>
             </div>
         </div>
     </div>
