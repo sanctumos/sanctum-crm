@@ -311,6 +311,139 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
         return;
     }
     
+    // Handle import actions
+    if ($action === 'import') {
+        if ($method === 'POST') {
+            // Handle CSV upload
+            if (isset($_FILES['csvFile'])) {
+                $file = $_FILES['csvFile'];
+                
+                // Validate file
+                if ($file['error'] !== UPLOAD_ERR_OK) {
+                    http_response_code(400);
+                    echo json_encode([
+                        'error' => 'File upload failed',
+                        'code' => 400
+                    ]);
+                    return;
+                }
+                
+                // Check file type
+                $fileType = mime_content_type($file['tmp_name']);
+                if (!in_array($fileType, ['text/csv', 'text/plain', 'application/csv'])) {
+                    http_response_code(400);
+                    echo json_encode([
+                        'error' => 'Invalid file type. Please upload a CSV file.',
+                        'code' => 400
+                    ]);
+                    return;
+                }
+                
+                // Parse CSV
+                $csvData = [];
+                if (($handle = fopen($file['tmp_name'], 'r')) !== FALSE) {
+                    $headers = fgetcsv($handle);
+                    while (($data = fgetcsv($handle)) !== FALSE) {
+                        $row = [];
+                        foreach ($headers as $index => $header) {
+                            $row[trim($header)] = isset($data[$index]) ? trim($data[$index]) : '';
+                        }
+                        $csvData[] = $row;
+                    }
+                    fclose($handle);
+                }
+                
+                echo json_encode([
+                    'success' => true,
+                    'data' => $csvData,
+                    'count' => count($csvData)
+                ]);
+                return;
+            }
+        }
+        
+        // Handle import processing
+        if (isset($input['csvData']) && isset($input['fieldMapping'])) {
+            $csvData = $input['csvData'];
+            $fieldMapping = $input['fieldMapping'];
+            $source = $input['source'] ?? 'CSV Import';
+            $notes = $input['notes'] ?? '';
+            
+            $successCount = 0;
+            $errorCount = 0;
+            $errors = [];
+            
+            foreach ($csvData as $index => $row) {
+                try {
+                    $contactData = [];
+                    
+                    // Map CSV columns to contact fields
+                    foreach ($fieldMapping as $field => $column) {
+                        if (isset($row[$column]) && !empty($row[$column])) {
+                            $contactData[$field] = $row[$column];
+                        }
+                    }
+                    
+                    // Add source and notes
+                    $contactData['source'] = $source;
+                    $contactData['notes'] = $notes;
+                    $contactData['contact_type'] = 'lead';
+                    $contactData['contact_status'] = 'new';
+                    $contactData['created_at'] = getCurrentTimestamp();
+                    $contactData['updated_at'] = getCurrentTimestamp();
+                    
+                    // Validate required fields
+                    if (empty($contactData['first_name']) || empty($contactData['last_name']) || empty($contactData['email'])) {
+                        $errors[] = [
+                            'row' => $index + 1,
+                            'message' => 'Missing required fields (first_name, last_name, or email)'
+                        ];
+                        $errorCount++;
+                        continue;
+                    }
+                    
+                    // Check for duplicate email
+                    $existing = $db->fetchOne("SELECT id FROM contacts WHERE email = ?", [$contactData['email']]);
+                    if ($existing) {
+                        $errors[] = [
+                            'row' => $index + 1,
+                            'message' => 'Contact with this email already exists'
+                        ];
+                        $errorCount++;
+                        continue;
+                    }
+                    
+                    // Insert contact
+                    $db->insert('contacts', $contactData);
+                    $successCount++;
+                    
+                } catch (Exception $e) {
+                    $errors[] = [
+                        'row' => $index + 1,
+                        'message' => 'Database error: ' . $e->getMessage()
+                    ];
+                    $errorCount++;
+                }
+            }
+            
+            echo json_encode([
+                'success' => true,
+                'totalProcessed' => count($csvData),
+                'successCount' => $successCount,
+                'errorCount' => $errorCount,
+                'errors' => $errors
+            ]);
+            return;
+        }
+        
+        http_response_code(400);
+        echo json_encode([
+            'error' => 'Invalid import request',
+            'code' => 400
+        ]);
+        return;
+    }
+    
     switch ($method) {
         case 'GET':
             if ($id) {
