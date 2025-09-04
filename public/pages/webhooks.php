@@ -28,6 +28,50 @@ renderHeader('Webhooks');
         <button class="btn btn-success" id="addWebhookBtn"><i class="fas fa-plus"></i> Add Webhook</button>
     </div>
 
+    <!-- Help Card -->
+    <div class="card mb-4 border-info">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>What are Webhooks?</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-8">
+                    <p class="mb-3">
+                        <strong>Webhooks</strong> are automated messages sent from one application to another when something happens. 
+                        Think of them as "push notifications" between different systems.
+                    </p>
+                    <h6 class="text-info">How it works:</h6>
+                    <ol class="mb-3">
+                        <li><strong>Event occurs</strong> - Something happens in your CRM (new contact, deal closed, etc.)</li>
+                        <li><strong>Webhook fires</strong> - Your CRM automatically sends data to a URL you specify</li>
+                        <li><strong>External system receives</strong> - Another app gets the data and can take action</li>
+                    </ol>
+                    <h6 class="text-info">Common use cases:</h6>
+                    <ul class="mb-0">
+                        <li><strong>Email marketing</strong> - Add new contacts to your email list automatically</li>
+                        <li><strong>Slack notifications</strong> - Get notified when deals are closed or contacts are added</li>
+                        <li><strong>Data sync</strong> - Keep other systems updated with your CRM data</li>
+                        <li><strong>Lead scoring</strong> - Send contact data to external lead scoring tools</li>
+                        <li><strong>CRM integration</strong> - Connect with other business tools and platforms</li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-center">
+                        <div class="bg-light p-4 rounded mb-3">
+                            <i class="fas fa-exchange-alt fa-3x text-info mb-3"></i>
+                            <h6>Real-time Integration</h6>
+                            <p class="small text-muted mb-0">Connect your CRM with external tools automatically</p>
+                        </div>
+                        <div class="alert alert-warning alert-sm">
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            <strong>Note:</strong> You'll need a webhook URL from the receiving system to get started.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Alerts -->
     <div id="webhooksAlert" class="alert d-none" role="alert"></div>
 
