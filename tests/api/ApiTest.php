@@ -14,8 +14,16 @@ class ApiTest {
     public function __construct() {
         $this->baseUrl = 'http://localhost:8000';
         
-        // Get admin API key
-        $this->apiKey = '77440a1aab7aae86a8ed5dff27b56df0';
+        // Get admin API key from production database (same as server)
+        $prodDb = new SQLite3(__DIR__ . '/../../db/crm.db');
+        $admin = $prodDb->querySingle("SELECT api_key FROM users WHERE username = 'admin'", true);
+        $this->apiKey = $admin['api_key'] ?? null;
+        $prodDb->close();
+        
+        if (!$this->apiKey) {
+            echo "    WARNING: No admin API key found in production database\n";
+            echo "    Skipping API tests that require authentication\n";
+        }
         
         $this->headers = [
             'Authorization: Bearer ' . $this->apiKey,

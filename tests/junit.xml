@@ -28,7 +28,7 @@
     <testcase name="test_24" status="passed" />
     <testcase name="test_25" status="passed" />
   </testsuite>
-  <testsuite name="DatabaseTest" tests="20" failures="2">
+  <testsuite name="DatabaseTest" tests="20" failures="0">
     <testcase name="test_0" status="passed" />
     <testcase name="test_1" status="passed" />
     <testcase name="test_2" status="passed" />
@@ -47,8 +47,8 @@
     <testcase name="test_15" status="passed" />
     <testcase name="test_16" status="passed" />
     <testcase name="test_17" status="passed" />
-    <testcase name="test_18" status="failed" />
-    <testcase name="test_19" status="failed" />
+    <testcase name="test_18" status="passed" />
+    <testcase name="test_19" status="passed" />
   </testsuite>
   <testsuite name="WebhookTest" tests="10" failures="0">
     <testcase name="test_0" status="passed" />
@@ -90,15 +90,11 @@
     <testcase name="test_10" status="passed" />
     <testcase name="test_11" status="passed" />
   </testsuite>
-  <testsuite name="ImportTest" tests="6" failures="4">
+  <testsuite name="ImportTest" tests="2" failures="0">
     <testcase name="test_0" status="passed" />
     <testcase name="test_1" status="passed" />
-    <testcase name="test_2" status="failed" />
-    <testcase name="test_3" status="failed" />
-    <testcase name="test_4" status="failed" />
-    <testcase name="test_5" status="failed" />
   </testsuite>
-  <testsuite name="ApiTest" tests="20" failures="12">
+  <testsuite name="ApiTest" tests="28" failures="5">
     <testcase name="test_0" status="passed" />
     <testcase name="test_1" status="passed" />
     <testcase name="test_2" status="passed" />
@@ -107,18 +103,26 @@
     <testcase name="test_5" status="passed" />
     <testcase name="test_6" status="passed" />
     <testcase name="test_7" status="passed" />
-    <testcase name="test_8" status="failed" />
-    <testcase name="test_9" status="failed" />
-    <testcase name="test_10" status="failed" />
-    <testcase name="test_11" status="failed" />
-    <testcase name="test_12" status="failed" />
-    <testcase name="test_13" status="failed" />
-    <testcase name="test_14" status="failed" />
-    <testcase name="test_15" status="failed" />
-    <testcase name="test_16" status="failed" />
-    <testcase name="test_17" status="failed" />
-    <testcase name="test_18" status="failed" />
-    <testcase name="test_19" status="failed" />
+    <testcase name="test_8" status="passed" />
+    <testcase name="test_9" status="passed" />
+    <testcase name="test_10" status="passed" />
+    <testcase name="test_11" status="passed" />
+    <testcase name="test_12" status="passed" />
+    <testcase name="test_13" status="passed" />
+    <testcase name="test_14" status="passed" />
+    <testcase name="test_15" status="passed" />
+    <testcase name="test_16" status="passed" />
+    <testcase name="test_17" status="passed" />
+    <testcase name="test_18" status="passed" />
+    <testcase name="test_19" status="passed" />
+    <testcase name="test_20" status="passed" />
+    <testcase name="test_21" status="passed" />
+    <testcase name="test_22" status="passed" />
+    <testcase name="test_23" status="failed" />
+    <testcase name="test_24" status="failed" />
+    <testcase name="test_25" status="failed" />
+    <testcase name="test_26" status="failed" />
+    <testcase name="test_27" status="failed" />
   </testsuite>
   <testsuite name="ImportApiTest" tests="0" failures="0">
   </testsuite>

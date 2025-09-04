@@ -34,10 +34,10 @@ class DatabaseTest {
         
         try {
             $connection = $this->db->getConnection();
-            if ($connection instanceof PDO) {
+            if ($connection instanceof SQLite3) {
                 echo "PASS\n";
             } else {
-                echo "FAIL - Connection not PDO instance\n";
+                echo "FAIL - Connection not SQLite3 instance\n";
             }
         } catch (Exception $e) {
             echo "FAIL - " . $e->getMessage() . "\n";

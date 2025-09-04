@@ -263,9 +263,10 @@ class ImportTest {
             $passes = $hasFirstName && $hasLastName;
             
             if ($passes === $shouldPass) {
-                echo "    ✓ Validation: $description - " . ($passes ? 'PASS' : 'FAIL') . "\n";
+                $status = $passes ? 'PASS' : 'REJECTED';
+                echo "    ✓ Validation: $description - $status\n";
             } else {
-                echo "    ✗ Validation: $description - Expected " . ($shouldPass ? 'PASS' : 'FAIL') . ", got " . ($passes ? 'PASS' : 'FAIL') . "\n";
+                echo "    ✗ Validation: $description - Expected " . ($shouldPass ? 'PASS' : 'REJECTED') . ", got " . ($passes ? 'PASS' : 'REJECTED') . "\n";
             }
         }
     }
