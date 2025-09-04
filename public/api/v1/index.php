@@ -680,6 +680,16 @@ function handleDeals($method, $id, $input, $auth) {
  * Handle users endpoints (admin only)
  */
 function handleUsers($method, $id, $input, $auth) {
+    // Check if user is admin without using requireAdmin() to avoid exit()
+    if (!$auth->isAuthenticated()) {
+        http_response_code(401);
+        echo json_encode([
+            'error' => 'Authentication required',
+            'code' => 401
+        ]);
+        return;
+    }
+    
     if (!$auth->isAdmin()) {
         http_response_code(403);
         echo json_encode([

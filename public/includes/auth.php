@@ -294,10 +294,7 @@ class Auth {
     }
     
     public function getAllUsers() {
-        if (!defined('CRM_TESTING')) {
-            $this->requireAdmin();
-        }
-        
+        // Note: Admin check should be done by the calling code to avoid exit()
         $sql = "SELECT id, username, email, first_name, last_name, role, is_active, api_key, created_at 
                 FROM users ORDER BY created_at DESC";
         
@@ -305,10 +302,7 @@ class Auth {
     }
     
     public function getUserById($userId) {
-        if (!defined('CRM_TESTING')) {
-            $this->requireAdmin();
-        }
-        
+        // Note: Admin check should be done by the calling code to avoid exit()
         $sql = "SELECT id, username, email, first_name, last_name, role, is_active, api_key, created_at 
                 FROM users WHERE id = ?";
         
