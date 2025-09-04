@@ -309,21 +309,30 @@ document.getElementById('csvUploadForm').addEventListener('submit', function(e) 
     
     fetch('/api/v1/contacts/import', {
         method: 'POST',
+        credentials: 'include',
         body: formData
     })
-    .then(response => response.json())
+    .then(response => {
+        if (response.ok) {
+            return response.json();
+        } else {
+            return response.json().then(error => {
+                throw new Error(error.error || 'Failed to upload CSV');
+            });
+        }
+    })
     .then(data => {
         if (data.success) {
             csvData = data.data;
             populateCSVColumns();
             showStep(2);
         } else {
-            alert('Error uploading CSV: ' + data.error);
+            alert('Error uploading CSV: ' + (data.error || 'Unknown error'));
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Error uploading CSV file');
+        alert('Network error: ' + error.message);
     });
 });
 
@@ -628,19 +637,28 @@ document.getElementById('startImport').addEventListener('click', function() {
         headers: {
             'Content-Type': 'application/json'
         },
+        credentials: 'include',
         body: JSON.stringify(importData)
     })
-    .then(response => response.json())
+    .then(response => {
+        if (response.ok) {
+            return response.json();
+        } else {
+            return response.json().then(error => {
+                throw new Error(error.error || 'Failed to process import');
+            });
+        }
+    })
     .then(data => {
         if (data.success) {
             showImportResults(data);
         } else {
-            alert('Import failed: ' + data.error);
+            alert('Import failed: ' + (data.error || 'Unknown error'));
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Error during import');
+        alert('Network error: ' + error.message);
     });
 });
 

@@ -378,7 +378,7 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
                 try {
                     $contactData = [];
                     
-                    // Map CSV columns to contact fields
+                    // Map CSV columns to contact fields with sanitization
                     foreach ($fieldMapping as $field => $column) {
                         // Skip name split fields - they'll be handled separately
                         if (strpos($column, '_split_') !== false) {
@@ -386,7 +386,14 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
                         }
                         
                         if (isset($row[$column]) && !empty($row[$column])) {
-                            $contactData[$field] = $row[$column];
+                            // Sanitize input based on field type
+                            if ($field === 'email') {
+                                $contactData[$field] = $row[$column]; // Email validation handled separately
+                            } elseif ($field === 'evm_address') {
+                                $contactData[$field] = validateEVMAddress($row[$column]) ? $row[$column] : null;
+                            } else {
+                                $contactData[$field] = sanitizeInput($row[$column]);
+                            }
                         }
                     }
                     
@@ -399,10 +406,20 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
                             $firstPart = trim($parts[$nameSplitConfig['firstPart']]);
                             $lastPart = trim($parts[$nameSplitConfig['lastPart']]);
                             
-                            // Set first_name and last_name with split values
-                            $contactData['first_name'] = $firstPart;
-                            $contactData['last_name'] = $lastPart;
+                            // Set first_name and last_name with split values (sanitized)
+                            $contactData['first_name'] = sanitizeInput($firstPart);
+                            $contactData['last_name'] = sanitizeInput($lastPart);
                         }
+                    }
+                    
+                    // Validate email if provided
+                    if (!empty($contactData['email']) && !validateEmail($contactData['email'])) {
+                        $errors[] = [
+                            'row' => $index + 1,
+                            'message' => 'Invalid email address: ' . $contactData['email']
+                        ];
+                        $errorCount++;
+                        continue;
                     }
                     
                     // Add source and notes
@@ -528,8 +545,8 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
                 }
             }
             
-            // Validate email
-            if (!validateEmail($input['email'])) {
+            // Validate email (only if provided)
+            if (!empty($input['email']) && !validateEmail($input['email'])) {
                 http_response_code(400);
                 echo json_encode([
                     'error' => 'Invalid email address',
@@ -538,22 +555,24 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
                 return;
             }
             
-            // Check if email already exists
-            $existing = $db->fetchOne("SELECT id FROM contacts WHERE email = ?", [$input['email']]);
-            if ($existing) {
-                http_response_code(409);
-                echo json_encode([
-                    'error' => 'Contact with this email already exists',
-                    'code' => 409
-                ]);
-                return;
+            // Check if email already exists (only if provided)
+            if (!empty($input['email'])) {
+                $existing = $db->fetchOne("SELECT id FROM contacts WHERE email = ?", [$input['email']]);
+                if ($existing) {
+                    http_response_code(409);
+                    echo json_encode([
+                        'error' => 'Contact with this email already exists',
+                        'code' => 409
+                    ]);
+                    return;
+                }
             }
             
             // Prepare contact data with sanitization
             $contactData = [
                 'first_name' => sanitizeInput($input['first_name']),
                 'last_name' => sanitizeInput($input['last_name']),
-                'email' => $input['email'], // Already validated
+                'email' => !empty($input['email']) ? $input['email'] : null,
                 'phone' => sanitizeInput($input['phone'] ?? null),
                 'company' => sanitizeInput($input['company'] ?? null),
                 'address' => sanitizeInput($input['address'] ?? null),
