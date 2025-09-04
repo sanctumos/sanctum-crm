@@ -1,6 +1,15 @@
-# Best Jobs in TA System
+# Sanctum CRM
 
-A modern job board and talent acquisition platform built with PHP, Bootstrap UI, and SQLite, designed for connecting top talent with the best opportunities in Technical Analysis and related fields.
+A modern Customer Relationship Management system built with PHP, Bootstrap UI, and SQLite, designed for managing contacts, deals, and business relationships with Web3 integration capabilities.
+
+## 📄 License
+
+This project is distributed under a **dual license** structure:
+
+- **Software Code** (PHP, JavaScript, CSS, HTML, SQL, etc.): [GNU Affero General Public License v3.0](LICENSE-AGPLv3)
+- **Documentation & Content** (README, docs, images, etc.): [Creative Commons Attribution-ShareAlike 4.0](LICENSE-CC-BY-SA)
+
+See [LICENSE](LICENSE) for complete details.
 
 ## 🚀 Features
 

@@ -1,30 +1,41 @@
-Creative Commons Attribution-ShareAlike 4.0 International License
+DUAL LICENSE NOTICE
 
-This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit:
+This project is distributed under a dual license structure:
 
-http://creativecommons.org/licenses/by-sa/4.0/
+1. SOFTWARE CODE (PHP, JavaScript, CSS, HTML, SQL, configuration files, etc.)
+   Licensed under: GNU Affero General Public License v3.0 (AGPL-3.0)
+   See: LICENSE-AGPLv3
 
-or send a letter to:
+2. DOCUMENTATION AND OTHER CONTENT (README files, documentation, images, etc.)
+   Licensed under: Creative Commons Attribution-ShareAlike 4.0 International (CC-BY-SA-4.0)
+   See: LICENSE-CC-BY-SA
 
-Creative Commons
-PO Box 1866
-Mountain View, CA 94042
-USA
+LICENSE APPLICABILITY:
 
-You are free to:
+SOFTWARE CODE includes but is not limited to:
+- All PHP files (*.php)
+- All JavaScript files (*.js)
+- All CSS files (*.css)
+- All HTML files (*.html)
+- All SQL files (*.sql)
+- Configuration files (*.json, *.xml, *.ini, etc.)
+- Database files (*.db, *.sqlite)
+- Test files (*.php, test_*.php)
+- API specification files (openapi.json)
+- Build and deployment scripts
 
-* Share — copy and redistribute the material in any medium or format
-* Adapt — remix, transform, and build upon the material for any purpose, even commercially
+DOCUMENTATION AND OTHER CONTENT includes but is not limited to:
+- README files (*.md)
+- Documentation files (*.md)
+- Images and graphics
+- Text files containing documentation
+- License files themselves
 
-Under the following terms:
+For the complete terms of each license, please refer to the respective license files:
+- LICENSE-AGPLv3 (for software code)
+- LICENSE-CC-BY-SA (for documentation and other content)
 
-* Attribution — You must give appropriate credit, provide a link to the license, and indicate if changes were made. You may do so in any reasonable manner, but not in any way that suggests the licensor endorses you or your use.
-* ShareAlike — If you remix, transform, or build upon the material, you must distribute your contributions under the same license as the original.
-
-No additional restrictions — You may not apply legal terms or technological measures that legally restrict others from doing anything the license permits.
-
-Notices:
-
-You do not have to comply with the license for elements of the material in the public domain or where your use is permitted by an applicable exception or limitation.
-
-No warranties are given. The license may not give you all of the permissions necessary for your intended use. For example, other rights such as publicity, privacy, or moral rights may limit how you use the material. 
+This dual licensing approach ensures that:
+- Software code remains free and open source under copyleft terms (AGPL-3.0)
+- Documentation and content can be freely shared and adapted (CC-BY-SA-4.0)
+- Both licenses require attribution and sharing of modifications 
