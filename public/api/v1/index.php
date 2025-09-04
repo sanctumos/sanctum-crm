@@ -226,12 +226,6 @@ if (!$auth->isAuthenticated()) {
     exit;
 }
 
-// Debug logging for authentication
-debugLog("AUTH DEBUG: User authenticated: " . ($auth->isAuthenticated() ? 'Yes' : 'No'));
-if ($auth->isAuthenticated()) {
-    $user = $auth->getUser();
-    debugLog("AUTH DEBUG: User: " . $user['username'] . ", Role: " . $user['role'] . ", Is Admin: " . ($auth->isAdmin() ? 'Yes' : 'No'));
-}
 
 // Route the request
 try {
@@ -716,10 +710,9 @@ function handleUsers($method, $id, $input, $auth) {
                         'count' => count($users)
                     ]);
                 } catch (Exception $e) {
-                    debugLog("USERS ERROR: " . $e->getMessage());
                     http_response_code(500);
                     echo json_encode([
-                        'error' => 'Failed to load users: ' . $e->getMessage(),
+                        'error' => 'Failed to load users',
                         'code' => 500
                     ]);
                 }
