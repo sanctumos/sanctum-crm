@@ -1,0 +1,47 @@
+{
+    "timestamp": "2025-09-05 00:46:11",
+    "total_tests": 6,
+    "passed_tests": 0,
+    "failed_tests": 6,
+    "success_rate": 0,
+    "test_results": {
+        "unit": [
+            {
+                "name": "ConfigManagerTest",
+                "status": "FAILED",
+                "output": ""
+            },
+            {
+                "name": "InstallationManagerTest",
+                "status": "FAILED",
+                "output": ""
+            },
+            {
+                "name": "EnvironmentDetectorTest",
+                "status": "FAILED",
+                "output": ""
+            }
+        ],
+        "integration": [
+            {
+                "name": "FirstBootIntegrationTest",
+                "status": "FAILED",
+                "output": ""
+            }
+        ],
+        "e2e": [
+            {
+                "name": "InstallationWizardE2ETest",
+                "status": "FAILED",
+                "output": ""
+            }
+        ],
+        "api": [
+            {
+                "name": "ConfigurationApiTest",
+                "status": "FAILED",
+                "output": ""
+            }
+        ]
+    }
+}

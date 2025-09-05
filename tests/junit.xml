@@ -94,6 +94,10 @@
     <testcase name="test_0" status="passed" />
     <testcase name="test_1" status="passed" />
   </testsuite>
+  <testsuite name="PageCoverageTest" tests="0" failures="0">
+  </testsuite>
+  <testsuite name="ConfigManagerCustomTest" tests="0" failures="0">
+  </testsuite>
   <testsuite name="ApiTest" tests="36" failures="0">
     <testcase name="test_0" status="passed" />
     <testcase name="test_1" status="passed" />

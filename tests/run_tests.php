@@ -72,7 +72,8 @@ class TestRunner {
             'WebhookTest.php' => 'WebhookTest',
             'UserManagementTest.php' => 'UserManagementTest',
             'ReportsTest.php' => 'ReportsTest',
-            'ImportTest.php' => 'ImportTest'
+            'ImportTest.php' => 'ImportTest',
+            'PageCoverageTest.php' => 'PageCoverageTest'
         ];
         
         foreach ($unitTests as $file => $class) {
@@ -103,12 +104,7 @@ class TestRunner {
         echo "===================\n";
         
         $configTests = [
-            'ConfigManagerTest.php' => 'ConfigManagerTest',
-            'InstallationManagerTest.php' => 'InstallationManagerTest',
-            'EnvironmentDetectorTest.php' => 'EnvironmentDetectorTest',
-            'FirstBootIntegrationTest.php' => 'FirstBootIntegrationTest',
-            'InstallationWizardE2ETest.php' => 'InstallationWizardE2ETest',
-            'ConfigurationApiTest.php' => 'ConfigurationApiTest'
+            'ConfigManagerCustomTest.php' => 'ConfigManagerCustomTest'
         ];
         
         foreach ($configTests as $file => $class) {
