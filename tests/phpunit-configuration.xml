@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.5/phpunit.xsd"
+         bootstrap="bootstrap.php"
+         colors="true"
+         stopOnFailure="false"
+         cacheResult="false">
+    
+    <testsuites>
+        <testsuite name="Configuration Unit Tests">
+            <file>unit/ConfigManagerTest.php</file>
+            <file>unit/InstallationManagerTest.php</file>
+            <file>unit/EnvironmentDetectorTest.php</file>
+        </testsuite>
+        
+        <testsuite name="Configuration Integration Tests">
+            <file>integration/FirstBootIntegrationTest.php</file>
+        </testsuite>
+        
+        <testsuite name="Configuration E2E Tests">
+            <file>e2e/InstallationWizardE2ETest.php</file>
+        </testsuite>
+        
+        <testsuite name="Configuration API Tests">
+            <file>api/ConfigurationApiTest.php</file>
+        </testsuite>
+    </testsuites>
+    
+    <coverage>
+        <include>
+            <directory suffix=".php">../public/includes</directory>
+        </include>
+        <exclude>
+            <directory>../public/includes/layout.php</directory>
+        </exclude>
+    </coverage>
+    
+    <logging>
+        <log type="junit" target="junit-configuration.xml"/>
+        <log type="coverage-html" target="coverage-configuration"/>
+        <log type="coverage-clover" target="clover-configuration.xml"/>
+    </logging>
+    
+    <php>
+        <ini name="memory_limit" value="256M"/>
+        <ini name="max_execution_time" value="300"/>
+        <ini name="error_reporting" value="E_ALL"/>
+        <ini name="display_errors" value="1"/>
+    </php>
+</phpunit>

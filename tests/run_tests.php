@@ -22,7 +22,7 @@
 
 /**
  * Test Runner
- * Best Jobs in TA - Comprehensive Test Suite
+ * Sanctum CRM - Comprehensive Test Suite
  */
 
 require_once __DIR__ . '/bootstrap.php';
@@ -40,11 +40,14 @@ class TestRunner {
     
     public function runAllTests() {
         echo "==========================================\n";
-        echo "Best Jobs in TA - Comprehensive Test Suite\n";
+        echo "Sanctum CRM - Comprehensive Test Suite\n";
         echo "==========================================\n\n";
         
         // Run unit tests
         $this->runUnitTests();
+        
+        // Run configuration tests
+        $this->runConfigurationTests();
         
         // Run API tests
         $this->runApiTests();
@@ -90,6 +93,26 @@ class TestRunner {
         
         foreach ($apiTests as $file => $class) {
             $this->runTestFile("api/{$file}", $class);
+        }
+        
+        echo "\n";
+    }
+    
+    public function runConfigurationTests() {
+        echo "CONFIGURATION TESTS\n";
+        echo "===================\n";
+        
+        $configTests = [
+            'ConfigManagerTest.php' => 'ConfigManagerTest',
+            'InstallationManagerTest.php' => 'InstallationManagerTest',
+            'EnvironmentDetectorTest.php' => 'EnvironmentDetectorTest',
+            'FirstBootIntegrationTest.php' => 'FirstBootIntegrationTest',
+            'InstallationWizardE2ETest.php' => 'InstallationWizardE2ETest',
+            'ConfigurationApiTest.php' => 'ConfigurationApiTest'
+        ];
+        
+        foreach ($configTests as $file => $class) {
+            $this->runTestFile("unit/{$file}", $class);
         }
         
         echo "\n";
