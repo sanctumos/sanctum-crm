@@ -235,6 +235,7 @@ For support and questions:
 
 ## 🔮 Roadmap
 
+### ✅ Completed (v2.0.0)
 - [x] First boot configuration system
 - [x] Dynamic configuration management
 - [x] MCP-compatible API design
@@ -244,6 +245,13 @@ For support and questions:
 - [x] Webhook system implementation
 - [x] Advanced reporting and analytics
 - [x] User management interface
+
+### 🚀 Near Term (v2.1.0 - v2.3.0)
+- [ ] **Activity Feed System** - Comprehensive activity tracking for contact interactions with chronological feed, memo support, and filtering capabilities (see [Feature Planning](docs/FEATURE_PLANNING_ACTIVITY_FEED.md) for details)
+- [ ] **Sanctum Agent Direct Integration** - Built-in chatbot interface for direct AI agent interaction within the CRM
+- [ ] **MCP Direct Compatibility** - Enhanced Model Context Protocol integration for seamless Letta AI and other agentic system connectivity
+
+### 🔮 Future (v2.4.0+)
 - [ ] Advanced MCP features for Letta AI
 - [ ] Batch operations and bulk imports
 - [ ] Advanced filtering & search
