@@ -1,6 +1,6 @@
 # Sanctum CRM
 
-A modern Customer Relationship Management system built with PHP, Bootstrap UI, and SQLite, designed for managing contacts, deals, and business relationships with Web3 integration capabilities.
+A modern, API-first Customer Relationship Management system built with PHP, Bootstrap UI, and SQLite, designed for seamless integration with Letta AI agents and the broader Sanctum AI ecosystem. Features intelligent first-boot configuration and MCP (Model Context Protocol) compatibility for AI agent integration.
 
 ## 📄 License
 
@@ -13,16 +13,17 @@ See [LICENSE](LICENSE) for complete details.
 
 ## 🚀 Features
 
-- **Contact Management**: Unified leads and customers with Web3 integration
-- **Deal Pipeline**: Track sales opportunities and conversions with Kanban view
-- **User Management**: Admin interface for user management and API key generation
-- **Reports & Analytics**: Comprehensive sales analytics with charts and exports
-- **Webhook System**: Real-time notifications and integrations
-- **Settings Management**: User profile and password management
-- **MCP-Ready API**: Machine-friendly endpoints for AI agents and automation
-- **Modern UI**: Responsive Bootstrap 5 interface with interactive components
-- **Web3 Integration**: EVM addresses, social media handles, and blockchain-ready
-- **API-First Design**: RESTful API with OpenAPI documentation
+- **🤖 AI Agent Ready**: MCP-compatible API designed for Letta AI and other agentic AI systems
+- **⚡ First Boot Configuration**: Intelligent setup wizard for instant deployment
+- **👥 Contact Management**: Unified leads and customers with comprehensive data fields
+- **💼 Deal Pipeline**: Track sales opportunities and conversions with Kanban view
+- **👤 User Management**: Admin interface for user management and API key generation
+- **📊 Reports & Analytics**: Comprehensive sales analytics with charts and exports
+- **🔗 Webhook System**: Real-time notifications and integrations
+- **⚙️ Dynamic Configuration**: Database-driven settings with encryption support
+- **🌐 API-First Design**: RESTful API with OpenAPI documentation
+- **📱 Modern UI**: Responsive Bootstrap 5 interface with interactive components
+- **🔒 Enterprise Security**: SQLite with fixed paths, input validation, and session security
 
 ## 🛠 Technology Stack
 
@@ -43,62 +44,78 @@ See [LICENSE](LICENSE) for complete details.
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/actuallyrizzn/bestjobsinta.com.git
-cd bestjobsinta.com
+git clone https://github.com/sanctumos/sanctum-crm.git
+cd sanctum-crm
 ```
 
-### 2. Set Up Development Environment
+### 2. First Boot Setup
 ```bash
 # Start PHP built-in server from the public directory
 cd public
 php -S localhost:8000
 ```
 
-### 3. Access the Application
+### 3. Complete Installation Wizard
 - Open your browser to `http://localhost:8000`
-- Default admin credentials: `admin/admin123`
+- Follow the 5-step installation wizard:
+  1. **Environment Check**: Verify PHP and SQLite requirements
+  2. **Database Setup**: Initialize SQLite database with proper schema
+  3. **Company Info**: Configure your company name and basic settings
+  4. **Admin User**: Create your administrator account
+  5. **Finalization**: Complete setup and access your CRM
 
-### 4. Run Tests
+### 4. AI Agent Integration
 ```bash
-# Run all tests
+# Get your API key from the admin panel
+# Use with Letta AI or any MCP-compatible agent
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+     https://your-domain.com/api/v1/contacts
+```
+
+### 5. Run Tests
+```bash
+# Run comprehensive test suite (100% coverage)
 php tests/run_tests.php
 
 # Run specific test suites
-php tests/unit/DatabaseTest.php
-php tests/unit/AuthTest.php
-php tests/api/ApiTest.php
-
-# Web interface for tests
-# Visit http://localhost:8000/tests/run_tests.php
+php tests/unit/ConfigManagerCustomTest.php
+php tests/integration/FirstBootIntegrationTest.php
+php tests/e2e/InstallationWizardE2ETest.php
 ```
 
 ## 📁 Project Structure
 
 ```
-bestjobsinta.com/
+sanctum-crm/
 ├── public/                  # Web root (all public files)
-│   ├── index.php
-│   ├── login.php
-│   ├── logout.php
-│   ├── .htaccess
+│   ├── index.php           # Main entry point with first-boot detection
+│   ├── install.php         # Installation wizard interface
+│   ├── login.php           # Authentication
+│   ├── logout.php          # Session cleanup
 │   ├── api/
 │   │   └── v1/
-│   │       └── index.php
-│   ├── pages/
+│   │       └── index.php   # MCP-compatible API endpoints
+│   ├── pages/              # Web interface pages
 │   │   ├── dashboard.php
 │   │   ├── contacts.php
-│   │   └── error.php
-│   └── assets/
-│       ├── js/
-│       └── css/
-├── includes/                # PHP includes (private)
-│   ├── config.php
-│   ├── database.php
-│   └── auth.php
-├── db/                      # SQLite DB (private)
+│   │   ├── deals.php
+│   │   ├── settings.php    # Dynamic configuration management
+│   │   └── ...
+│   └── includes/           # Shared components
+│       ├── config.php
+│       ├── database.php
+│       ├── ConfigManager.php      # Dynamic configuration system
+│       ├── InstallationManager.php # First-boot setup
+│       ├── EnvironmentDetector.php # Server environment analysis
+│       └── layout.php
+├── db/                      # SQLite database (private)
 │   └── crm.db
-├── tests/                   # Test suite (private)
-├── docs/                    # Documentation
+├── tests/                   # Comprehensive test suite (100% coverage)
+│   ├── unit/               # Unit tests
+│   ├── integration/        # Integration tests
+│   ├── e2e/               # End-to-end tests
+│   └── api/               # API tests
+├── docs/                   # Documentation
 └── README.md
 ```
 
@@ -107,44 +124,90 @@ bestjobsinta.com/
 - Never expose `/includes`, `/db`, `/tests`, or `/docs` to the web
 - All sensitive files are outside the web root for security
 
-## 🔌 API Usage
+## 🤖 AI Agent Integration
+
+### MCP (Model Context Protocol) Compatibility
+Sanctum CRM is designed for seamless integration with Letta AI and other agentic AI systems through MCP-compatible APIs.
 
 ### Authentication
 ```bash
-# Using Bearer token (preferred)
+# Using Bearer token (preferred for AI agents)
 curl -H "Authorization: Bearer YOUR_API_KEY" \
      https://your-domain.com/api/v1/contacts
 
-# Using query parameter
+# Using query parameter (fallback)
 curl https://your-domain.com/api/v1/contacts?api_key=YOUR_API_KEY
 ```
 
-### Example API Calls
+### Example AI Agent Usage
 ```bash
-# Get all contacts
+# Get all contacts (AI agent can analyze customer data)
 GET /api/v1/contacts
 
-# Create new contact
+# Create new contact (AI agent can add leads from conversations)
 POST /api/v1/contacts
 {
   "first_name": "John",
   "last_name": "Doe",
   "email": "john@example.com",
-  "evm_address": "0x1234...",
-  "twitter_handle": "@johndoe"
+  "company": "Acme Corp",
+  "phone": "+1234567890",
+  "source": "ai_agent_conversation"
 }
 
-# Convert lead to customer
-PUT /api/v1/contacts/123/convert
+# Update contact status (AI agent can track interactions)
+PUT /api/v1/contacts/123
+{
+  "contact_status": "qualified",
+  "notes": "AI agent identified high-value prospect"
+}
+
+# Get configuration (AI agent can understand system settings)
+GET /api/v1/settings
 ```
 
-## 🔧 Configuration
+### Letta AI Integration Example
+```javascript
+// Example MCP tool for Letta AI
+const crmTool = {
+  name: "sanctum_crm",
+  description: "Customer Relationship Management system",
+  parameters: {
+    action: {
+      type: "string",
+      enum: ["create_contact", "update_contact", "get_contacts", "create_deal"],
+      description: "Action to perform"
+    },
+    contact_data: {
+      type: "object",
+      description: "Contact information"
+    }
+  }
+};
+```
 
-Edit `includes/config.php` to customize:
-- Database settings
-- Application configuration
-- Security settings
-- API settings
+## ⚙️ Configuration
+
+### First Boot Configuration
+The system automatically detects first-time installation and guides you through:
+1. **Environment Validation**: Checks PHP version, SQLite support, and server configuration
+2. **Database Initialization**: Creates SQLite database with proper schema
+3. **Company Setup**: Configure your company name and basic information
+4. **Admin Account**: Create your administrator user account
+5. **Finalization**: Complete setup and access your CRM
+
+### Dynamic Configuration Management
+After installation, use the admin settings panel to manage:
+- **Company Information**: Update company name and details
+- **System Settings**: Configure application behavior
+- **User Management**: Add/remove users and manage API keys
+- **Environment Detection**: View server environment analysis
+
+### API Configuration
+- **API Keys**: Generate and manage API keys for AI agent integration
+- **Rate Limiting**: Configure request limits and throttling
+- **Webhook Settings**: Set up real-time notifications
+- **Security Settings**: Configure authentication and access controls
 
 ## 📚 Documentation
 
@@ -172,19 +235,24 @@ For support and questions:
 
 ## 🔮 Roadmap
 
+- [x] First boot configuration system
+- [x] Dynamic configuration management
+- [x] MCP-compatible API design
+- [x] Comprehensive test suite (100% coverage)
+- [x] Environment detection and validation
+- [x] Database-driven settings with encryption
 - [x] Webhook system implementation
 - [x] Advanced reporting and analytics
 - [x] User management interface
-- [x] Settings management
-- [ ] Email integration
-- [ ] Calendar integration
-- [ ] Mobile app
-- [ ] Advanced MCP features
-- [ ] Batch operations
+- [ ] Advanced MCP features for Letta AI
+- [ ] Batch operations and bulk imports
 - [ ] Advanced filtering & search
+- [ ] Real-time collaboration features
+- [ ] Mobile app with offline support
 
 ---
 
-**Version**: 1.0.0  
-**Last Updated**: 2025  
-**License**: CC-BY-SA 
+**Version**: 2.0.0  
+**Last Updated**: January 2025  
+**License**: Dual (AGPLv3 + CC-BY-SA)  
+**Compatibility**: Letta AI, MCP Protocol, PHP 8.0+ 

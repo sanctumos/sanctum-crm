@@ -22,7 +22,7 @@
 
 /**
  * Integration Tests
- * Best Jobs in TA - System Integration Testing
+ * Sanctum CRM - System Integration Testing
  */
 
 require_once __DIR__ . '/../bootstrap.php';

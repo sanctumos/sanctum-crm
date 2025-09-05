@@ -30,7 +30,7 @@ function debugLog($message) {
 debugLog('METHOD=' . ($_SERVER['REQUEST_METHOD'] ?? '') . ' REQUEST_URI=' . ($_SERVER['REQUEST_URI'] ?? ''));
 /**
  * API v1 Endpoint
- * Best Jobs in TA - MCP-Ready API
+ * Sanctum CRM - MCP-Ready API
  */
 
 // Define CRM loaded constant
@@ -45,11 +45,11 @@ require_once __DIR__ . '/../../includes/auth.php';
 if (!defined('CRM_TESTING')) header('Content-Type: application/json');
 if (!defined('CRM_TESTING')) {
     $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-    $allowed_origins = ['https://bestjobsinta.com', 'https://www.bestjobsinta.com'];
+    $allowed_origins = ['https://sanctum-crm.local', 'https://www.sanctum-crm.local'];
     if (in_array($origin, $allowed_origins)) {
         header('Access-Control-Allow-Origin: ' . $origin);
     } else {
-        header('Access-Control-Allow-Origin: https://bestjobsinta.com');
+        header('Access-Control-Allow-Origin: https://sanctum-crm.local');
     }
 }
 if (!defined('CRM_TESTING')) header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
@@ -141,7 +141,7 @@ if ($resource === 'openapi.json') {
     echo json_encode([
         'openapi' => '3.0.0',
         'info' => [
-            'title' => 'Best Jobs in TA API',
+            'title' => 'Sanctum CRM API',
             'version' => '1.0.0'
         ],
         'paths' => new stdClass()

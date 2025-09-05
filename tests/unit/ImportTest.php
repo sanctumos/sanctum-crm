@@ -22,7 +22,7 @@
 
 /**
  * Import Functionality Unit Tests
- * Best Jobs in TA - CSV Import and Name Splitting Testing
+ * Sanctum CRM - CSV Import and Name Splitting Testing
  */
 
 require_once __DIR__ . '/../bootstrap.php';

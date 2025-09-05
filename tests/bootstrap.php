@@ -22,7 +22,7 @@
 
 /**
  * Test Bootstrap
- * Best Jobs in TA - Test Environment Setup
+ * Sanctum CRM - Test Environment Setup
  */
 
 // Set test environment

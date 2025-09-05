@@ -378,7 +378,7 @@ class TestRunner {
         $html = '<!DOCTYPE html>
 <html>
 <head>
-    <title>Best Jobs in TA - Test Results</title>
+    <title>Sanctum CRM - Test Results</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
         .header { background: #f0f0f0; padding: 20px; border-radius: 5px; }
@@ -391,7 +391,7 @@ class TestRunner {
 </head>
 <body>
     <div class="header">
-        <h1>Best Jobs in TA - Test Results</h1>
+        <h1>Sanctum CRM - Test Results</h1>
         <p>Generated on: ' . date('Y-m-d H:i:s') . '</p>
     </div>
     

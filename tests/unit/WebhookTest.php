@@ -22,7 +22,7 @@
 
 /**
  * Webhook Unit Tests
- * Best Jobs in TA - Webhook Functionality Testing
+ * Sanctum CRM - Webhook Functionality Testing
  */
 
 require_once __DIR__ . '/../bootstrap.php';

@@ -22,7 +22,7 @@
 
 /**
  * Dashboard Page
- * Best Jobs in TA - Main Dashboard
+ * Sanctum CRM - Main Dashboard
  */
 
 // Remove any require_once for auth.php and layout.php

@@ -22,7 +22,7 @@
 
 /**
  * Logout Handler
- * Best Jobs in TA
+ * Sanctum CRM
  */
 
 // Define CRM loaded constant

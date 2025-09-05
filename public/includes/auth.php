@@ -22,7 +22,7 @@
 
 /**
  * Authentication System
- * Best Jobs in TA - Authentication and Authorization
+ * Sanctum CRM - Authentication and Authorization
  */
 
 // Prevent direct access

@@ -22,7 +22,7 @@
 
 /**
  * API Integration Tests
- * Best Jobs in TA - API Endpoint Testing
+ * Sanctum CRM - API Endpoint Testing
  */
 
 require_once __DIR__ . '/../bootstrap.php';

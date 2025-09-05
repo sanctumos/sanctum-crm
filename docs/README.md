@@ -1,4 +1,4 @@
-# Best Jobs in TA Documentation
+# Sanctum CRM Documentation
 
 ## 📚 Available Documentation
 

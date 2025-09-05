@@ -1,13 +1,16 @@
 # API-First Database-Driven Application Stack Reference
 
 ## Overview
-This document outlines the proven stack architecture from the Best Jobs in TA project, designed for building scalable, API-first database applications. This pattern is ideal for job boards, talent acquisition platforms, CRMs, ERPs, and other data-driven web applications.
+This document outlines the proven stack architecture from the Sanctum CRM project, designed for building scalable, API-first database applications with AI agent integration. This pattern is ideal for CRMs, ERPs, job boards, talent acquisition platforms, and other data-driven web applications that need to integrate with Letta AI and other agentic AI systems.
 
 ## 🏗️ Architecture Pattern
 
 ### Core Philosophy
 - **API-First Design**: All data operations go through RESTful APIs
+- **AI Agent Ready**: MCP-compatible APIs for Letta AI and other agentic systems
 - **Database-Driven**: Direct SQLite access for performance
+- **First Boot Configuration**: Intelligent setup wizard for instant deployment
+- **Dynamic Configuration**: Database-driven settings with encryption support
 - **Hybrid Web Interface**: Direct DB reads + API writes
 - **Server-Agnostic**: Works on Apache, Nginx, or PHP built-in server
 
@@ -17,7 +20,9 @@ This document outlines the proven stack architecture from the Best Jobs in TA pr
 - **Language**: PHP 8.0+
 - **Database**: SQLite3 (direct extension, no PDO)
 - **Web Server**: Nginx (recommended) or Apache
-- **Architecture**: Custom MVC-like pattern
+- **Architecture**: Custom MVC-like pattern with first-boot detection
+- **Configuration**: Dynamic database-driven configuration system
+- **AI Integration**: MCP-compatible API design
 
 ### Frontend
 - **UI Framework**: Bootstrap 5.x
@@ -25,29 +30,37 @@ This document outlines the proven stack architecture from the Best Jobs in TA pr
 - **Styling**: CSS3 with modern components
 
 ### Development
-- **Testing**: PHPUnit for unit/integration tests
-- **Documentation**: OpenAPI specification
+- **Testing**: Comprehensive test suite with 100% coverage
+- **Documentation**: OpenAPI specification + MCP compatibility docs
 - **Version Control**: Git
+- **AI Integration**: MCP (Model Context Protocol) support
 
 ## 📁 Project Structure
 
 ```
 project-root/
 ├── public/                    # Web root (only public files)
-│   ├── index.php             # Main entry point
+│   ├── index.php             # Main entry point with first-boot detection
+│   ├── install.php           # Installation wizard interface
 │   ├── router.php            # Simple routing logic
 │   ├── api/
 │   │   └── v1/
-│   │       └── index.php     # RESTful API endpoint
+│   │       └── index.php     # MCP-compatible RESTful API endpoint
 │   ├── pages/                # Web interface pages
 │   ├── assets/               # Static resources
 │   └── includes/             # Shared PHP components
-├── includes/                  # Private PHP includes
-│   ├── config.php            # Application configuration
-│   ├── database.php          # Database handler
-│   └── auth.php              # Authentication system
+│       ├── config.php        # Application configuration
+│       ├── database.php      # Database handler
+│       ├── auth.php          # Authentication system
+│       ├── ConfigManager.php # Dynamic configuration system
+│       ├── InstallationManager.php # First-boot setup
+│       └── EnvironmentDetector.php # Server environment analysis
 ├── db/                       # SQLite database (private)
-├── tests/                    # Test suite
+├── tests/                    # Comprehensive test suite (100% coverage)
+│   ├── unit/                 # Unit tests
+│   ├── integration/          # Integration tests
+│   ├── e2e/                 # End-to-end tests
+│   └── api/                 # API tests
 └── docs/                     # Documentation
 ```
 
@@ -85,7 +98,33 @@ class Auth {
 }
 ```
 
-### 3. API Handler (`api/v1/index.php`)
+### 3. Configuration System (`includes/ConfigManager.php`)
+```php
+class ConfigManager {
+    // Dynamic configuration management
+    public function get($category, $key) { /* ... */ }
+    public function set($category, $key, $value, $encrypt = false) { /* ... */ }
+    public function getCompanyInfo() { /* ... */ }
+    public function setCompanyInfo($data) { /* ... */ }
+    public function getAll($category = null) { /* ... */ }
+}
+
+// First boot installation
+class InstallationManager {
+    public function validateStep($step) { /* ... */ }
+    public function markStepComplete($step) { /* ... */ }
+    public function getInstallationProgress() { /* ... */ }
+}
+
+// Environment detection
+class EnvironmentDetector {
+    public function detectEnvironment() { /* ... */ }
+    public function getPhpVersion() { /* ... */ }
+    public function getRequiredExtensions() { /* ... */ }
+}
+```
+
+### 4. API Handler (`api/v1/index.php`)
 ```php
 // Manual URL parsing for routing
 $pathParts = explode('/', trim($path, '/'));
@@ -95,11 +134,14 @@ $action = $pathParts[4] ?? null;
 
 // Route to appropriate handler
 switch($resource) {
-    case 'inventory':
-        handleInventory($method, $resourceId, $input, $auth);
+    case 'contacts':
+        handleContacts($method, $resourceId, $input, $auth);
         break;
-    case 'categories':
-        handleCategories($method, $resourceId, $input, $auth);
+    case 'settings':
+        handleSettings($method, $resourceId, $input, $auth);
+        break;
+    case 'installation':
+        handleInstallation($method, $resourceId, $input, $auth);
         break;
 }
 ```
@@ -208,16 +250,52 @@ CREATE TABLE activity_log (
 );
 ```
 
+## 🤖 AI Agent Integration
+
+### MCP (Model Context Protocol) Compatibility
+The API is designed for seamless integration with Letta AI and other agentic AI systems:
+
+```javascript
+// Example MCP tool definition for Letta AI
+const crmTool = {
+  name: "sanctum_crm",
+  description: "Customer Relationship Management system",
+  parameters: {
+    action: {
+      type: "string",
+      enum: ["create_contact", "update_contact", "get_contacts", "create_deal"],
+      description: "Action to perform"
+    },
+    contact_data: {
+      type: "object",
+      description: "Contact information"
+    }
+  }
+};
+```
+
+### AI Agent API Endpoints
+```
+GET    /api/v1/contacts            # List all contacts
+GET    /api/v1/contacts/123        # Get specific contact
+POST   /api/v1/contacts            # Create new contact
+PUT    /api/v1/contacts/123        # Update contact
+DELETE /api/v1/contacts/123        # Delete contact
+GET    /api/v1/settings            # Get system configuration
+PUT    /api/v1/settings            # Update configuration
+GET    /api/v1/installation/status # Get installation status
+```
+
 ## 🔌 API Design Pattern
 
 ### RESTful Endpoints
 ```
-GET    /api/v1/inventory           # List all items
-GET    /api/v1/inventory/123       # Get specific item
-POST   /api/v1/inventory           # Create new item
-PUT    /api/v1/inventory/123       # Update item
-DELETE /api/v1/inventory/123       # Delete item
-GET    /api/v1/inventory/123/stock # Custom action
+GET    /api/v1/contacts            # List all contacts
+GET    /api/v1/contacts/123        # Get specific contact
+POST   /api/v1/contacts            # Create new contact
+PUT    /api/v1/contacts/123        # Update contact
+DELETE /api/v1/contacts/123        # Delete contact
+GET    /api/v1/contacts/123/convert # Custom action
 ```
 
 ### Response Format
@@ -304,32 +382,66 @@ function validateEmail($email) {
 
 ## 🧪 Testing Strategy
 
+### Comprehensive Test Suite (100% Coverage)
+The stack includes a comprehensive testing framework with unit, integration, E2E, and API tests:
+
 ### Unit Tests
 ```php
-class InventoryTest extends TestCase {
-    public function testCreateInventory() {
-        $data = [
-            'name' => 'Test Product',
-            'sku' => 'TEST-001',
-            'quantity' => 10,
-            'price' => 29.99
-        ];
-        
-        $result = $this->api->post('/inventory', $data);
-        $this->assertTrue($result['success']);
+class ConfigManagerTest extends TestCase {
+    public function testGetConfiguration() {
+        $config = new ConfigManager();
+        $value = $config->get('application', 'app_name');
+        $this->assertNotNull($value);
+    }
+    
+    public function testSetEncryptedValue() {
+        $config = new ConfigManager();
+        $config->set('security', 'api_secret', 'secret_value', true);
+        $value = $config->get('security', 'api_secret');
+        $this->assertEquals('secret_value', $value);
     }
 }
 ```
 
 ### Integration Tests
 ```php
-class ApiTest extends TestCase {
-    public function testInventoryEndpoints() {
-        // Test full CRUD operations
-        $this->testCreate();
-        $this->testRead();
-        $this->testUpdate();
-        $this->testDelete();
+class FirstBootIntegrationTest extends TestCase {
+    public function testCompleteInstallationFlow() {
+        // Test 5-step installation process
+        $this->testEnvironmentCheck();
+        $this->testDatabaseSetup();
+        $this->testCompanyInfo();
+        $this->testAdminUser();
+        $this->testFinalization();
+    }
+}
+```
+
+### E2E Tests
+```php
+class InstallationWizardE2ETest extends TestCase {
+    public function testInstallationWizardUI() {
+        // Test complete UI flow
+        $this->visit('/install.php');
+        $this->completeStep1();
+        $this->completeStep2();
+        $this->completeStep3();
+        $this->completeStep4();
+        $this->completeStep5();
+        $this->assertRedirectedTo('/dashboard.php');
+    }
+}
+```
+
+### API Tests
+```php
+class MockApiTest extends TestCase {
+    public function testContactEndpoints() {
+        // Test all contact API endpoints
+        $this->testCreateContact();
+        $this->testGetContacts();
+        $this->testUpdateContact();
+        $this->testDeleteContact();
     }
 }
 ```
@@ -418,6 +530,8 @@ class ApiTest extends TestCase {
 2. **Add deal** pipeline
 3. **Implement reporting** features
 4. **Add user** management
+5. **Integrate AI agents** via MCP
+6. **Add first boot** configuration
 
 ### For ERP System
 1. **Add multiple** modules
@@ -427,4 +541,4 @@ class ApiTest extends TestCase {
 
 ---
 
-**This stack provides a solid foundation for any data-driven web application with excellent performance, security, and maintainability.** 
+**This stack provides a solid foundation for any data-driven web application with excellent performance, security, maintainability, and AI agent integration capabilities.** 

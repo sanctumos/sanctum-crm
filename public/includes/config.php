@@ -22,7 +22,7 @@
 
 /**
  * CRM System Configuration
- * Best Jobs in TA - Main Configuration File
+ * Sanctum CRM - Main Configuration File
  */
 
 // Prevent direct access

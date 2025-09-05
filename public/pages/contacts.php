@@ -22,7 +22,7 @@
 
 /**
  * Contacts Page
- * Best Jobs in TA - Contact Management
+ * Sanctum CRM - Contact Management
  */
 
 // Get database instance

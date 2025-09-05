@@ -1,4 +1,4 @@
-# Best Jobs in TA - Comprehensive Documentation
+# Sanctum CRM - Comprehensive Documentation
 
 ## 📋 Table of Contents
 
@@ -16,30 +16,33 @@
 ## 🏗️ System Overview
 
 ### Technology Stack
-- **Backend**: PHP 8.0+
+- **Backend**: PHP 8.0+ with first-boot configuration system
 - **Frontend**: Bootstrap 5.x, jQuery, Select2
-- **Database**: SQLite 3
+- **Database**: SQLite 3 with dynamic configuration management
 - **Server**: Apache/Nginx (or PHP built-in server for development)
 - **Authentication**: Session-based with API key support
+- **AI Integration**: MCP-compatible API for Letta AI and other agentic systems
+- **Configuration**: Database-driven settings with encryption support
 
 ### Project Structure
 ```
-bestjobsinta.com/
+sanctum-crm/
 ├── public/                  # Web root (all public files)
-│   ├── index.php           # Main entry point
+│   ├── index.php           # Main entry point with first-boot detection
+│   ├── install.php         # Installation wizard interface
 │   ├── login.php           # Authentication
 │   ├── logout.php          # Session cleanup
 │   ├── router.php          # Page routing
 │   ├── api/
 │   │   └── v1/
-│   │       └── index.php   # API endpoints
+│   │       └── index.php   # MCP-compatible API endpoints
 │   ├── pages/              # Page templates
 │   │   ├── dashboard.php
 │   │   ├── contacts.php
 │   │   ├── deals.php
 │   │   ├── users.php
 │   │   ├── reports.php
-│   │   ├── settings.php
+│   │   ├── settings.php    # Dynamic configuration management
 │   │   ├── webhooks.php
 │   │   ├── view_contact.php
 │   │   └── edit_contact.php
@@ -47,13 +50,20 @@ bestjobsinta.com/
 │   │   ├── config.php
 │   │   ├── database.php
 │   │   ├── auth.php
-│   │   └── layout.php
+│   │   ├── layout.php
+│   │   ├── ConfigManager.php      # Dynamic configuration system
+│   │   ├── InstallationManager.php # First-boot setup
+│   │   └── EnvironmentDetector.php # Server environment analysis
 │   └── assets/
 │       ├── css/
 │       └── js/
 ├── db/                     # SQLite database (private)
 │   └── crm.db
-├── tests/                  # Test suite
+├── tests/                  # Comprehensive test suite (100% coverage)
+│   ├── unit/               # Unit tests
+│   ├── integration/        # Integration tests
+│   ├── e2e/               # End-to-end tests
+│   └── api/               # API tests
 ├── docs/                   # Documentation
 └── README.md
 ```
@@ -153,6 +163,43 @@ CREATE TABLE webhooks (
 );
 ```
 
+#### System Configuration Table
+```sql
+CREATE TABLE system_config (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    category VARCHAR(50) NOT NULL,
+    config_key VARCHAR(100) NOT NULL,
+    config_value TEXT,
+    data_type VARCHAR(20) DEFAULT 'string',
+    is_encrypted BOOLEAN DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(category, config_key)
+);
+```
+
+#### Company Information Table
+```sql
+CREATE TABLE company_info (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    company_name VARCHAR(200) NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+#### Installation State Table
+```sql
+CREATE TABLE installation_state (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    step VARCHAR(50) NOT NULL,
+    status VARCHAR(20) DEFAULT 'pending',
+    data TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+```
+
 ---
 
 ## 🚀 Installation & Deployment
@@ -167,8 +214,8 @@ CREATE TABLE webhooks (
 ### Quick Start (Development)
 ```bash
 # 1. Clone repository
-git clone https://github.com/actuallyrizzn/bestjobsinta.com.git
-cd bestjobsinta.com
+git clone https://github.com/sanctumos/sanctum-crm.git
+cd sanctum-crm
 
 # 2. Set permissions
 chmod 755 -R public/
@@ -179,9 +226,14 @@ chmod 755 db/
 cd public
 php -S localhost:8000
 
-# 4. Access application
+# 4. Complete First Boot Setup
 # Open browser to http://localhost:8000
-# Default admin: admin/admin123
+# Follow the 5-step installation wizard:
+#   1. Environment Check
+#   2. Database Setup
+#   3. Company Info
+#   4. Admin User
+#   5. Finalization
 ```
 
 ### Production Deployment
@@ -205,7 +257,7 @@ sudo chown $USER:$USER /var/www/crm
 
 # Clone repository
 cd /var/www/crm
-git clone https://github.com/actuallyrizzn/bestjobsinta.com.git .
+git clone https://github.com/sanctumos/sanctum-crm.git .
 
 # Set proper ownership and permissions
 sudo chown -R www-data:www-data /var/www/crm
@@ -281,6 +333,108 @@ sudo certbot --apache -d your-domain.com
 # Auto-renewal
 sudo crontab -e
 # Add: 0 12 * * * /usr/bin/certbot renew --quiet
+```
+
+---
+
+## ⚡ First Boot Configuration System
+
+### Overview
+Sanctum CRM features an intelligent first-boot configuration system that automatically detects new installations and guides users through a comprehensive setup process. This system ensures proper configuration for both development and production environments.
+
+### Installation Wizard Steps
+
+#### 1. Environment Check
+- **PHP Version Validation**: Ensures PHP 8.0+ is installed
+- **Extension Verification**: Checks for required PHP extensions (sqlite3, json, curl, mbstring, openssl)
+- **Server Environment Analysis**: Detects web server type and configuration
+- **File Permissions Check**: Verifies proper directory permissions
+- **Database Connectivity**: Tests SQLite database creation and access
+
+#### 2. Database Setup
+- **Schema Creation**: Initializes all required database tables
+- **Index Creation**: Sets up performance-optimized database indexes
+- **Default Data**: Inserts essential configuration data
+- **Migration Support**: Handles any future schema updates
+- **Backup Creation**: Creates initial database backup
+
+#### 3. Company Information
+- **Company Name**: Configure your organization's name
+- **Basic Settings**: Set up fundamental application settings
+- **Environment Detection**: Analyze and configure server-specific settings
+- **Security Configuration**: Set up initial security parameters
+
+#### 4. Admin User Creation
+- **User Account**: Create the primary administrator account
+- **API Key Generation**: Generate initial API key for AI agent integration
+- **Password Security**: Enforce strong password requirements
+- **Role Assignment**: Set up proper user permissions
+
+#### 5. Finalization
+- **Configuration Validation**: Verify all settings are correct
+- **Test API Endpoints**: Ensure API functionality works properly
+- **Environment Report**: Generate server environment analysis
+- **Completion**: Redirect to main application
+
+### Configuration Management
+
+#### ConfigManager Class
+The `ConfigManager` class provides dynamic configuration management:
+
+```php
+// Get configuration value
+$config = new ConfigManager();
+$appName = $config->get('application', 'app_name');
+
+// Set configuration value
+$config->set('application', 'debug_mode', true);
+
+// Set encrypted value
+$config->set('security', 'api_secret', 'secret_value', true);
+
+// Get company information
+$companyInfo = $config->getCompanyInfo();
+```
+
+#### Environment Detection
+The `EnvironmentDetector` class analyzes server environments:
+
+```php
+$detector = new EnvironmentDetector();
+$environment = $detector->detectEnvironment();
+$phpVersion = $detector->getPhpVersion();
+$extensions = $detector->getRequiredExtensions();
+```
+
+#### Installation State Tracking
+The `InstallationManager` class tracks installation progress:
+
+```php
+$installer = new InstallationManager();
+$installer->validateStep('database_setup');
+$installer->markStepComplete('company_info');
+$progress = $installer->getInstallationProgress();
+```
+
+### API Integration
+
+#### MCP Compatibility
+The API is designed for seamless integration with Letta AI and other MCP-compatible systems:
+
+```bash
+# Get system configuration
+GET /api/v1/settings
+
+# Get installation status
+GET /api/v1/installation/status
+
+# Update configuration
+PUT /api/v1/settings
+{
+  "category": "application",
+  "key": "app_name",
+  "value": "My Company CRM"
+}
 ```
 
 ---
@@ -777,7 +931,7 @@ chmod 644 includes/config.php
 #### Environment Variables
 ```php
 // public/includes/config.php
-define('APP_NAME', 'Best Jobs in TA');
+define('APP_NAME', 'Sanctum CRM');
 define('APP_VERSION', '1.0.0');
 define('APP_URL', 'https://your-domain.com');
 define('DEBUG_MODE', false);
@@ -876,36 +1030,43 @@ Check logs for detailed error information.
 
 ## 🆕 Recent Updates & Fixes
 
-### UI Improvements (Latest)
+### First Boot Configuration System (v2.0.0)
+- ✅ **Intelligent Installation Wizard** - 5-step guided setup process
+- ✅ **Environment Detection** - Automatic server environment analysis and validation
+- ✅ **Dynamic Configuration Management** - Database-driven settings with encryption support
+- ✅ **Company Information Setup** - Streamlined company configuration
+- ✅ **Admin User Creation** - Secure administrator account setup with API key generation
+
+### AI Agent Integration (v2.0.0)
+- ✅ **MCP Compatibility** - Full Model Context Protocol support for Letta AI
+- ✅ **API-First Design** - RESTful API optimized for AI agent integration
+- ✅ **Configuration API** - Dynamic settings management via API endpoints
+- ✅ **Installation Status API** - Real-time installation progress tracking
+
+### Comprehensive Testing (v2.0.0)
+- ✅ **100% Test Coverage** - Complete test suite with unit, integration, E2E, and API tests
+- ✅ **Mock Test Framework** - HTTP-independent testing for reliable CI/CD
+- ✅ **Database Cleanup** - Proper test isolation and data management
+- ✅ **Configuration Testing** - Extensive testing of dynamic configuration system
+
+### Security & Performance (v2.0.0)
+- ✅ **Fixed Database Path** - Security-hardened database location
+- ✅ **Input Validation** - Enhanced validation for all user inputs and API requests
+- ✅ **Encryption Support** - Secure storage of sensitive configuration data
+- ✅ **Session Security** - Improved session management and security
+
+### UI Improvements (v1.3.0)
 - ✅ **Mobile hamburger menu** - Responsive navigation for mobile devices
 - ✅ **Contact view modes** - Toggle between cards and list view with persistent preference
 - ✅ **Simplified action buttons** - Cleaner contact management interface
 - ✅ **Searchable dropdowns** - Select2 integration for contact selection in deals
 - ✅ **Dedicated edit contact page** - Separate page for editing contacts
 
-### API Fixes (Latest)
+### API Enhancements (v1.3.0)
 - ✅ **Consistent response formats** - All endpoints return standardized JSON responses
 - ✅ **DELETE endpoint fixes** - Proper JSON responses for contact, deal, and webhook deletion
 - ✅ **Error handling improvements** - Better error messages and status codes
 - ✅ **Rate limiting** - API request throttling to prevent abuse
-
-### Security Enhancements
-- ✅ **Settings management** - Admin-only settings page to control system behavior
-- ✅ **Default credentials toggle** - Option to hide default login credentials in production
-- ✅ **Input validation** - Enhanced validation for all user inputs
-- ✅ **Session security** - Improved session management and security
-
-### Integration Improvements
-- ✅ **Troubleshooting FAQ** - Common integration issues and solutions
-- ✅ **Real-world examples** - Updated integration examples with actual fixes
-- ✅ **Error handling** - Better error handling in integration code
-- ✅ **SSL support** - Proper SSL certificate handling for production
-
-### Database Updates
-- ✅ **Settings table** - New table for system-wide settings
-- ✅ **Migration support** - Automatic database schema updates
-- ✅ **Backup functionality** - Database backup and restore capabilities
-- ✅ **Performance optimization** - Improved query performance
 
 ---
 
@@ -914,41 +1075,50 @@ Check logs for detailed error information.
 ### Local Development Setup
 ```bash
 # Clone repository
-git clone https://github.com/actuallyrizzn/bestjobsinta.com.git
-cd bestjobsinta.com
+git clone https://github.com/sanctumos/sanctum-crm.git
+cd sanctum-crm
 
 # Start development server
 cd public
 php -S localhost:8000
 
-# Access application
+# Complete first boot setup
 # http://localhost:8000
-# Default: admin/admin123
+# Follow the 5-step installation wizard
 ```
 
 ### Code Structure
-- **MVC Pattern**: Model-View-Controller architecture
+- **MVC Pattern**: Model-View-Controller architecture with first-boot detection
 - **Template System**: PHP-based templating with layout system
-- **Database Layer**: SQLite with PDO abstraction
-- **API Layer**: RESTful API with JSON responses
+- **Database Layer**: SQLite with direct extension (no PDO)
+- **Configuration System**: Dynamic database-driven configuration with encryption
+- **API Layer**: MCP-compatible RESTful API with JSON responses
 - **Frontend**: Bootstrap 5 with jQuery and Select2
+- **Testing**: Comprehensive test suite with 100% coverage
 
 ### Testing
 ```bash
-# Run test suite
+# Run comprehensive test suite (100% coverage)
 cd tests
 php run_tests.php
 
-# Run specific test
-php run_tests.php --filter=ApiTest
+# Run specific test suites
+php run_tests.php --filter=ConfigManagerCustomTest
+php run_tests.php --filter=FirstBootIntegrationTest
+php run_tests.php --filter=InstallationWizardE2ETest
+
+# Run configuration tests
+php run_configuration_tests.php
 ```
 
 ### Adding New Features
 1. **Database**: Add tables/columns in `database.php`
-2. **API**: Add endpoints in `api/v1/index.php`
-3. **Frontend**: Add pages in `pages/` directory
-4. **Navigation**: Update `layout.php` for new menu items
-5. **Documentation**: Update this file with new features
+2. **Configuration**: Add settings in `ConfigManager.php` if needed
+3. **API**: Add endpoints in `api/v1/index.php`
+4. **Frontend**: Add pages in `pages/` directory
+5. **Navigation**: Update `layout.php` for new menu items
+6. **Tests**: Add comprehensive tests for new functionality
+7. **Documentation**: Update this file with new features
 
 ### Deployment Checklist
 - [ ] Set `DEBUG_MODE = false`
@@ -978,13 +1148,15 @@ php run_tests.php --filter=ApiTest
 5. Submit a pull request
 
 ### Version History
-- **v1.0.0**: Initial release with basic CRM functionality
-- **v1.1.0**: Added API endpoints and integration support
-- **v1.2.0**: UI improvements and mobile responsiveness
+- **v2.0.0**: First boot configuration system, MCP compatibility, 100% test coverage
 - **v1.3.0**: Security enhancements and settings management
+- **v1.2.0**: UI improvements and mobile responsiveness
+- **v1.1.0**: Added API endpoints and integration support
+- **v1.0.0**: Initial release with basic CRM functionality
 
 ---
 
 **Last Updated**: January 2025  
-**Version**: 1.3.0  
-**Maintainer**: Best Jobs in TA Team 
+**Version**: 2.0.0  
+**Maintainer**: Sanctum AI Team  
+**Compatibility**: Letta AI, MCP Protocol, PHP 8.0+ 

@@ -22,7 +22,7 @@
 
 /**
  * Authentication Unit Tests
- * Best Jobs in TA - Auth Class Testing
+ * Sanctum CRM - Auth Class Testing
  */
 
 require_once __DIR__ . '/../bootstrap.php';

@@ -22,7 +22,7 @@
 
 /**
  * Login Page
- * Best Jobs in TA - Authentication
+ * Sanctum CRM - Authentication
  */
 
 // Define CRM loaded constant

@@ -22,7 +22,7 @@
 
 /**
  * User Management Unit Tests
- * Best Jobs in TA - Enhanced User Management Testing
+ * Sanctum CRM - Enhanced User Management Testing
  */
 
 require_once __DIR__ . '/../bootstrap.php';

@@ -22,7 +22,7 @@
 
 /**
  * Deals Pipeline Page
- * Best Jobs in TA
+ * Sanctum CRM
  */
 
 // Remove any require_once for auth.php and layout.php

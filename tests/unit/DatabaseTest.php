@@ -22,7 +22,7 @@
 
 /**
  * Database Unit Tests
- * Best Jobs in TA - Database Class Testing
+ * Sanctum CRM - Database Class Testing
  */
 
 require_once __DIR__ . '/../bootstrap.php';

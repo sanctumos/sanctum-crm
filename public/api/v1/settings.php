@@ -22,7 +22,7 @@
 
 /**
  * User Settings API Endpoint
- * Best Jobs in TA - /api/v1/settings
+ * Sanctum CRM - /api/v1/settings
  */
 
 // Define CRM loaded constant
