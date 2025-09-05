@@ -92,7 +92,7 @@ try {
             'email' => 'test@example.com',
             'company' => 'Test Company',
             'contact_type' => 'lead',
-            'evm_address' => '0x1234567890123456789012345678901234567890',
+            'custom_field_1' => 'Custom Value 1',
             'twitter_handle' => '@testuser'
         ];
         

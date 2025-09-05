@@ -184,8 +184,8 @@ class ImportTest {
                 if (isset($row[$column]) && !empty($row[$column])) {
                     if ($field === 'email') {
                         $contactData[$field] = $row[$column];
-                    } elseif ($field === 'evm_address') {
-                        $contactData[$field] = validateEVMAddress($row[$column]) ? $row[$column] : null;
+                    } elseif ($field === 'custom_field_1') {
+                        $contactData[$field] = validateCustomField($row[$column], 'text') ? $row[$column] : null;
                     } else {
                         $contactData[$field] = sanitizeInput($row[$column]);
                     }

@@ -63,9 +63,8 @@ define('SMTP_PASSWORD', '');
 define('SMTP_FROM_EMAIL', 'noreply@bestjobsinta.com');
 define('SMTP_FROM_NAME', 'Best Jobs in TA');
 
-// Web3 Configuration
-define('WEB3_ENABLED', true);
-define('ETHEREUM_NETWORK', 'mainnet'); // mainnet, testnet, local
+// Custom Fields Configuration
+// Custom field settings will be managed through the database
 
 // Error Reporting
 if (DEBUG_MODE) {
@@ -137,9 +136,18 @@ function sanitizeInput($input) {
     return htmlspecialchars(trim($input), ENT_QUOTES, 'UTF-8');
 }
 
-// Helper function to validate EVM address
-function validateEVMAddress($address) {
-    return preg_match('/^0x[a-fA-F0-9]{40}$/', $address);
+// Helper function to validate custom field values
+function validateCustomField($value, $fieldType) {
+    switch ($fieldType) {
+        case 'email':
+            return validateEmail($value);
+        case 'url':
+            return validateUrl($value);
+        case 'phone':
+            return preg_match('/^[\+]?[1-9][\d]{0,15}$/', $value);
+        default:
+            return !empty(trim($value));
+    }
 }
 
 // Helper function to get current timestamp

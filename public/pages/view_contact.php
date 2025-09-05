@@ -70,9 +70,6 @@ renderHeader('View Contact');
                 <?php if (!empty($contact['position'])): ?>
                     <div><strong>Position:</strong> <?php echo htmlspecialchars($contact['position']); ?></div>
                 <?php endif; ?>
-                <?php if (!empty($contact['evm_address'])): ?>
-                    <div><strong>EVM Address:</strong> <?php echo htmlspecialchars($contact['evm_address']); ?></div>
-                <?php endif; ?>
                 <?php if (!empty($contact['twitter_handle'])): ?>
                     <div><strong>Twitter:</strong> <?php echo htmlspecialchars($contact['twitter_handle']); ?></div>
                 <?php endif; ?>

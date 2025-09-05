@@ -410,8 +410,8 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
                             // Sanitize input based on field type
                             if ($field === 'email') {
                                 $contactData[$field] = $row[$column]; // Email validation handled separately
-                            } elseif ($field === 'evm_address') {
-                                $contactData[$field] = validateEVMAddress($row[$column]) ? $row[$column] : null;
+                            } elseif ($field === 'custom_field_1') {
+                                $contactData[$field] = validateCustomField($row[$column], 'text') ? $row[$column] : null;
                             } else {
                                 $contactData[$field] = sanitizeInput($row[$column]);
                             }
@@ -601,7 +601,7 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
                 'state' => sanitizeInput($input['state'] ?? null),
                 'zip_code' => sanitizeInput($input['zip_code'] ?? null),
                 'country' => sanitizeInput($input['country'] ?? null),
-                'evm_address' => !empty($input['evm_address']) && validateEVMAddress($input['evm_address']) ? $input['evm_address'] : null,
+                'custom_field_1' => !empty($input['custom_field_1']) && validateCustomField($input['custom_field_1'], 'text') ? $input['custom_field_1'] : null,
                 'twitter_handle' => sanitizeInput($input['twitter_handle'] ?? null),
                 'linkedin_profile' => sanitizeInput($input['linkedin_profile'] ?? null),
                 'telegram_username' => sanitizeInput($input['telegram_username'] ?? null),
@@ -673,7 +673,7 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
             // Regular update
             $updateData = array_intersect_key($input, array_flip([
                 'first_name', 'last_name', 'email', 'phone', 'company', 'address',
-                'city', 'state', 'zip_code', 'country', 'evm_address', 'twitter_handle',
+                'city', 'state', 'zip_code', 'country', 'custom_field_1', 'twitter_handle',
                 'linkedin_profile', 'telegram_username', 'discord_username', 'github_username',
                 'website', 'contact_type', 'contact_status', 'source', 'assigned_to', 'notes'
             ]));
