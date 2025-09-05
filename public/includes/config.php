@@ -31,9 +31,9 @@ if (!defined('CRM_LOADED')) {
 }
 
 // Application Configuration
-define('APP_NAME', 'Best Jobs in TA');
+define('APP_NAME', 'Sanctum CRM');
 define('APP_VERSION', '1.0.0');
-define('APP_URL', 'https://bestjobsinta.com'); // Production URL
+define('APP_URL', 'http://localhost'); // Default URL - will be overridden by configuration
 define('DEBUG_MODE', false); // Set to false in production
 
 // Database Configuration
@@ -199,4 +199,24 @@ function sendWebhook($url, $payload) {
 // Helper function to validate URL
 function validateUrl($url) {
     return filter_var($url, FILTER_VALIDATE_URL) !== false;
+}
+
+// Helper function to get current application name
+function getAppName() {
+    if (class_exists('ConfigManager')) {
+        $config = ConfigManager::getInstance();
+        $appConfig = $config->getCategory('application');
+        return $appConfig['app_name'] ?? APP_NAME;
+    }
+    return APP_NAME;
+}
+
+// Helper function to get current application URL
+function getAppUrl() {
+    if (class_exists('ConfigManager')) {
+        $config = ConfigManager::getInstance();
+        $appConfig = $config->getCategory('application');
+        return $appConfig['app_url'] ?? APP_URL;
+    }
+    return APP_URL;
 } 

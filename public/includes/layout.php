@@ -22,13 +22,18 @@
 
 /**
  * Layout Template System
- * Best Jobs in TA - Consistent page layout
+ * Sanctum CRM - Consistent page layout
  */
 
 // Prevent direct access
 if (!defined('CRM_LOADED')) {
     die('Direct access not permitted');
 }
+
+// Get configuration for dynamic content
+$config = ConfigManager::getInstance();
+$companyInfo = $config->getCompanyInfo();
+$appConfig = $config->getCategory('application');
 
 // Get current user (if auth is available)
 $user = null;
@@ -67,7 +72,7 @@ $recent_deals = $db->fetchAll("SELECT * FROM deals ORDER BY created_at DESC LIMI
 
 function renderHeader($title = null) {
     global $user, $auth, $currentPage;
-    $pageTitle = $title ? $title . ' - ' . APP_NAME : APP_NAME;
+    $pageTitle = $title ? $title . ' - ' . getAppName() : getAppName();
     ?>
     <!DOCTYPE html>
     <html lang="en">
@@ -202,7 +207,7 @@ function renderHeader($title = null) {
                     <div class="sidebar p-3" id="sidebar">
                         <div class="text-center mb-4">
                             <h4 class="text-white mb-0">
-                                <i class="fas fa-users"></i> <?php echo APP_NAME; ?>
+                                <i class="fas fa-users"></i> <?php echo htmlspecialchars(getAppName()); ?>
                             </h4>
                         </div>
                         

@@ -34,6 +34,7 @@ require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/database.php';
 require_once __DIR__ . '/includes/ConfigManager.php';
 require_once __DIR__ . '/includes/InstallationManager.php';
+require_once __DIR__ . '/includes/EnvironmentDetector.php';
 require_once __DIR__ . '/includes/auth.php';
 
 // Check if first boot is needed
