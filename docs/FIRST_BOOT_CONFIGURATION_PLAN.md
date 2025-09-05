@@ -17,7 +17,6 @@ This document outlines the comprehensive plan to transform Sanctum CRM from a ha
 
 ### Hardcoded Configuration Issues
 - **Application Identity**: `APP_NAME` hardcoded to "Best Jobs in TA"
-- **Database Paths**: Fixed relative paths that may not work in all environments
 - **Default Admin**: Hardcoded admin user with fixed credentials
 - **Company Name**: No configurable company branding
 - **Security Settings**: Static session and security configurations
@@ -47,8 +46,8 @@ define('APP_URL', 'https://bestjobsinta.com');
    - Timezone settings
 
 2. **Database Settings**
-   - SQLite database path
    - Backup settings
+   - Database maintenance
 
 3. **Security Settings**
    - Session configuration
@@ -79,7 +78,7 @@ class InstallationManager {
 
 #### B. First Boot Flow
 1. **Environment Check**: Verify PHP version, extensions, permissions
-2. **Database Setup**: Create tables, run migrations
+2. **Database Setup**: Create tables, run migrations (database path is fixed for security)
 3. **Company Configuration**: Set company name
 4. **Admin Account**: Create initial administrator account
 5. **Final Setup**: Complete installation and redirect to dashboard
@@ -174,7 +173,7 @@ class InstallationManager {
 #### A. Installation Wizard Pages
 1. **Welcome Page**: Introduction and requirements check
 2. **Environment Check**: PHP version, extensions, permissions
-3. **Database Setup**: SQLite database initialization
+3. **Database Setup**: SQLite database initialization (path fixed for security)
 4. **Company Information**: Company name setup
 5. **Admin Account**: Create initial administrator
 6. **Final Setup**: Complete installation
@@ -205,7 +204,6 @@ $configSchema = [
         'company_name' => ['type' => 'string', 'required' => true]
     ],
     'database' => [
-        'db_path' => ['type' => 'string', 'required' => true],
         'backup_enabled' => ['type' => 'boolean', 'required' => false]
     ]
 ];
@@ -276,6 +274,7 @@ sudo apt install apache2 mysql-server php8.1 php8.1-mysql php8.1-sqlite3 php8.1-
 - **Input Validation**: All configuration inputs validated
 - **Access Control**: Configuration changes require admin privileges
 - **Audit Logging**: Track all configuration changes
+- **Fixed Database Path**: Database path is hardcoded for security - no user configuration to prevent path traversal attacks
 
 ### 3. Performance Optimizations
 - **Configuration Caching**: Cache frequently accessed configurations
@@ -295,8 +294,8 @@ sudo apt install apache2 mysql-server php8.1 php8.1-mysql php8.1-sqlite3 php8.1-
 - Timezone settings
 
 ### Database Settings
-- SQLite database path
 - Backup configuration
+- Database maintenance
 
 ### Security Settings
 - Session configuration
