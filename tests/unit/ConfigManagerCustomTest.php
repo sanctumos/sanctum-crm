@@ -145,6 +145,9 @@ class ConfigManagerCustomTest {
     }
     
     private function testGetCategory() {
+        // Clear the application category first
+        $this->db->query("DELETE FROM system_config WHERE category = 'application'");
+        
         $configs = [
             'app_name' => 'Test App',
             'app_url' => 'http://test.com'
@@ -260,6 +263,9 @@ class ConfigManagerCustomTest {
     }
     
     private function testInstallationProgress() {
+        // Clear installation state first
+        $this->db->query("DELETE FROM installation_state");
+        
         $this->config->completeInstallationStep('environment');
         $this->config->completeInstallationStep('database', ['tables_created' => 5]);
         
@@ -606,6 +612,9 @@ class ConfigManagerCustomTest {
     }
     
     private function testDataTypeDetection() {
+        // Clear test data first
+        $this->db->query("DELETE FROM system_config WHERE category = 'test'");
+        
         $testCases = [
             'string' => 'test string',
             'integer' => 42,
@@ -621,7 +630,8 @@ class ConfigManagerCustomTest {
             $retrieved = $this->config->get('test', $expectedType);
             
             if ($expectedType === 'object') {
-                if ($retrieved !== (array)$value) {
+                // Objects should be retrieved as objects, not arrays
+                if ($retrieved !== $value) {
                     $allPassed = false;
                     break;
                 }

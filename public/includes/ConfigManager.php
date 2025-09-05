@@ -84,18 +84,17 @@ class ConfigManager {
      */
     public function set($category, $key, $value, $encrypt = false) {
         $dataType = $this->getDataType($value);
-        $configValue = $value;
         
-        // Encrypt if needed
-        if ($encrypt) {
-            $configValue = $this->encrypt($configValue);
-        }
-        
-        // Convert to string for storage
+        // Convert to string for storage first
         if (is_array($value) || is_object($value)) {
             $configValue = json_encode($value);
         } else {
             $configValue = (string) $value;
+        }
+        
+        // Encrypt if needed (after string conversion)
+        if ($encrypt) {
+            $configValue = $this->encrypt($configValue);
         }
         
         $existing = $this->db->fetchOne(
@@ -217,7 +216,7 @@ class ConfigManager {
      * Get company information
      */
     public function getCompanyInfo() {
-        $result = $this->db->fetchOne("SELECT * FROM company_info WHERE id = 1");
+        $result = $this->db->fetchOne("SELECT * FROM company_info ORDER BY id LIMIT 1");
         return $result ?: [
             'company_name' => 'Sanctum CRM',
             'timezone' => 'UTC'
@@ -228,12 +227,12 @@ class ConfigManager {
      * Set company information
      */
     public function setCompanyInfo($data) {
-        $existing = $this->db->fetchOne("SELECT id FROM company_info WHERE id = 1");
+        $existing = $this->db->fetchOne("SELECT id FROM company_info ORDER BY id LIMIT 1");
         
         if ($existing) {
             $this->db->update('company_info', array_merge($data, [
                 'updated_at' => getCurrentTimestamp()
-            ]), 'id = 1');
+            ]), 'id = ' . $existing['id']);
         } else {
             $this->db->insert('company_info', array_merge($data, [
                 'created_at' => getCurrentTimestamp(),
@@ -329,7 +328,9 @@ class ConfigManager {
      * Convert data type for storage
      */
     private function getDataType($value) {
-        if (is_bool($value)) {
+        if (is_null($value)) {
+            return 'null';
+        } elseif (is_bool($value)) {
             return 'boolean';
         } elseif (is_int($value)) {
             return 'integer';
@@ -347,6 +348,8 @@ class ConfigManager {
      */
     private function convertDataType($value, $dataType) {
         switch ($dataType) {
+            case 'null':
+                return null;
             case 'boolean':
                 return (bool) $value;
             case 'integer':

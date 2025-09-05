@@ -88,8 +88,8 @@ class TestRunner {
         echo "=========\n";
         
         $apiTests = [
-            'ApiTest.php' => 'ApiTest',
-            'ImportApiTest.php' => 'ImportApiTest'
+            'MockApiTest.php' => 'MockApiTest',
+            'MockImportApiTest.php' => 'MockImportApiTest'
         ];
         
         foreach ($apiTests as $file => $class) {
@@ -120,7 +120,7 @@ class TestRunner {
         
         $integrationTests = [
             'IntegrationTest.php' => 'IntegrationTest',
-            'ImportIntegrationTest.php' => 'ImportIntegrationTest'
+            'MockImportIntegrationTest.php' => 'MockImportIntegrationTest'
         ];
         
         foreach ($integrationTests as $file => $class) {
