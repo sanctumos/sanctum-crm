@@ -78,7 +78,7 @@ class InstallationManager {
 
 #### B. First Boot Flow
 1. **Environment Check**: Verify PHP version, extensions, permissions
-2. **Database Setup**: Create tables, run migrations (database path is fixed for security)
+2. **Database Setup**: Create tables and initial data (database path is fixed for security)
 3. **Company Configuration**: Set company name
 4. **Admin Account**: Create initial administrator account
 5. **Final Setup**: Complete installation and redirect to dashboard
@@ -98,7 +98,7 @@ class InstallationManager {
 
 ## 📝 Implementation Plan
 
-### Phase 1: Database Schema Updates
+### Phase 1: Database Schema Setup
 
 #### A. New Tables
 ```sql
@@ -135,10 +135,10 @@ CREATE TABLE installation_state (
 );
 ```
 
-#### B. Migration Scripts
-- Create migration system for database updates
-- Handle existing installations gracefully
-- Preserve existing data during migration
+#### B. Database Initialization
+- Create all required tables on first run
+- Insert default configuration data
+- No migration system needed for fresh installation
 
 ### Phase 2: Configuration Management Classes
 
@@ -281,10 +281,10 @@ sudo apt install apache2 mysql-server php8.1 php8.1-mysql php8.1-sqlite3 php8.1-
 - **Lazy Loading**: Load configurations only when needed
 - **Database Indexing**: Optimize configuration queries
 
-### 4. Migration Strategy
-- **Backward Compatibility**: Support existing installations
-- **Gradual Migration**: Migrate configurations incrementally
-- **Rollback Support**: Ability to revert configuration changes
+### 4. Fresh Installation Strategy
+- **Clean Installation**: Fresh database setup with all required tables
+- **Default Configuration**: Pre-populated with sensible defaults
+- **No Legacy Support**: No need to support existing installations
 
 ## 📊 Configuration Categories Detail
 
@@ -318,11 +318,11 @@ sudo apt install apache2 mysql-server php8.1 php8.1-mysql php8.1-sqlite3 php8.1-
 4. First boot wizard guides through setup
 5. Application ready for use
 
-### Scenario 2: Existing Installation Migration
+### Scenario 2: Code Update
 1. User has existing Sanctum CRM installation
 2. Updates to new version
-3. Migration script runs automatically
-4. Existing configuration preserved
+3. Database tables created if they don't exist
+4. Configuration system initialized
 5. New configuration options available
 
 ### Scenario 3: Development Environment
@@ -342,14 +342,14 @@ sudo apt install apache2 mysql-server php8.1 php8.1-mysql php8.1-sqlite3 php8.1-
 ### Integration Tests
 - First boot wizard flow
 - Configuration API endpoints
-- Database migration scripts
+- Database initialization
 - Settings management interface
 
 ### End-to-End Tests
 - Complete installation process
 - Configuration changes
 - Environment-specific deployments
-- Migration scenarios
+- Database initialization scenarios
 
 ## 📈 Success Metrics
 
