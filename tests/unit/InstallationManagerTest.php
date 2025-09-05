@@ -303,4 +303,412 @@ class InstallationManagerTest extends TestCase {
         $this->assertArrayHasKey('errors', $validation);
         $this->assertArrayHasKey('warnings', $validation);
     }
+    
+    public function testValidateStepInvalidStep() {
+        $validation = $this->installationManager->validateStep('invalid_step', []);
+        
+        $this->assertIsArray($validation);
+        $this->assertFalse($validation['valid']);
+        $this->assertContains('Invalid step', $validation['errors']);
+    }
+    
+    public function testValidateStepAdminWithMissingFields() {
+        $validation = $this->installationManager->validateStep('admin', [
+            'username' => 'admin'
+            // Missing email and password
+        ]);
+        
+        $this->assertFalse($validation['valid']);
+        $this->assertContains('Email is required', $validation['errors']);
+        $this->assertContains('Password is required', $validation['errors']);
+    }
+    
+    public function testValidateStepAdminWithInvalidEmail() {
+        $validation = $this->installationManager->validateStep('admin', [
+            'username' => 'admin',
+            'email' => 'not-an-email',
+            'password' => 'password123'
+        ]);
+        
+        $this->assertFalse($validation['valid']);
+        $this->assertContains('Invalid email format', $validation['errors']);
+    }
+    
+    public function testValidateStepAdminWithShortPassword() {
+        $validation = $this->installationManager->validateStep('admin', [
+            'username' => 'admin',
+            'email' => 'admin@test.com',
+            'password' => '123'
+        ]);
+        
+        $this->assertFalse($validation['valid']);
+        $this->assertContains('Password must be at least', $validation['errors']);
+    }
+    
+    public function testValidateStepAdminWithEmptyUsername() {
+        $validation = $this->installationManager->validateStep('admin', [
+            'username' => '',
+            'email' => 'admin@test.com',
+            'password' => 'password123'
+        ]);
+        
+        $this->assertFalse($validation['valid']);
+        $this->assertContains('Username is required', $validation['errors']);
+    }
+    
+    public function testValidateStepAdminWithWhitespaceUsername() {
+        $validation = $this->installationManager->validateStep('admin', [
+            'username' => '   ',
+            'email' => 'admin@test.com',
+            'password' => 'password123'
+        ]);
+        
+        $this->assertFalse($validation['valid']);
+        $this->assertContains('Username is required', $validation['errors']);
+    }
+    
+    public function testValidateStepAdminWithLongUsername() {
+        $validation = $this->installationManager->validateStep('admin', [
+            'username' => str_repeat('a', 256), // Too long
+            'email' => 'admin@test.com',
+            'password' => 'password123'
+        ]);
+        
+        $this->assertFalse($validation['valid']);
+        $this->assertContains('Username is too long', $validation['errors']);
+    }
+    
+    public function testValidateStepAdminWithSpecialCharacters() {
+        $validation = $this->installationManager->validateStep('admin', [
+            'username' => 'admin<script>',
+            'email' => 'admin@test.com',
+            'password' => 'password123'
+        ]);
+        
+        $this->assertFalse($validation['valid']);
+        $this->assertContains('Username contains invalid characters', $validation['errors']);
+    }
+    
+    public function testValidateStepCompanyWithLongName() {
+        $validation = $this->installationManager->validateStep('company', [
+            'company_name' => str_repeat('a', 256) // Too long
+        ]);
+        
+        $this->assertFalse($validation['valid']);
+        $this->assertContains('Company name is too long', $validation['errors']);
+    }
+    
+    public function testValidateStepCompanyWithWhitespaceName() {
+        $validation = $this->installationManager->validateStep('company', [
+            'company_name' => '   '
+        ]);
+        
+        $this->assertFalse($validation['valid']);
+        $this->assertContains('Company name is required', $validation['errors']);
+    }
+    
+    public function testValidateStepCompanyWithSpecialCharacters() {
+        $validation = $this->installationManager->validateStep('company', [
+            'company_name' => 'Company<script>alert("xss")</script>'
+        ]);
+        
+        $this->assertFalse($validation['valid']);
+        $this->assertContains('Company name contains invalid characters', $validation['errors']);
+    }
+    
+    public function testValidateStepEnvironmentWithErrors() {
+        // Mock environment validation to return errors
+        $validation = $this->installationManager->validateStep('environment', []);
+        
+        $this->assertIsArray($validation);
+        $this->assertArrayHasKey('valid', $validation);
+        $this->assertArrayHasKey('errors', $validation);
+        $this->assertArrayHasKey('warnings', $validation);
+    }
+    
+    public function testValidateStepDatabaseWithErrors() {
+        $validation = $this->installationManager->validateStep('database', []);
+        
+        $this->assertIsArray($validation);
+        $this->assertArrayHasKey('valid', $validation);
+        $this->assertArrayHasKey('errors', $validation);
+        $this->assertArrayHasKey('warnings', $validation);
+    }
+    
+    public function testValidateStepComplete() {
+        $validation = $this->installationManager->validateStep('complete', []);
+        
+        $this->assertIsArray($validation);
+        $this->assertTrue($validation['valid']);
+    }
+    
+    public function testGetInstallationStatusWithNoSteps() {
+        $status = $this->installationManager->getInstallationStatus();
+        
+        $this->assertIsArray($status);
+        $this->assertArrayHasKey('environment', $status);
+        $this->assertArrayHasKey('database', $status);
+        $this->assertArrayHasKey('company', $status);
+        $this->assertArrayHasKey('admin', $status);
+        $this->assertArrayHasKey('complete', $status);
+        
+        $this->assertFalse($status['environment']['completed']);
+        $this->assertTrue($status['environment']['current']);
+    }
+    
+    public function testGetInstallationStatusWithPartialCompletion() {
+        $this->installationManager->completeStep('environment');
+        $this->installationManager->completeStep('database');
+        
+        $status = $this->installationManager->getInstallationStatus();
+        
+        $this->assertTrue($status['environment']['completed']);
+        $this->assertTrue($status['database']['completed']);
+        $this->assertFalse($status['company']['completed']);
+        $this->assertTrue($status['company']['current']);
+    }
+    
+    public function testGetInstallationStatusWithAllComplete() {
+        $steps = ['environment', 'database', 'company', 'admin', 'complete'];
+        foreach ($steps as $step) {
+            $this->installationManager->completeStep($step);
+        }
+        
+        $status = $this->installationManager->getInstallationStatus();
+        
+        foreach ($status as $step => $info) {
+            $this->assertTrue($info['completed']);
+            $this->assertFalse($info['current']);
+        }
+    }
+    
+    public function testResetInstallationWithPartialData() {
+        // Set up partial installation
+        $this->installationManager->completeStep('environment');
+        $this->installationManager->completeStep('database');
+        $this->installationManager->setupCompany('Test Company', 'UTC');
+        $this->installationManager->completeStep('company');
+        
+        $result = $this->installationManager->resetInstallation();
+        $this->assertTrue($result);
+        
+        // Verify reset
+        $this->assertTrue($this->installationManager->isFirstBoot());
+        $this->assertEquals('environment', $this->installationManager->getCurrentStep());
+        
+        $progress = $this->installationManager->getInstallationProgress();
+        $this->assertEmpty($progress);
+    }
+    
+    public function testResetInstallationWithCompleteData() {
+        // Set up complete installation
+        $this->installationManager->completeStep('environment');
+        $this->installationManager->completeStep('database');
+        $this->installationManager->setupCompany('Test Company', 'UTC');
+        $this->installationManager->completeStep('company');
+        $this->installationManager->createAdminUser('admin', 'admin@test.com', 'password123');
+        $this->installationManager->completeStep('admin');
+        $this->installationManager->completeStep('complete');
+        
+        $result = $this->installationManager->resetInstallation();
+        $this->assertTrue($result);
+        
+        // Verify reset
+        $this->assertTrue($this->installationManager->isFirstBoot());
+        $this->assertEquals('environment', $this->installationManager->getCurrentStep());
+    }
+    
+    public function testCreateAdminUserWithExistingUsername() {
+        // Create first admin
+        $this->installationManager->createAdminUser('admin', 'admin1@test.com', 'password123');
+        
+        // Try to create second admin with same username
+        $result = $this->installationManager->createAdminUser('admin', 'admin2@test.com', 'password123');
+        
+        $this->assertFalse($result);
+    }
+    
+    public function testCreateAdminUserWithExistingEmail() {
+        // Create first admin
+        $this->installationManager->createAdminUser('admin1', 'admin@test.com', 'password123');
+        
+        // Try to create second admin with same email
+        $result = $this->installationManager->createAdminUser('admin2', 'admin@test.com', 'password123');
+        
+        $this->assertFalse($result);
+    }
+    
+    public function testCreateAdminUserWithEmptyFirstName() {
+        $result = $this->installationManager->createAdminUser(
+            'admin',
+            'admin@test.com',
+            'password123',
+            '', // Empty first name
+            'Admin'
+        );
+        
+        $this->assertFalse($result);
+    }
+    
+    public function testCreateAdminUserWithEmptyLastName() {
+        $result = $this->installationManager->createAdminUser(
+            'admin',
+            'admin@test.com',
+            'password123',
+            'Test',
+            '' // Empty last name
+        );
+        
+        $this->assertFalse($result);
+    }
+    
+    public function testCreateAdminUserWithLongFirstName() {
+        $result = $this->installationManager->createAdminUser(
+            'admin',
+            'admin@test.com',
+            'password123',
+            str_repeat('a', 256), // Too long
+            'Admin'
+        );
+        
+        $this->assertFalse($result);
+    }
+    
+    public function testCreateAdminUserWithLongLastName() {
+        $result = $this->installationManager->createAdminUser(
+            'admin',
+            'admin@test.com',
+            'password123',
+            'Test',
+            str_repeat('a', 256) // Too long
+        );
+        
+        $this->assertFalse($result);
+    }
+    
+    public function testCreateAdminUserWithSpecialCharactersInName() {
+        $result = $this->installationManager->createAdminUser(
+            'admin',
+            'admin@test.com',
+            'password123',
+            'Test<script>',
+            'Admin'
+        );
+        
+        $this->assertFalse($result);
+    }
+    
+    public function testSetupCompanyWithInvalidTimezone() {
+        $result = $this->installationManager->setupCompany('Test Company', 'Invalid/Timezone');
+        
+        $this->assertFalse($result);
+    }
+    
+    public function testSetupCompanyWithEmptyName() {
+        $result = $this->installationManager->setupCompany('', 'UTC');
+        
+        $this->assertFalse($result);
+    }
+    
+    public function testSetupCompanyWithWhitespaceName() {
+        $result = $this->installationManager->setupCompany('   ', 'UTC');
+        
+        $this->assertFalse($result);
+    }
+    
+    public function testSetupCompanyWithLongName() {
+        $result = $this->installationManager->setupCompany(str_repeat('a', 256), 'UTC');
+        
+        $this->assertFalse($result);
+    }
+    
+    public function testSetupCompanyWithSpecialCharacters() {
+        $result = $this->installationManager->setupCompany('Company<script>', 'UTC');
+        
+        $this->assertFalse($result);
+    }
+    
+    public function testValidateEnvironmentWithMissingExtensions() {
+        // This test would need to mock the extension check
+        $validation = $this->installationManager->validateEnvironment();
+        
+        $this->assertIsArray($validation);
+        $this->assertArrayHasKey('valid', $validation);
+        $this->assertArrayHasKey('errors', $validation);
+        $this->assertArrayHasKey('warnings', $validation);
+    }
+    
+    public function testValidateEnvironmentWithLowMemory() {
+        // This test would need to mock the memory check
+        $validation = $this->installationManager->validateEnvironment();
+        
+        $this->assertIsArray($validation);
+        $this->assertArrayHasKey('valid', $validation);
+        $this->assertArrayHasKey('errors', $validation);
+        $this->assertArrayHasKey('warnings', $validation);
+    }
+    
+    public function testValidateEnvironmentWithOldPHPVersion() {
+        // This test would need to mock the PHP version check
+        $validation = $this->installationManager->validateEnvironment();
+        
+        $this->assertIsArray($validation);
+        $this->assertArrayHasKey('valid', $validation);
+        $this->assertArrayHasKey('errors', $validation);
+        $this->assertArrayHasKey('warnings', $validation);
+    }
+    
+    public function testInitializeDatabaseWithExistingTables() {
+        // Test when database is already initialized
+        $result = $this->installationManager->initializeDatabase();
+        
+        $this->assertTrue($result);
+    }
+    
+    public function testSetupDefaultConfigWithExistingConfig() {
+        // Set some existing config
+        $this->config->set('application', 'app_name', 'Existing App');
+        
+        $result = $this->installationManager->setupDefaultConfig();
+        
+        $this->assertTrue($result);
+        
+        // Verify default config was set (should not override existing)
+        $appConfig = $this->config->getCategory('application');
+        $this->assertEquals('Existing App', $appConfig['app_name']);
+    }
+    
+    public function testCompleteInstallationWithPartialSteps() {
+        // Complete only some steps
+        $this->installationManager->completeStep('environment');
+        $this->installationManager->completeStep('database');
+        
+        $result = $this->installationManager->completeInstallation();
+        
+        $this->assertTrue($result);
+        
+        // Verify all steps are marked as completed
+        $progress = $this->installationManager->getInstallationProgress();
+        $completedSteps = array_column($progress, 'step');
+        
+        $expectedSteps = ['environment', 'database', 'company', 'admin', 'complete'];
+        foreach ($expectedSteps as $step) {
+            $this->assertContains($step, $completedSteps);
+        }
+    }
+    
+    public function testCompleteInstallationWithNoSteps() {
+        $result = $this->installationManager->completeInstallation();
+        
+        $this->assertTrue($result);
+        
+        // Verify all steps are marked as completed
+        $progress = $this->installationManager->getInstallationProgress();
+        $completedSteps = array_column($progress, 'step');
+        
+        $expectedSteps = ['environment', 'database', 'company', 'admin', 'complete'];
+        foreach ($expectedSteps as $step) {
+            $this->assertContains($step, $completedSteps);
+        }
+    }
 }

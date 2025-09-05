@@ -252,4 +252,352 @@ class ConfigManagerTest extends TestCase {
         $retrieved = $this->config->get('test', 'large_array');
         $this->assertEquals($largeArray, $retrieved);
     }
+    
+    public function testGetAllConfigurations() {
+        // Set some test configurations
+        $this->config->set('category1', 'key1', 'value1');
+        $this->config->set('category1', 'key2', 'value2');
+        $this->config->set('category2', 'key1', 'value3');
+        
+        $allConfigs = $this->config->getAll();
+        
+        $this->assertIsArray($allConfigs);
+        $this->assertArrayHasKey('category1', $allConfigs);
+        $this->assertArrayHasKey('category2', $allConfigs);
+        $this->assertEquals('value1', $allConfigs['category1']['key1']);
+        $this->assertEquals('value2', $allConfigs['category1']['key2']);
+        $this->assertEquals('value3', $allConfigs['category2']['key1']);
+    }
+    
+    public function testGetAllWithEncryptedValues() {
+        $this->config->set('test', 'encrypted_key', 'secret_value', true);
+        $this->config->set('test', 'normal_key', 'normal_value');
+        
+        $allConfigs = $this->config->getAll();
+        
+        $this->assertEquals('secret_value', $allConfigs['test']['encrypted_key']);
+        $this->assertEquals('normal_value', $allConfigs['test']['normal_key']);
+    }
+    
+    public function testGetAllWithDifferentDataTypes() {
+        $this->config->set('test', 'string_val', 'test');
+        $this->config->set('test', 'int_val', 42);
+        $this->config->set('test', 'float_val', 3.14);
+        $this->config->set('test', 'bool_val', true);
+        $this->config->set('test', 'array_val', ['key' => 'value']);
+        
+        $allConfigs = $this->config->getAll();
+        
+        $this->assertEquals('test', $allConfigs['test']['string_val']);
+        $this->assertEquals(42, $allConfigs['test']['int_val']);
+        $this->assertEquals(3.14, $allConfigs['test']['float_val']);
+        $this->assertTrue($allConfigs['test']['bool_val']);
+        $this->assertEquals(['key' => 'value'], $allConfigs['test']['array_val']);
+    }
+    
+    public function testGetAllEmpty() {
+        $allConfigs = $this->config->getAll();
+        $this->assertIsArray($allConfigs);
+        $this->assertEmpty($allConfigs);
+    }
+    
+    public function testGetCategoryEmpty() {
+        $configs = $this->config->getCategory('nonexistent');
+        $this->assertIsArray($configs);
+        $this->assertEmpty($configs);
+    }
+    
+    public function testSetCategoryWithEmptyArray() {
+        $result = $this->config->setCategory('test', []);
+        $this->assertTrue($result);
+        
+        $configs = $this->config->getCategory('test');
+        $this->assertEmpty($configs);
+    }
+    
+    public function testSetCategoryWithNullValues() {
+        $this->config->setCategory('test', [
+            'null_val' => null,
+            'empty_string' => '',
+            'zero' => 0,
+            'false_val' => false
+        ]);
+        
+        $configs = $this->config->getCategory('test');
+        $this->assertNull($configs['null_val']);
+        $this->assertEquals('', $configs['empty_string']);
+        $this->assertEquals(0, $configs['zero']);
+        $this->assertFalse($configs['false_val']);
+    }
+    
+    public function testDeleteNonExistentConfiguration() {
+        $result = $this->config->delete('nonexistent', 'key');
+        $this->assertTrue($result);
+    }
+    
+    public function testCacheBehavior() {
+        // Set a value
+        $this->config->set('test', 'cached_key', 'cached_value');
+        
+        // Get it (should be cached)
+        $value1 = $this->config->get('test', 'cached_key');
+        $this->assertEquals('cached_value', $value1);
+        
+        // Clear cache
+        $this->config->clearCache();
+        
+        // Get it again (should be retrieved from database)
+        $value2 = $this->config->get('test', 'cached_key');
+        $this->assertEquals('cached_value', $value2);
+    }
+    
+    public function testUpdateExistingConfigurationClearsCache() {
+        // Set initial value
+        $this->config->set('test', 'update_key', 'initial_value');
+        $this->config->get('test', 'update_key'); // Load into cache
+        
+        // Update value
+        $this->config->set('test', 'update_key', 'updated_value');
+        
+        // Get value (should be updated)
+        $value = $this->config->get('test', 'update_key');
+        $this->assertEquals('updated_value', $value);
+    }
+    
+    public function testDeleteConfigurationClearsCache() {
+        // Set and cache a value
+        $this->config->set('test', 'delete_key', 'delete_value');
+        $this->config->get('test', 'delete_key'); // Load into cache
+        
+        // Delete it
+        $this->config->delete('test', 'delete_key');
+        
+        // Try to get it (should return default)
+        $value = $this->config->get('test', 'delete_key', 'default');
+        $this->assertEquals('default', $value);
+    }
+    
+    public function testCompanyInfoWithEmptyDatabase() {
+        // Clear company info table
+        $this->db->query("DELETE FROM company_info");
+        
+        $companyInfo = $this->config->getCompanyInfo();
+        $this->assertEquals('Sanctum CRM', $companyInfo['company_name']);
+        $this->assertEquals('UTC', $companyInfo['timezone']);
+    }
+    
+    public function testSetCompanyInfoWithEmptyDatabase() {
+        // Clear company info table
+        $this->db->query("DELETE FROM company_info");
+        
+        $result = $this->config->setCompanyInfo([
+            'company_name' => 'New Company',
+            'timezone' => 'America/New_York'
+        ]);
+        
+        $this->assertTrue($result);
+        
+        $companyInfo = $this->config->getCompanyInfo();
+        $this->assertEquals('New Company', $companyInfo['company_name']);
+        $this->assertEquals('America/New_York', $companyInfo['timezone']);
+    }
+    
+    public function testInstallationProgressEmpty() {
+        $progress = $this->config->getInstallationProgress();
+        $this->assertIsArray($progress);
+        $this->assertEmpty($progress);
+    }
+    
+    public function testCompleteInstallationStepWithData() {
+        $testData = ['php_version' => '8.1', 'extensions' => ['sqlite3', 'json']];
+        
+        $result = $this->config->completeInstallationStep('environment', $testData);
+        $this->assertTrue($result);
+        
+        $progress = $this->config->getInstallationProgress();
+        $this->assertCount(1, $progress);
+        $this->assertEquals('environment', $progress[0]['step']);
+        $this->assertEquals(1, $progress[0]['is_completed']);
+        
+        $data = json_decode($progress[0]['data'], true);
+        $this->assertEquals($testData, $data);
+    }
+    
+    public function testCompleteInstallationStepWithoutData() {
+        $result = $this->config->completeInstallationStep('environment');
+        $this->assertTrue($result);
+        
+        $progress = $this->config->getInstallationProgress();
+        $this->assertCount(1, $progress);
+        $this->assertEquals('environment', $progress[0]['step']);
+        $this->assertEquals(1, $progress[0]['is_completed']);
+        $this->assertNull($progress[0]['data']);
+    }
+    
+    public function testGetCurrentInstallationStepWithIncompleteSteps() {
+        // Complete first two steps
+        $this->config->completeInstallationStep('environment');
+        $this->config->completeInstallationStep('database');
+        
+        $currentStep = $this->config->getCurrentInstallationStep();
+        $this->assertEquals('company', $currentStep);
+    }
+    
+    public function testGetCurrentInstallationStepAllComplete() {
+        // Complete all steps
+        $steps = ['environment', 'database', 'company', 'admin', 'complete'];
+        foreach ($steps as $step) {
+            $this->config->completeInstallationStep($step);
+        }
+        
+        $currentStep = $this->config->getCurrentInstallationStep();
+        $this->assertEquals('complete', $currentStep);
+    }
+    
+    public function testGetCurrentInstallationStepNoSteps() {
+        $currentStep = $this->config->getCurrentInstallationStep();
+        $this->assertEquals('environment', $currentStep);
+    }
+    
+    public function testGetCurrentInstallationStepWithGaps() {
+        // Complete first and third steps, skip second
+        $this->config->completeInstallationStep('environment');
+        $this->config->completeInstallationStep('company');
+        
+        $currentStep = $this->config->getCurrentInstallationStep();
+        $this->assertEquals('database', $currentStep);
+    }
+    
+    public function testDataTypeDetection() {
+        // Test different data types
+        $testCases = [
+            'string' => 'test string',
+            'integer' => 42,
+            'float' => 3.14,
+            'boolean' => true,
+            'array' => ['key' => 'value'],
+            'object' => (object)['key' => 'value']
+        ];
+        
+        foreach ($testCases as $expectedType => $value) {
+            $this->config->set('test', $expectedType, $value);
+            $retrieved = $this->config->get('test', $expectedType);
+            
+            if ($expectedType === 'object') {
+                // Objects are converted to arrays
+                $this->assertEquals((array)$value, $retrieved);
+            } else {
+                $this->assertEquals($value, $retrieved);
+            }
+        }
+    }
+    
+    public function testEncryptionDecryption() {
+        $originalValue = 'sensitive_data_123';
+        
+        $this->config->set('security', 'secret', $originalValue, true);
+        $retrieved = $this->config->get('security', 'secret');
+        
+        $this->assertEquals($originalValue, $retrieved);
+        
+        // Verify it's stored encrypted in database
+        $result = $this->db->fetchOne(
+            "SELECT config_value FROM system_config WHERE category = 'security' AND config_key = 'secret'"
+        );
+        
+        $this->assertNotEquals($originalValue, $result['config_value']);
+        $this->assertEquals($originalValue, base64_decode($result['config_value']));
+    }
+    
+    public function testEncryptionWithSpecialCharacters() {
+        $specialValue = "Special chars: !@#$%^&*()_+-=[]{}|;':\",./<>?";
+        
+        $this->config->set('test', 'special', $specialValue, true);
+        $retrieved = $this->config->get('test', 'special');
+        
+        $this->assertEquals($specialValue, $retrieved);
+    }
+    
+    public function testEncryptionWithUnicode() {
+        $unicodeValue = "Unicode: 你好世界 🌍 émojis";
+        
+        $this->config->set('test', 'unicode', $unicodeValue, true);
+        $retrieved = $this->config->get('test', 'unicode');
+        
+        $this->assertEquals($unicodeValue, $retrieved);
+    }
+    
+    public function testConcurrentAccess() {
+        // Test that multiple instances share the same data
+        $config1 = ConfigManager::getInstance();
+        $config2 = ConfigManager::getInstance();
+        
+        $config1->set('test', 'concurrent', 'value1');
+        $value = $config2->get('test', 'concurrent');
+        
+        $this->assertEquals('value1', $value);
+        
+        $config2->set('test', 'concurrent', 'value2');
+        $value = $config1->get('test', 'concurrent');
+        
+        $this->assertEquals('value2', $value);
+    }
+    
+    public function testErrorHandling() {
+        // Test with invalid category/key combinations
+        $this->config->set('', 'key', 'value');
+        $this->config->set('category', '', 'value');
+        
+        // These should not cause errors
+        $this->assertTrue(true);
+    }
+    
+    public function testMemoryUsage() {
+        // Test with large amounts of data
+        $largeData = str_repeat('x', 10000);
+        
+        $this->config->set('test', 'large', $largeData);
+        $retrieved = $this->config->get('test', 'large');
+        
+        $this->assertEquals($largeData, $retrieved);
+    }
+    
+    public function testNestedArrays() {
+        $nestedArray = [
+            'level1' => [
+                'level2' => [
+                    'level3' => 'deep_value'
+                ]
+            ]
+        ];
+        
+        $this->config->set('test', 'nested', $nestedArray);
+        $retrieved = $this->config->get('test', 'nested');
+        
+        $this->assertEquals($nestedArray, $retrieved);
+    }
+    
+    public function testBooleanEdgeCases() {
+        $this->config->set('test', 'true_bool', true);
+        $this->config->set('test', 'false_bool', false);
+        $this->config->set('test', 'string_true', 'true');
+        $this->config->set('test', 'string_false', 'false');
+        
+        $this->assertTrue($this->config->get('test', 'true_bool'));
+        $this->assertFalse($this->config->get('test', 'false_bool'));
+        $this->assertEquals('true', $this->config->get('test', 'string_true'));
+        $this->assertEquals('false', $this->config->get('test', 'string_false'));
+    }
+    
+    public function testNumericEdgeCases() {
+        $this->config->set('test', 'zero', 0);
+        $this->config->set('test', 'negative', -1);
+        $this->config->set('test', 'float_zero', 0.0);
+        $this->config->set('test', 'string_zero', '0');
+        
+        $this->assertEquals(0, $this->config->get('test', 'zero'));
+        $this->assertEquals(-1, $this->config->get('test', 'negative'));
+        $this->assertEquals(0.0, $this->config->get('test', 'float_zero'));
+        $this->assertEquals('0', $this->config->get('test', 'string_zero'));
+    }
 }

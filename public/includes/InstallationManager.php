@@ -137,8 +137,26 @@ class InstallationManager {
      * Set up company information
      */
     public function setupCompany($companyName, $timezone = 'UTC') {
+        // Validate company name
+        if (empty($companyName) || trim($companyName) === '') {
+            return false;
+        }
+        
+        if (strlen($companyName) > 255) {
+            return false;
+        }
+        
+        if (preg_match('/<[^>]*>/', $companyName)) {
+            return false;
+        }
+        
+        // Validate timezone
+        if (!in_array($timezone, timezone_identifiers_list())) {
+            return false;
+        }
+        
         return $this->config->setCompanyInfo([
-            'company_name' => $companyName,
+            'company_name' => trim($companyName),
             'timezone' => $timezone
         ]);
     }
@@ -154,7 +172,41 @@ class InstallationManager {
         }
         
         // Validate input
-        if (empty($username) || empty($email) || empty($password)) {
+        if (empty($username) || trim($username) === '') {
+            return false;
+        }
+        
+        if (empty($email) || trim($email) === '') {
+            return false;
+        }
+        
+        if (empty($password) || trim($password) === '') {
+            return false;
+        }
+        
+        if (empty($firstName) || trim($firstName) === '') {
+            return false;
+        }
+        
+        if (empty($lastName) || trim($lastName) === '') {
+            return false;
+        }
+        
+        // Validate lengths
+        if (strlen($username) > 255) {
+            return false;
+        }
+        
+        if (strlen($firstName) > 255) {
+            return false;
+        }
+        
+        if (strlen($lastName) > 255) {
+            return false;
+        }
+        
+        // Validate special characters
+        if (preg_match('/<[^>]*>/', $username) || preg_match('/<[^>]*>/', $firstName) || preg_match('/<[^>]*>/', $lastName)) {
             return false;
         }
         
@@ -166,17 +218,23 @@ class InstallationManager {
             return false;
         }
         
+        // Check for existing username or email
+        $existingUser = $this->db->fetchOne("SELECT id FROM users WHERE username = ? OR email = ?", [$username, $email]);
+        if ($existingUser) {
+            return false;
+        }
+        
         // Hash password
         $passwordHash = password_hash($password, PASSWORD_DEFAULT);
         $apiKey = generateApiKey();
         
         // Insert admin user
         $result = $this->db->insert('users', [
-            'username' => $username,
-            'email' => $email,
+            'username' => trim($username),
+            'email' => trim($email),
             'password_hash' => $passwordHash,
-            'first_name' => $firstName,
-            'last_name' => $lastName,
+            'first_name' => trim($firstName),
+            'last_name' => trim($lastName),
             'role' => 'admin',
             'api_key' => $apiKey,
             'is_active' => 1,
@@ -287,22 +345,38 @@ class InstallationManager {
                     ['valid' => false, 'errors' => ['Database initialization failed'], 'warnings' => []];
                 
             case 'company':
-                if (empty($data['company_name'])) {
-                    return ['valid' => false, 'errors' => ['Company name is required'], 'warnings' => []];
+                $errors = [];
+                if (empty($data['company_name']) || trim($data['company_name']) === '') {
+                    $errors[] = 'Company name is required';
+                } elseif (strlen($data['company_name']) > 255) {
+                    $errors[] = 'Company name is too long';
+                } elseif (preg_match('/<[^>]*>/', $data['company_name'])) {
+                    $errors[] = 'Company name contains invalid characters';
                 }
-                return ['valid' => true, 'errors' => [], 'warnings' => []];
+                
+                return [
+                    'valid' => empty($errors),
+                    'errors' => $errors,
+                    'warnings' => []
+                ];
                 
             case 'admin':
                 $errors = [];
-                if (empty($data['username'])) {
+                if (empty($data['username']) || trim($data['username']) === '') {
                     $errors[] = 'Username is required';
+                } elseif (strlen($data['username']) > 255) {
+                    $errors[] = 'Username is too long';
+                } elseif (preg_match('/<[^>]*>/', $data['username'])) {
+                    $errors[] = 'Username contains invalid characters';
                 }
-                if (empty($data['email'])) {
+                
+                if (empty($data['email']) || trim($data['email']) === '') {
                     $errors[] = 'Email is required';
                 } elseif (!validateEmail($data['email'])) {
                     $errors[] = 'Invalid email format';
                 }
-                if (empty($data['password'])) {
+                
+                if (empty($data['password']) || trim($data['password']) === '') {
                     $errors[] = 'Password is required';
                 } elseif (strlen($data['password']) < PASSWORD_MIN_LENGTH) {
                     $errors[] = 'Password must be at least ' . PASSWORD_MIN_LENGTH . ' characters';
@@ -314,8 +388,11 @@ class InstallationManager {
                     'warnings' => []
                 ];
                 
-            default:
+            case 'complete':
                 return ['valid' => true, 'errors' => [], 'warnings' => []];
+                
+            default:
+                return ['valid' => false, 'errors' => ['Invalid step'], 'warnings' => []];
         }
     }
 }

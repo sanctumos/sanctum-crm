@@ -180,6 +180,32 @@ class ConfigManager {
     }
     
     /**
+     * Get all configurations
+     */
+    public function getAll() {
+        $results = $this->db->fetchAll(
+            "SELECT category, config_key, config_value, data_type, is_encrypted FROM system_config ORDER BY category, config_key"
+        );
+        
+        $configs = [];
+        foreach ($results as $row) {
+            $value = $row['config_value'];
+            
+            // Decrypt if needed
+            if ($row['is_encrypted']) {
+                $value = $this->decrypt($value);
+            }
+            
+            // Convert data type
+            $value = $this->convertDataType($value, $row['data_type']);
+            
+            $configs[$row['category']][$row['config_key']] = $value;
+        }
+        
+        return $configs;
+    }
+    
+    /**
      * Clear configuration cache
      */
     public function clearCache() {
