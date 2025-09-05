@@ -32,7 +32,17 @@ if (preg_match('/^\/api\/v1\//', $_SERVER['REQUEST_URI'])) {
 // Include required files
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/database.php';
+require_once __DIR__ . '/includes/ConfigManager.php';
+require_once __DIR__ . '/includes/InstallationManager.php';
 require_once __DIR__ . '/includes/auth.php';
+
+// Check if first boot is needed
+$installationManager = new InstallationManager();
+if ($installationManager->isFirstBoot()) {
+    // Redirect to installation wizard
+    header('Location: /install.php');
+    exit;
+}
 
 // Initialize authentication
 $auth = new Auth();

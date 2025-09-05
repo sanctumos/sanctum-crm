@@ -162,6 +162,38 @@ class Database {
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
+            ",
+            'system_config' => "
+                CREATE TABLE IF NOT EXISTS system_config (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    category VARCHAR(50) NOT NULL,
+                    config_key VARCHAR(100) NOT NULL,
+                    config_value TEXT,
+                    data_type VARCHAR(20) DEFAULT 'string',
+                    is_encrypted BOOLEAN DEFAULT 0,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(category, config_key)
+                )
+            ",
+            'company_info' => "
+                CREATE TABLE IF NOT EXISTS company_info (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    company_name VARCHAR(255) NOT NULL,
+                    timezone VARCHAR(50) DEFAULT 'UTC',
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            ",
+            'installation_state' => "
+                CREATE TABLE IF NOT EXISTS installation_state (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    step VARCHAR(50) NOT NULL,
+                    is_completed BOOLEAN DEFAULT 0,
+                    completed_at DATETIME,
+                    data TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
             "
         ];
         foreach ($tables as $table => $sql) {
