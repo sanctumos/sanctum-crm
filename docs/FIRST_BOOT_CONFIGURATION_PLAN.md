@@ -7,7 +7,7 @@ This document outlines the comprehensive plan to transform Sanctum CRM from a ha
 ## 🎯 Objectives
 
 1. **First Boot Setup Mode**: Detect first installation and guide users through initial configuration
-2. **Company Information Management**: Configurable company details throughout the application
+2. **Company Name Configuration**: Simple company name setup for application branding
 3. **Environment Detection**: Automatic detection of server environment and requirements
 4. **Configuration Management**: Centralized, database-driven configuration system
 5. **Deployment Guides**: Comprehensive setup instructions for different server environments
@@ -16,11 +16,10 @@ This document outlines the comprehensive plan to transform Sanctum CRM from a ha
 ## 🔍 Current State Analysis
 
 ### Hardcoded Configuration Issues
-- **Application Identity**: `APP_NAME`, `APP_URL`, `SMTP_FROM_EMAIL` hardcoded to "Best Jobs in TA"
+- **Application Identity**: `APP_NAME` hardcoded to "Best Jobs in TA"
 - **Database Paths**: Fixed relative paths that may not work in all environments
 - **Default Admin**: Hardcoded admin user with fixed credentials
-- **Email Settings**: Static SMTP configuration
-- **Custom Fields**: Fixed custom field configurations
+- **Company Name**: No configurable company branding
 - **Security Settings**: Static session and security configurations
 
 ### Current Configuration Structure
@@ -28,9 +27,7 @@ This document outlines the comprehensive plan to transform Sanctum CRM from a ha
 // Current hardcoded values in config.php
 define('APP_NAME', 'Best Jobs in TA');
 define('APP_URL', 'https://bestjobsinta.com');
-define('SMTP_FROM_EMAIL', 'noreply@bestjobsinta.com');
-define('SMTP_FROM_NAME', 'Best Jobs in TA');
-// Custom field configurations will be database-driven
+// Company name and other settings will be database-driven
 ```
 
 ## 🏗️ Proposed Architecture
@@ -45,30 +42,20 @@ define('SMTP_FROM_NAME', 'Best Jobs in TA');
 
 #### B. Configuration Categories
 1. **Application Settings**
-   - Company name, logo, branding
+   - Company name
    - Application URL, version
-   - Timezone, locale settings
+   - Timezone settings
 
 2. **Database Settings**
-   - Database type (SQLite, MySQL, PostgreSQL)
-   - Connection parameters
+   - SQLite database path
    - Backup settings
 
-3. **Email Settings**
-   - SMTP configuration
-   - Email templates
-   - Notification settings
-
-4. **Security Settings**
+3. **Security Settings**
    - Session configuration
    - API rate limits
    - Password policies
 
-5. **Custom Fields Settings**
-   - Custom field definitions
-   - Field validation rules
-
-6. **Server Environment**
+4. **Server Environment**
    - Web server type (Apache, Nginx)
    - PHP version and extensions
    - File permissions
@@ -85,7 +72,7 @@ class InstallationManager {
     }
     
     public function getInstallationStep(): string {
-        // Return current step: 'database', 'company', 'admin', 'email', 'complete'
+        // Return current step: 'database', 'company', 'admin', 'complete'
     }
 }
 ```
@@ -93,19 +80,16 @@ class InstallationManager {
 #### B. First Boot Flow
 1. **Environment Check**: Verify PHP version, extensions, permissions
 2. **Database Setup**: Create tables, run migrations
-3. **Company Configuration**: Set company name, logo, contact info
+3. **Company Configuration**: Set company name
 4. **Admin Account**: Create initial administrator account
-5. **Email Configuration**: Set up SMTP settings
-6. **Final Setup**: Complete installation and redirect to dashboard
+5. **Final Setup**: Complete installation and redirect to dashboard
 
 ### 3. Configuration Management Interface
 
 #### A. Settings Page Enhancement
-- **Company Settings Tab**: Company information, branding
+- **Company Settings Tab**: Company name configuration
 - **System Settings Tab**: Application configuration
-- **Email Settings Tab**: SMTP configuration
 - **Security Settings Tab**: Security policies
-- **Custom Fields Tab**: Custom field configuration
 - **Server Info Tab**: Environment information
 
 #### B. Configuration API
@@ -136,13 +120,7 @@ CREATE TABLE system_config (
 CREATE TABLE company_info (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     company_name VARCHAR(255) NOT NULL,
-    company_email VARCHAR(255),
-    company_phone VARCHAR(50),
-    company_address TEXT,
-    company_website VARCHAR(255),
-    company_logo VARCHAR(255),
     timezone VARCHAR(50) DEFAULT 'UTC',
-    currency VARCHAR(10) DEFAULT 'USD',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -196,12 +174,10 @@ class InstallationManager {
 #### A. Installation Wizard Pages
 1. **Welcome Page**: Introduction and requirements check
 2. **Environment Check**: PHP version, extensions, permissions
-3. **Database Setup**: Database configuration and initialization
-4. **Company Information**: Company details and branding
+3. **Database Setup**: SQLite database initialization
+4. **Company Information**: Company name setup
 5. **Admin Account**: Create initial administrator
-6. **Email Configuration**: SMTP settings
-7. **Custom Fields**: Custom field configuration (optional)
-8. **Final Setup**: Complete installation
+6. **Final Setup**: Complete installation
 
 #### B. UI Components
 - **Progress Indicator**: Show installation progress
@@ -223,20 +199,14 @@ $configSchema = [
     'application' => [
         'app_name' => ['type' => 'string', 'required' => true],
         'app_url' => ['type' => 'url', 'required' => true],
-        'timezone' => ['type' => 'timezone', 'required' => true],
-        'locale' => ['type' => 'locale', 'required' => true]
+        'timezone' => ['type' => 'timezone', 'required' => true]
     ],
     'company' => [
-        'company_name' => ['type' => 'string', 'required' => true],
-        'company_email' => ['type' => 'email', 'required' => true],
-        'company_phone' => ['type' => 'string', 'required' => false],
-        'company_address' => ['type' => 'text', 'required' => false]
+        'company_name' => ['type' => 'string', 'required' => true]
     ],
-    'email' => [
-        'smtp_host' => ['type' => 'string', 'required' => false],
-        'smtp_port' => ['type' => 'integer', 'required' => false],
-        'smtp_username' => ['type' => 'string', 'required' => false],
-        'smtp_password' => ['type' => 'password', 'required' => false, 'encrypt' => true]
+    'database' => [
+        'db_path' => ['type' => 'string', 'required' => true],
+        'backup_enabled' => ['type' => 'boolean', 'required' => false]
     ]
 ];
 ```
@@ -320,34 +290,19 @@ sudo apt install apache2 mysql-server php8.1 php8.1-mysql php8.1-sqlite3 php8.1-
 ## 📊 Configuration Categories Detail
 
 ### Application Settings
-- Company name and branding
+- Company name
 - Application URL and version
-- Timezone and locale
-- Theme and UI preferences
+- Timezone settings
 
 ### Database Settings
-- Database type selection
-- Connection parameters
+- SQLite database path
 - Backup configuration
-- Migration settings
-
-### Email Settings
-- SMTP configuration
-- Email templates
-- Notification preferences
-- Email queue settings
 
 ### Security Settings
 - Session configuration
 - Password policies
 - API rate limiting
 - Security headers
-
-### Custom Fields Settings
-- Custom field definitions
-- Field validation rules
-- Field display options
-- Field grouping and organization
 
 ### Server Settings
 - Web server configuration

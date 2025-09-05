@@ -55,13 +55,7 @@ define('API_MAX_PAYLOAD_SIZE', 1048576); // 1MB
 define('UPLOAD_MAX_SIZE', 5242880); // 5MB
 define('UPLOAD_ALLOWED_TYPES', ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx']);
 
-// Email Configuration (for future use)
-define('SMTP_HOST', 'localhost');
-define('SMTP_PORT', 587);
-define('SMTP_USERNAME', '');
-define('SMTP_PASSWORD', '');
-define('SMTP_FROM_EMAIL', 'noreply@bestjobsinta.com');
-define('SMTP_FROM_NAME', 'Best Jobs in TA');
+// Email functionality removed - use webhooks and API for integrations
 
 // Custom Fields Configuration
 // Custom field settings will be managed through the database
@@ -178,7 +172,7 @@ function sendWebhook($url, $payload) {
         CURLOPT_POSTFIELDS => json_encode($payload),
         CURLOPT_HTTPHEADER => [
             'Content-Type: application/json',
-            'User-Agent: BestJobsInTA/1.0'
+            'User-Agent: SanctumCRM/1.0'
         ],
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT => 10,
