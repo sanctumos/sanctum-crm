@@ -349,9 +349,9 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
                     return;
                 }
                 
-                // Check file type
-                $fileType = mime_content_type($file['tmp_name']);
-                if (!in_array($fileType, ['text/csv', 'text/plain', 'application/csv'])) {
+                // Check file type using file extension (more reliable than mime_content_type)
+                $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+                if ($extension !== 'csv') {
                     http_response_code(400);
                     echo json_encode([
                         'error' => 'Invalid file type. Please upload a CSV file.',
@@ -716,7 +716,7 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
             
             if ($deleted) {
                 http_response_code(204);
-                // No content for successful deletion
+                exit; // Ensure no content is sent for 204 response
             } else {
                 http_response_code(404);
                 echo json_encode([
@@ -848,7 +848,7 @@ function handleDeals($method, $id, $input, $auth) {
             
             if ($deleted) {
                 http_response_code(204);
-                // No content for successful deletion
+                exit; // Ensure no content is sent for 204 response
             } else {
                 http_response_code(404);
                 echo json_encode([
@@ -978,7 +978,7 @@ function handleUsers($method, $id, $input, $auth) {
             try {
                 $auth->deleteUser($id);
                 http_response_code(204);
-                // No content for successful deletion
+                exit; // Ensure no content is sent for 204 response
             } catch (Exception $e) {
                 http_response_code(400);
                 echo json_encode([
@@ -1180,7 +1180,7 @@ function handleWebhooks($method, $id, $input, $auth, $action = null) {
             
             if ($deleted) {
                 http_response_code(204);
-                // No content for successful deletion
+                exit; // Ensure no content is sent for 204 response
             } else {
                 http_response_code(404);
                 echo json_encode([

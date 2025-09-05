@@ -626,7 +626,17 @@ async function deleteDeal(dealId) {
         });
         
         if (response.ok) {
-            showAlert('Deal deleted successfully!', 'success');
+            // DELETE operations return 204 No Content
+            if (response.status === 204) {
+                showAlert('Deal deleted successfully!', 'success');
+            } else {
+                const result = await response.json();
+                if (result.success) {
+                    showAlert('Deal deleted successfully!', 'success');
+                } else {
+                    showAlert('Error: ' + (result.error || 'Failed to delete deal'), 'danger');
+                }
+            }
             loadDeals();
         } else {
             const result = await response.json();

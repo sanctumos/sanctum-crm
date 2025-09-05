@@ -31,29 +31,29 @@ if (!defined('CRM_LOADED')) {
 }
 
 // Application Configuration
-define('APP_NAME', 'Sanctum CRM');
-define('APP_VERSION', '1.0.0');
-define('APP_URL', 'http://localhost'); // Default URL - will be overridden by configuration
-define('DEBUG_MODE', false); // Set to false in production
+if (!defined('APP_NAME')) define('APP_NAME', 'Sanctum CRM');
+if (!defined('APP_VERSION')) define('APP_VERSION', '1.0.0');
+if (!defined('APP_URL')) define('APP_URL', 'http://localhost'); // Default URL - will be overridden by configuration
+if (!defined('DEBUG_MODE')) define('DEBUG_MODE', false); // Set to false in production
 
 // Database Configuration
-define('DB_PATH', dirname(dirname(__DIR__)) . '/db/crm.db');
-define('DB_BACKUP_PATH', dirname(dirname(__DIR__)) . '/db/backup/');
+if (!defined('DB_PATH')) define('DB_PATH', dirname(dirname(__DIR__)) . '/db/crm.db');
+if (!defined('DB_BACKUP_PATH')) define('DB_BACKUP_PATH', dirname(dirname(__DIR__)) . '/db/backup/');
 
 // Security Configuration
-define('SESSION_NAME', 'crm_session');
-define('SESSION_LIFETIME', 3600); // 1 hour
-define('API_KEY_LENGTH', 32);
-define('PASSWORD_MIN_LENGTH', 8);
+if (!defined('SESSION_NAME')) define('SESSION_NAME', 'crm_session');
+if (!defined('SESSION_LIFETIME')) define('SESSION_LIFETIME', 3600); // 1 hour
+if (!defined('API_KEY_LENGTH')) define('API_KEY_LENGTH', 32);
+if (!defined('PASSWORD_MIN_LENGTH')) define('PASSWORD_MIN_LENGTH', 8);
 
 // API Configuration
-define('API_VERSION', 'v1');
-define('API_RATE_LIMIT', 1000); // requests per hour
-define('API_MAX_PAYLOAD_SIZE', 1048576); // 1MB
+if (!defined('API_VERSION')) define('API_VERSION', 'v1');
+if (!defined('API_RATE_LIMIT')) define('API_RATE_LIMIT', 1000); // requests per hour
+if (!defined('API_MAX_PAYLOAD_SIZE')) define('API_MAX_PAYLOAD_SIZE', 1048576); // 1MB
 
 // File Upload Configuration
-define('UPLOAD_MAX_SIZE', 5242880); // 5MB
-define('UPLOAD_ALLOWED_TYPES', ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx']);
+if (!defined('UPLOAD_MAX_SIZE')) define('UPLOAD_MAX_SIZE', 5242880); // 5MB
+if (!defined('UPLOAD_ALLOWED_TYPES')) define('UPLOAD_ALLOWED_TYPES', ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx']);
 
 // Email functionality removed - use webhooks and API for integrations
 

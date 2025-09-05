@@ -326,12 +326,21 @@ async function deleteUser(userId) {
             credentials: 'include'
         });
         
-        const result = await response.json();
-        
         if (response.ok) {
-            showAlert('User deleted successfully!', 'success');
+            // DELETE operations return 204 No Content
+            if (response.status === 204) {
+                showAlert('User deleted successfully!', 'success');
+            } else {
+                const result = await response.json();
+                if (result.success) {
+                    showAlert('User deleted successfully!', 'success');
+                } else {
+                    showAlert('Error: ' + (result.error || 'Failed to delete user'), 'danger');
+                }
+            }
             loadUsers();
         } else {
+            const result = await response.json();
             showAlert('Failed to delete user: ' + (result.error || 'Unknown error'), 'danger');
         }
     } catch (err) {

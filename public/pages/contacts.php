@@ -171,7 +171,7 @@ renderHeader('Contacts');
                         <h5 class="card-title mb-1">
                             <?php echo htmlspecialchars($contact['first_name'] . ' ' . $contact['last_name']); ?>
                         </h5>
-                        <p class="text-muted mb-0"><?php echo htmlspecialchars($contact['email']); ?></p>
+                        <p class="text-muted mb-0"><?php echo $contact['email'] ? htmlspecialchars($contact['email']) : 'No email'; ?></p>
                     </div>
                     <a href="/index.php?page=view_contact&id=<?php echo $contact['id']; ?>" 
                        class="btn btn-sm btn-outline-primary">
@@ -239,7 +239,7 @@ renderHeader('Contacts');
                             <br><small class="text-muted"><?php echo htmlspecialchars($contact['position']); ?></small>
                             <?php endif; ?>
                         </td>
-                        <td><?php echo htmlspecialchars($contact['email']); ?></td>
+                        <td><?php echo $contact['email'] ? htmlspecialchars($contact['email']) : '<span class="text-muted">No email</span>'; ?></td>
                         <td><?php echo $contact['phone'] ? htmlspecialchars($contact['phone']) : '-'; ?></td>
                         <td><?php echo $contact['company'] ? htmlspecialchars($contact['company']) : '-'; ?></td>
                         <td>
@@ -569,7 +569,7 @@ function editContact(contactId) {
             document.getElementById('edit_contact_id').value = contact.id;
             document.getElementById('edit_first_name').value = contact.first_name;
             document.getElementById('edit_last_name').value = contact.last_name;
-            document.getElementById('edit_email').value = contact.email;
+            document.getElementById('edit_email').value = contact.email || '';
             document.getElementById('edit_phone').value = contact.phone || '';
             document.getElementById('edit_company').value = contact.company || '';
             document.getElementById('edit_position').value = contact.position || '';
@@ -601,7 +601,14 @@ function deleteContact(contactId) {
         })
         .then(response => {
             if (response.ok) {
-                return response.json();
+                // DELETE operations return 204 No Content, so check if there's content to parse
+                if (response.status === 204) {
+                    // 204 No Content - no body to parse
+                    return { success: true };
+                } else {
+                    // Other successful responses might have JSON content
+                    return response.json();
+                }
             } else {
                 return response.json().then(error => {
                     throw new Error(error.error || 'Failed to delete contact');
@@ -630,7 +637,14 @@ function deleteContactFromModal() {
         })
         .then(response => {
             if (response.ok) {
-                return response.json();
+                // DELETE operations return 204 No Content, so check if there's content to parse
+                if (response.status === 204) {
+                    // 204 No Content - no body to parse
+                    return { success: true };
+                } else {
+                    // Other successful responses might have JSON content
+                    return response.json();
+                }
             } else {
                 return response.json().then(error => {
                     throw new Error(error.error || 'Failed to delete contact');
