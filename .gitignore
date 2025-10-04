@@ -72,3 +72,4 @@ database.local.php
 *.backup
 *.bak
 *.old 
+docs/planning/UPGRADE_PLAN_BESTJOBSINTA_INTEGRATION.md
