@@ -1,25 +1,4 @@
 <?php
-/**
- * Sanctum CRM
- * 
- * This file is part of Sanctum CRM.
- * 
- * Copyright (C) 2025 Sanctum OS
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published
- * by the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
-
 // Debug logging wrapper function
 function debugLog($message) {
     if (defined('DEBUG_MODE') && DEBUG_MODE) {
@@ -30,7 +9,7 @@ function debugLog($message) {
 debugLog('METHOD=' . ($_SERVER['REQUEST_METHOD'] ?? '') . ' REQUEST_URI=' . ($_SERVER['REQUEST_URI'] ?? ''));
 /**
  * API v1 Endpoint
- * Sanctum CRM - MCP-Ready API
+ * Best Jobs in TA - MCP-Ready API
  */
 
 // Define CRM loaded constant
@@ -40,20 +19,67 @@ define('CRM_LOADED', true);
 require_once __DIR__ . '/../../includes/config.php';
 require_once __DIR__ . '/../../includes/database.php';
 require_once __DIR__ . '/../../includes/auth.php';
+// Include both services
+require_once __DIR__ . '/../../includes/LeadEnrichmentService.php';
+require_once __DIR__ . '/../../includes/MockLeadEnrichmentService.php';
+
+// Auto-detect if RocketReach is available based on API key presence and client availability
+$db = Database::getInstance();
+$settings = $db->fetchOne("SELECT rocketreach_api_key FROM settings WHERE id = 1");
+$hasApiKey = !empty($settings['rocketreach_api_key']);
+
+// Check if RocketReach client is available
+$hasRocketReachClient = false;
+if (class_exists('RocketReach\SDK\RocketReachClient')) {
+    try {
+        // Test if we can actually instantiate the client
+        $testClient = new RocketReach\SDK\RocketReachClient('test');
+        $hasRocketReachClient = true;
+    } catch (Exception $e) {
+        $hasRocketReachClient = false;
+    }
+}
+
+if ($hasApiKey && $hasRocketReachClient) {
+    // Use real RocketReach service when API key is present and client is available
+    class_alias('LeadEnrichmentService', 'EnrichmentService');
+} else {
+    // Use mock service when no API key is configured or client is not available
+    class_alias('MockLeadEnrichmentService', 'EnrichmentService');
+}
 
 // Set JSON content type
 if (!defined('CRM_TESTING')) header('Content-Type: application/json');
 if (!defined('CRM_TESTING')) {
     $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-    $allowed_origins = ['https://sanctum-crm.local', 'https://www.sanctum-crm.local'];
-    if (in_array($origin, $allowed_origins)) {
+    $allowed_origins = ['https://bestjobsinta.com', 'https://www.bestjobsinta.com'];
+    
+    // Add localhost origins only in development (Windows)
+    if (defined('DEBUG_MODE') && DEBUG_MODE) {
+        $allowed_origins = array_merge($allowed_origins, [
+            'http://localhost:8080', 
+            'http://127.0.0.1:8080',
+            'http://localhost:3000',
+            'http://127.0.0.1:3000'
+        ]);
+    }
+    
+    // Handle null origin (file:// protocol) for local testing
+    if (empty($origin) || $origin === 'null') {
+        if (defined('DEBUG_MODE') && DEBUG_MODE) {
+            header('Access-Control-Allow-Origin: *');
+        } else {
+            header('Access-Control-Allow-Origin: https://bestjobsinta.com');
+        }
+    } elseif (in_array($origin, $allowed_origins)) {
         header('Access-Control-Allow-Origin: ' . $origin);
     } else {
-        header('Access-Control-Allow-Origin: https://sanctum-crm.local');
+        header('Access-Control-Allow-Origin: https://bestjobsinta.com');
     }
 }
 if (!defined('CRM_TESTING')) header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 if (!defined('CRM_TESTING')) header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+if (!defined('CRM_TESTING')) header('Access-Control-Allow-Credentials: true');
 
 // Handle preflight requests
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -77,9 +103,11 @@ $action = null;
 // Handle different URL patterns
 if (count($pathParts) >= 3 && $pathParts[0] === 'api' && $pathParts[1] === 'v1') {
     $resource = $pathParts[2];
+    debugLog("URL parsing: pathParts=" . json_encode($pathParts));
     // Special handling for endpoints like /api/v1/reports/analytics, /api/v1/reports/export
     if ($resource === 'reports' && isset($pathParts[3]) && in_array($pathParts[3], ['analytics', 'export'])) {
         $action = $pathParts[3];
+        debugLog("URL parsing: reports action=" . $action);
     } elseif (isset($pathParts[3]) && is_numeric($pathParts[3])) {
         $resourceId = $pathParts[3];
         if (isset($pathParts[4])) {
@@ -87,11 +115,14 @@ if (count($pathParts) >= 3 && $pathParts[0] === 'api' && $pathParts[1] === 'v1')
         } elseif (isset($_GET['action'])) {
             $action = $_GET['action'];
         }
+        debugLog("URL parsing: numeric ID=" . $resourceId . " action=" . $action);
     } elseif (isset($pathParts[3])) {
         // For endpoints like /api/v1/webhooks/{id}/test where {id} is not numeric
         $action = $pathParts[3];
+        debugLog("URL parsing: non-numeric action=" . $action);
     } elseif (isset($_GET['action'])) {
         $action = $_GET['action'];
+        debugLog("URL parsing: GET action=" . $action);
     }
 }
 debugLog("parsed resource=$resource id=$resourceId action=$action");
@@ -136,12 +167,121 @@ if ($resource === 'reports') {
         exit;
     }
 }
+
+// Handle contacts export endpoint
+if ($resource === 'contacts' && $action === 'export') {
+    debugLog("[DEBUG] contacts/export endpoint hit");
+    
+    // Check authentication
+    if (!$auth->isAuthenticated()) {
+        http_response_code(401);
+        echo json_encode([
+            'error' => 'Authentication required',
+            'code' => 401
+        ]);
+        exit;
+    }
+    
+    // Get format parameter
+    $format = $_GET['format'] ?? 'csv';
+    
+    if ($format !== 'csv') {
+        http_response_code(400);
+        echo json_encode([
+            'error' => 'Only CSV format is supported',
+            'code' => 400
+        ]);
+        exit;
+    }
+    
+    // Build query with filters (same logic as contacts listing)
+    $where = "1=1";
+    $params = [];
+    
+    if (isset($_GET['type'])) {
+        $where .= " AND contact_type = ?";
+        $params[] = $_GET['type'];
+    }
+    
+    if (isset($_GET['status'])) {
+        $where .= " AND contact_status = ?";
+        $params[] = $_GET['status'];
+    }
+    
+    if (isset($_GET['enrichment_status'])) {
+        if ($_GET['enrichment_status'] === 'null') {
+            $where .= " AND (enrichment_status IS NULL OR enrichment_status = '')";
+        } else {
+            $where .= " AND enrichment_status = ?";
+            $params[] = $_GET['enrichment_status'];
+        }
+    }
+    
+    // Get contacts with all fields
+    $sql = "SELECT * FROM contacts WHERE $where ORDER BY created_at DESC";
+    $contacts = $db->fetchAll($sql, $params);
+    
+    // Set CSV headers
+    header('Content-Type: text/csv');
+    header('Content-Disposition: attachment; filename="contacts_export_' . date('Y-m-d') . '.csv"');
+    
+    // Create CSV output
+    $output = fopen('php://output', 'w');
+    
+    // CSV headers
+    $headers = [
+        'ID', 'First Name', 'Last Name', 'Email', 'Phone', 'Company', 'Address', 
+        'City', 'State', 'Zip Code', 'Country', 'EVM Address', 'Twitter Handle',
+        'LinkedIn Profile', 'Telegram Username', 'Discord Username', 'GitHub Username',
+        'Website', 'Contact Type', 'Contact Status', 'Source', 'Assigned To', 
+        'Enrichment Status', 'Notes', 'First Purchase Date', 'Created At', 'Updated At'
+    ];
+    
+    fputcsv($output, $headers);
+    
+    // Add contact data
+    foreach ($contacts as $contact) {
+        $row = [
+            $contact['id'],
+            $contact['first_name'] ?? '',
+            $contact['last_name'] ?? '',
+            $contact['email'] ?? '',
+            $contact['phone'] ?? '',
+            $contact['company'] ?? '',
+            $contact['address'] ?? '',
+            $contact['city'] ?? '',
+            $contact['state'] ?? '',
+            $contact['zip_code'] ?? '',
+            $contact['country'] ?? '',
+            $contact['evm_address'] ?? '',
+            $contact['twitter_handle'] ?? '',
+            $contact['linkedin_profile'] ?? '',
+            $contact['telegram_username'] ?? '',
+            $contact['discord_username'] ?? '',
+            $contact['github_username'] ?? '',
+            $contact['website'] ?? '',
+            $contact['contact_type'] ?? '',
+            $contact['contact_status'] ?? '',
+            $contact['source'] ?? '',
+            $contact['assigned_to'] ?? '',
+            $contact['enrichment_status'] ?? '',
+            $contact['notes'] ?? '',
+            $contact['first_purchase_date'] ?? '',
+            $contact['created_at'] ?? '',
+            $contact['updated_at'] ?? ''
+        ];
+        fputcsv($output, $row);
+    }
+    
+    fclose($output);
+    exit;
+}
 if ($resource === 'openapi.json') {
     // Stub OpenAPI endpoint
     echo json_encode([
         'openapi' => '3.0.0',
         'info' => [
-            'title' => 'Sanctum CRM API',
+            'title' => 'Best Jobs in TA API',
             'version' => '1.0.0'
         ],
         'paths' => new stdClass()
@@ -273,6 +413,14 @@ try {
             handleCommands($method, $resourceId, $input, $auth);
             break;
             
+        case 'enrichment':
+            handleEnrichment($method, $resourceId, $input, $auth, $action);
+            break;
+            
+        case 'import':
+            handleImport($method, $resourceId, $input, $auth, $action);
+            break;
+            
         default:
             http_response_code(404);
             echo json_encode([
@@ -331,183 +479,122 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
         echo json_encode($contact);
         return;
     }
-    
-    // Handle import actions
-    if ($action === 'import') {
-        if ($method === 'POST') {
-            // Handle CSV upload
-            if (isset($_FILES['csvFile'])) {
-                $file = $_FILES['csvFile'];
-                
-                // Validate file
-                if ($file['error'] !== UPLOAD_ERR_OK) {
-                    http_response_code(400);
-                    echo json_encode([
-                        'error' => 'File upload failed',
-                        'code' => 400
-                    ]);
-                    return;
-                }
-                
-                // Check file type using file extension (more reliable than mime_content_type)
-                $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-                if ($extension !== 'csv') {
-                    http_response_code(400);
-                    echo json_encode([
-                        'error' => 'Invalid file type. Please upload a CSV file.',
-                        'code' => 400
-                    ]);
-                    return;
-                }
-                
-                // Parse CSV
-                $csvData = [];
-                if (($handle = fopen($file['tmp_name'], 'r')) !== FALSE) {
-                    $headers = fgetcsv($handle);
-                    while (($data = fgetcsv($handle)) !== FALSE) {
-                        $row = [];
-                        foreach ($headers as $index => $header) {
-                            $row[trim($header)] = isset($data[$index]) ? trim($data[$index]) : '';
-                        }
-                        $csvData[] = $row;
-                    }
-                    fclose($handle);
-                }
-                
-                echo json_encode([
-                    'success' => true,
-                    'data' => $csvData,
-                    'count' => count($csvData)
-                ]);
-                return;
-            }
-        }
-        
-        // Handle import processing
-        if (isset($input['csvData']) && isset($input['fieldMapping'])) {
-            $csvData = $input['csvData'];
-            $fieldMapping = $input['fieldMapping'];
-            $source = $input['source'] ?? 'CSV Import';
-            $notes = $input['notes'] ?? '';
-            $nameSplitConfig = $input['nameSplitConfig'] ?? null;
-            
-            $successCount = 0;
-            $errorCount = 0;
-            $errors = [];
-            
-            foreach ($csvData as $index => $row) {
-                try {
-                    $contactData = [];
-                    
-                    // Map CSV columns to contact fields with sanitization
-                    foreach ($fieldMapping as $field => $column) {
-                        // Skip name split fields - they'll be handled separately
-                        if (strpos($column, '_split_') !== false) {
-                            continue;
-                        }
-                        
-                        if (isset($row[$column]) && !empty($row[$column])) {
-                            // Sanitize input based on field type
-                            if ($field === 'email') {
-                                $contactData[$field] = $row[$column]; // Email validation handled separately
-                            } elseif ($field === 'custom_field_1') {
-                                $contactData[$field] = validateCustomField($row[$column], 'text') ? $row[$column] : null;
-                            } else {
-                                $contactData[$field] = sanitizeInput($row[$column]);
-                            }
-                        }
-                    }
-                    
-                    // Handle name splitting if configured
-                    if ($nameSplitConfig && isset($row[$nameSplitConfig['column']])) {
-                        $fullName = $row[$nameSplitConfig['column']];
-                        $parts = explode($nameSplitConfig['delimiter'], $fullName);
-                        
-                        if (count($parts) >= 2) {
-                            $firstPart = trim($parts[$nameSplitConfig['firstPart']]);
-                            $lastPart = trim($parts[$nameSplitConfig['lastPart']]);
-                            
-                            // Set first_name and last_name with split values (sanitized)
-                            $contactData['first_name'] = sanitizeInput($firstPart);
-                            $contactData['last_name'] = sanitizeInput($lastPart);
-                        }
-                    }
-                    
-                    // Validate email if provided
-                    if (!empty($contactData['email']) && !validateEmail($contactData['email'])) {
-                        $errors[] = [
-                            'row' => $index + 1,
-                            'message' => 'Invalid email address: ' . $contactData['email']
-                        ];
-                        $errorCount++;
-                        continue;
-                    }
-                    
-                    // Add source and notes
-                    $contactData['source'] = $source;
-                    $contactData['notes'] = $notes;
-                    $contactData['contact_type'] = 'lead';
-                    $contactData['contact_status'] = 'new';
-                    $contactData['created_at'] = getCurrentTimestamp();
-                    $contactData['updated_at'] = getCurrentTimestamp();
-                    
-                    // Validate required fields (email is no longer required for lead enrichment)
-                    if (empty($contactData['first_name']) || empty($contactData['last_name'])) {
-                        $missingFields = [];
-                        if (empty($contactData['first_name'])) $missingFields[] = 'first_name';
-                        if (empty($contactData['last_name'])) $missingFields[] = 'last_name';
-                        
-                        $errors[] = [
-                            'row' => $index + 1,
-                            'message' => 'Missing required fields: ' . implode(', ', $missingFields) . ' (Data: ' . json_encode($contactData) . ')'
-                        ];
-                        $errorCount++;
-                        continue;
-                    }
-                    
-                    // Check for duplicate email (only if email is provided)
-                    if (!empty($contactData['email'])) {
-                        $existing = $db->fetchOne("SELECT id FROM contacts WHERE email = ?", [$contactData['email']]);
-                        if ($existing) {
-                            $errors[] = [
-                                'row' => $index + 1,
-                                'message' => 'Contact with this email already exists'
-                            ];
-                            $errorCount++;
-                            continue;
-                        }
-                    }
-                    
-                    // Insert contact
-                    $db->insert('contacts', $contactData);
-                    $successCount++;
-                    
-                } catch (Exception $e) {
-                    $errors[] = [
-                        'row' => $index + 1,
-                        'message' => 'Database error: ' . $e->getMessage()
-                    ];
-                    $errorCount++;
-                }
-            }
-            
+
+    // Special case: enrich action
+    if ($action === 'enrich') {
+        debugLog("[DEBUG] enrich action: id=$id");
+        if (!$id) {
+            debugLog("[ERROR] enrich: missing id");
+            http_response_code(400);
             echo json_encode([
-                'success' => true,
-                'totalProcessed' => count($csvData),
-                'successCount' => $successCount,
-                'errorCount' => $errorCount,
-                'errors' => $errors
+                'error' => 'Contact ID required for enrichment',
+                'code' => 400
             ]);
             return;
         }
         
-        http_response_code(400);
-        echo json_encode([
-            'error' => 'Invalid import request',
-            'code' => 400
-        ]);
+        try {
+            $enrichmentService = new EnrichmentService();
+            $strategy = $input['strategy'] ?? 'auto';
+            $result = $enrichmentService->enrichContact($id, $strategy);
+            
+            debugLog("[DEBUG] enrich: success id=$id strategy=$strategy");
+            http_response_code(200);
+            echo json_encode([
+                'success' => true,
+                'contact' => $result['contact'],
+                'enrichment_data' => $result['enrichment_data'] ?? null
+            ]);
+        } catch (Exception $e) {
+            debugLog("[ERROR] enrich: failed id=$id error=" . $e->getMessage());
+            http_response_code(500);
+            echo json_encode([
+                'error' => $e->getMessage(),
+                'code' => 500
+            ]);
+        }
         return;
     }
+
+    // Special case: enrichment-status action
+    if ($action === 'enrichment-status') {
+        debugLog("[DEBUG] enrichment-status action: id=$id");
+        if (!$id) {
+            debugLog("[ERROR] enrichment-status: missing id");
+            http_response_code(400);
+            echo json_encode([
+                'error' => 'Contact ID required for enrichment status',
+                'code' => 400
+            ]);
+            return;
+        }
+        
+        try {
+            $enrichmentService = new EnrichmentService();
+            $status = $enrichmentService->getEnrichmentStatus($id);
+            
+            debugLog("[DEBUG] enrichment-status: success id=$id");
+            http_response_code(200);
+            echo json_encode($status);
+        } catch (Exception $e) {
+            debugLog("[ERROR] enrichment-status: failed id=$id error=" . $e->getMessage());
+            http_response_code(500);
+            echo json_encode([
+                'error' => $e->getMessage(),
+                'code' => 500
+            ]);
+        }
+        return;
+    }
+    
+    // Special case: bulk-enrich action
+    if ($action === 'bulk-enrich') {
+        debugLog("[DEBUG] bulk-enrich action");
+        if ($method !== 'POST') {
+            http_response_code(405);
+            echo json_encode([
+                'error' => 'Method not allowed for bulk enrichment',
+                'code' => 405
+            ]);
+            return;
+        }
+        
+        if (empty($input['contact_ids']) || !is_array($input['contact_ids'])) {
+            http_response_code(400);
+            echo json_encode([
+                'error' => 'contact_ids array is required for bulk enrichment',
+                'code' => 400
+            ]);
+            return;
+        }
+        
+        try {
+            $enrichmentService = new EnrichmentService();
+            $strategy = $input['strategy'] ?? 'auto';
+            $result = $enrichmentService->enrichContacts($input['contact_ids'], $strategy);
+            
+            debugLog("[DEBUG] bulk-enrich: success count=" . count($input['contact_ids']));
+            http_response_code(200);
+            echo json_encode([
+                'success' => true,
+                'total_processed' => count($input['contact_ids']),
+                'successful' => $result['successful'],
+                'failed' => $result['failed'],
+                'enriched_contacts' => $result['enriched_contacts'],
+                'errors' => $result['errors']
+            ]);
+        } catch (Exception $e) {
+            debugLog("[ERROR] bulk-enrich: failed error=" . $e->getMessage());
+            http_response_code(500);
+            echo json_encode([
+                'error' => $e->getMessage(),
+                'code' => 500
+            ]);
+        }
+        return;
+    }
+
+    // Import handling moved to handleImport function
     
     switch ($method) {
         case 'GET':
@@ -527,7 +614,7 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
                 
                 echo json_encode($contact);
             } else {
-                // List contacts with optional filtering
+                // List contacts with optional filtering and pagination
                 $where = "1=1";
                 $params = [];
                 
@@ -541,12 +628,43 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
                     $params[] = $_GET['status'];
                 }
                 
-                $sql = "SELECT * FROM contacts WHERE $where ORDER BY created_at DESC";
+                if (isset($_GET['enrichment_status'])) {
+                    if ($_GET['enrichment_status'] === 'null') {
+                        $where .= " AND (enrichment_status IS NULL OR enrichment_status = '')";
+                    } else {
+                        $where .= " AND enrichment_status = ?";
+                        $params[] = $_GET['enrichment_status'];
+                    }
+                }
+                
+                // Handle pagination
+                $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 50; // Default limit
+                $offset = 0;
+                
+                if (isset($_GET['page']) && isset($_GET['limit'])) {
+                    $page = (int)$_GET['page'];
+                    $limit = (int)$_GET['limit'];
+                    $offset = ($page - 1) * $limit;
+                } elseif (isset($_GET['offset'])) {
+                    $offset = (int)$_GET['offset'];
+                }
+                
+                // Get total count
+                $countSql = "SELECT COUNT(*) as total FROM contacts WHERE $where";
+                $totalResult = $db->fetchOne($countSql, $params);
+                $total = $totalResult['total'];
+                
+                // Get contacts with limit and offset
+                $sql = "SELECT * FROM contacts WHERE $where ORDER BY created_at DESC LIMIT ? OFFSET ?";
+                $params[] = $limit;
+                $params[] = $offset;
                 $contacts = $db->fetchAll($sql, $params);
                 
                 echo json_encode([
                     'contacts' => $contacts,
-                    'count' => count($contacts)
+                    'total' => $total,
+                    'limit' => $limit,
+                    'offset' => $offset
                 ]);
             }
             break;
@@ -601,7 +719,7 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
                 'state' => sanitizeInput($input['state'] ?? null),
                 'zip_code' => sanitizeInput($input['zip_code'] ?? null),
                 'country' => sanitizeInput($input['country'] ?? null),
-                'custom_field_1' => !empty($input['custom_field_1']) && validateCustomField($input['custom_field_1'], 'text') ? $input['custom_field_1'] : null,
+                'evm_address' => !empty($input['evm_address']) && validateEVMAddress($input['evm_address']) ? $input['evm_address'] : null,
                 'twitter_handle' => sanitizeInput($input['twitter_handle'] ?? null),
                 'linkedin_profile' => sanitizeInput($input['linkedin_profile'] ?? null),
                 'telegram_username' => sanitizeInput($input['telegram_username'] ?? null),
@@ -673,7 +791,7 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
             // Regular update
             $updateData = array_intersect_key($input, array_flip([
                 'first_name', 'last_name', 'email', 'phone', 'company', 'address',
-                'city', 'state', 'zip_code', 'country', 'custom_field_1', 'twitter_handle',
+                'city', 'state', 'zip_code', 'country', 'evm_address', 'twitter_handle',
                 'linkedin_profile', 'telegram_username', 'discord_username', 'github_username',
                 'website', 'contact_type', 'contact_status', 'source', 'assigned_to', 'notes'
             ]));
@@ -1208,4 +1326,258 @@ function handleCommands($method, $id, $input, $auth) {
         'error' => 'Commands not implemented yet',
         'code' => 501
     ]);
+}
+
+/**
+ * Handle enrichment endpoints
+ */
+function handleEnrichment($method, $id, $input, $auth, $action = null) {
+    debugLog("[DEBUG] handleEnrichment ENTRY: method=$method id=$id action=$action input=" . json_encode($input));
+    
+    try {
+        $enrichmentService = new EnrichmentService();
+        
+        switch ($method) {
+            case 'GET':
+                if ($action === 'stats') {
+                    // Get enrichment statistics
+                    $stats = $enrichmentService->getEnrichmentStats();
+                    http_response_code(200);
+                    echo json_encode($stats);
+                } else {
+                    http_response_code(400);
+                    echo json_encode([
+                        'error' => 'Invalid action for enrichment endpoint',
+                        'code' => 400
+                    ]);
+                }
+                break;
+                
+            default:
+                http_response_code(405);
+                echo json_encode([
+                    'error' => 'Method not allowed',
+                    'code' => 405
+                ]);
+        }
+    } catch (Exception $e) {
+        debugLog("[ERROR] handleEnrichment: failed error=" . $e->getMessage());
+        http_response_code(500);
+        echo json_encode([
+            'error' => $e->getMessage(),
+            'code' => 500
+        ]);
+    }
+}
+
+/**
+ * Handle import operations
+ */
+function handleImport($method, $id, $input, $auth, $action = null) {
+    global $db;
+    
+    try {
+        if ($method === 'POST') {
+            // Handle CSV upload
+            if (isset($_FILES['csvFile'])) {
+                $file = $_FILES['csvFile'];
+                
+                // Validate file
+                if ($file['error'] !== UPLOAD_ERR_OK) {
+                    http_response_code(400);
+                    echo json_encode([
+                        'error' => 'File upload failed',
+                        'code' => 400
+                    ]);
+                    return;
+                }
+                
+                // Check file type using file extension (more reliable than mime_content_type)
+                $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+                if ($extension !== 'csv') {
+                    http_response_code(400);
+                    echo json_encode([
+                        'error' => 'Invalid file type. Please upload a CSV file.',
+                        'code' => 400
+                    ]);
+                    return;
+                }
+                
+                // Parse CSV
+                $csvData = [];
+                try {
+                    if (($handle = fopen($file['tmp_name'], 'r')) !== FALSE) {
+                        $headers = fgetcsv($handle);
+                        while (($data = fgetcsv($handle)) !== FALSE) {
+                            $row = [];
+                            foreach ($headers as $index => $header) {
+                                $row[trim($header)] = isset($data[$index]) ? trim($data[$index]) : '';
+                            }
+                            $csvData[] = $row;
+                        }
+                        fclose($handle);
+                    } else {
+                        throw new Exception("Failed to open CSV file");
+                    }
+                } catch (Exception $e) {
+                    http_response_code(500);
+                    echo json_encode([
+                        'error' => 'Failed to parse CSV file: ' . $e->getMessage(),
+                        'code' => 500
+                    ]);
+                    return;
+                }
+                
+                echo json_encode([
+                    'success' => true,
+                    'data' => $csvData,
+                    'rowCount' => count($csvData)
+                ]);
+                return;
+            }
+        }
+        
+        // Handle import processing
+        if (isset($input['csvData']) && isset($input['fieldMapping'])) {
+            $csvData = $input['csvData'];
+            $fieldMapping = $input['fieldMapping'];
+            $source = $input['source'] ?? 'CSV Import';
+            $notes = $input['notes'] ?? '';
+            $nameSplitConfig = $input['nameSplitConfig'] ?? null;
+            
+            $successCount = 0;
+            $errorCount = 0;
+            $errors = [];
+            
+            foreach ($csvData as $index => $row) {
+                try {
+                    $contactData = [];
+                    
+                    // Map CSV columns to contact fields with sanitization
+                    foreach ($fieldMapping as $field => $column) {
+                        // Skip name split fields - they'll be handled separately
+                        if (strpos($column, '_split_') !== false) {
+                            continue;
+                        }
+                        
+                        if (isset($row[$column]) && !empty($row[$column])) {
+                            // Sanitize input based on field type
+                            if ($field === 'email') {
+                                $contactData[$field] = $row[$column]; // Email validation handled separately
+                            } elseif ($field === 'evm_address') {
+                                $contactData[$field] = validateEVMAddress($row[$column]) ? $row[$column] : null;
+                            } else {
+                                $contactData[$field] = sanitizeInput($row[$column]);
+                            }
+                        }
+                    }
+                    
+                    // Handle name splitting if configured
+                    if ($nameSplitConfig && isset($row[$nameSplitConfig['column']])) {
+                        $fullName = $row[$nameSplitConfig['column']];
+                        $parts = explode($nameSplitConfig['delimiter'], $fullName);
+                        
+                        if (count($parts) >= 2) {
+                            $firstPart = trim($parts[$nameSplitConfig['firstPart']]);
+                            $lastPart = trim($parts[$nameSplitConfig['lastPart']]);
+                            
+                            // Set first_name and last_name with split values (sanitized)
+                            $contactData['first_name'] = sanitizeInput($firstPart);
+                            $contactData['last_name'] = sanitizeInput($lastPart);
+                        }
+                    }
+                    
+                    // Validate email if provided
+                    if (!empty($contactData['email']) && !validateEmail($contactData['email'])) {
+                        $errors[] = [
+                            'row' => $index + 1,
+                            'message' => 'Invalid email address: ' . $contactData['email']
+                        ];
+                        $errorCount++;
+                        continue;
+                    }
+                    
+                    // Add source and notes
+                    $contactData['source'] = $source;
+                    $contactData['notes'] = $notes;
+                    $contactData['contact_type'] = 'lead';
+                    $contactData['contact_status'] = 'new';
+                    $contactData['created_at'] = getCurrentTimestamp();
+                    $contactData['updated_at'] = getCurrentTimestamp();
+                    
+                    // Validate required fields - only require first_name and last_name if no name splitting is configured
+                    if (!$nameSplitConfig && (empty($contactData['first_name']) || empty($contactData['last_name']))) {
+                        $missingFields = [];
+                        if (empty($contactData['first_name'])) $missingFields[] = 'first_name';
+                        if (empty($contactData['last_name'])) $missingFields[] = 'last_name';
+                        
+                        $errors[] = [
+                            'row' => $index + 1,
+                            'message' => 'Missing required fields: ' . implode(', ', $missingFields) . ' (Data: ' . json_encode($contactData) . ')'
+                        ];
+                        $errorCount++;
+                        continue;
+                    }
+                    
+                    // If name splitting is configured but didn't produce valid names, skip this row
+                    if ($nameSplitConfig && (empty($contactData['first_name']) || empty($contactData['last_name']))) {
+                        $errors[] = [
+                            'row' => $index + 1,
+                            'message' => 'Name splitting failed - could not split name: ' . ($row[$nameSplitConfig['column']] ?? 'N/A')
+                        ];
+                        $errorCount++;
+                        continue;
+                    }
+                    
+                    // Check for duplicate email (only if email is provided)
+                    if (!empty($contactData['email'])) {
+                        $existing = $db->fetchOne("SELECT id FROM contacts WHERE email = ?", [$contactData['email']]);
+                        if ($existing) {
+                            $errors[] = [
+                                'row' => $index + 1,
+                                'message' => 'Contact with this email already exists'
+                            ];
+                            $errorCount++;
+                            continue;
+                        }
+                    }
+                    
+                    // Insert contact
+                    $db->insert('contacts', $contactData);
+                    $successCount++;
+                    
+                } catch (Exception $e) {
+                    $errors[] = [
+                        'row' => $index + 1,
+                        'message' => 'Database error: ' . $e->getMessage()
+                    ];
+                    $errorCount++;
+                }
+            }
+            
+            echo json_encode([
+                'success' => true,
+                'totalProcessed' => count($csvData),
+                'successCount' => $successCount,
+                'errorCount' => $errorCount,
+                'errors' => $errors
+            ]);
+            return;
+        }
+        
+        http_response_code(400);
+        echo json_encode([
+            'error' => 'Invalid import request',
+            'code' => 400
+        ]);
+        return;
+        
+    } catch (Exception $e) {
+        debugLog("[ERROR] handleImport: failed error=" . $e->getMessage());
+        http_response_code(500);
+        echo json_encode([
+            'error' => $e->getMessage(),
+            'code' => 500
+        ]);
+    }
 } 

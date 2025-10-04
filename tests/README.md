@@ -1,14 +1,21 @@
-# Sanctum CRM - Test Suite
+# Best Jobs in TA - Test Suite
 
-This directory contains a comprehensive test suite for the Sanctum CRM system, designed to ensure reliability and functionality across all components.
+This directory contains a comprehensive test suite for the Best Jobs in TA system, designed to ensure reliability and functionality across all components.
 
 ## 🧪 Test Structure
 
 ```
 tests/
 ├── bootstrap.php           # Test environment setup
-├── run_tests.php          # Main test runner
+├── run_tests.php          # Main PHP test runner
 ├── phpunit.xml            # PHPUnit configuration
+├── live/                  # Live browser & API tests (Python)
+│   ├── conftest.py        # Pytest configuration
+│   ├── test_browser_ui.py # Browser automation tests
+│   ├── test_user_workflows.py # End-to-end workflows
+│   ├── test_api_integration.py # Live API testing
+│   ├── requirements.txt   # Python dependencies
+│   └── run_live_tests.py  # Live test runner
 ├── unit/                  # Unit tests
 │   ├── DatabaseTest.php   # Database operations
 │   └── AuthTest.php       # Authentication system
@@ -22,8 +29,14 @@ tests/
 
 ### Quick Start
 ```bash
-# Run all tests
+# Run PHP tests
 php tests/run_tests.php
+
+# Run live tests (Python/Playwright)
+cd tests/live
+./venv/Scripts/Activate.ps1  # Windows
+source venv/bin/activate      # Linux/Mac
+python run_live_tests.py
 
 # Run specific test suites
 php tests/unit/DatabaseTest.php
@@ -32,7 +45,7 @@ php tests/api/ApiTest.php
 ```
 
 ### Web Interface
-Visit `http://localhost:8000/tests/run_tests.php` for a web-based test runner.
+Visit `http://localhost:8000/tests/run_tests.php` for a web-based PHP test runner.
 
 ### PHPUnit (Optional)
 If you have PHPUnit installed:
@@ -41,6 +54,12 @@ phpunit --configuration tests/phpunit.xml
 ```
 
 ## 📋 Test Categories
+
+### Live Tests (Python/Playwright)
+- **Browser UI Tests**: Real browser automation, UI interactions
+- **User Workflow Tests**: End-to-end user journeys
+- **API Integration Tests**: Live server API testing
+- **Performance Tests**: Load testing, response times
 
 ### Unit Tests
 - **Database Tests**: CRUD operations, transactions, table info
@@ -161,4 +180,4 @@ if (php_sapi_name() === 'cli' || isset($_GET['run'])) {
 
 **Test Suite Version**: 1.0.0  
 **Last Updated**: 2025  
-**Maintainer**: Sanctum CRM Development Team 
+**Maintainer**: Best Jobs in TA Development Team 

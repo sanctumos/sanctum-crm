@@ -382,6 +382,20 @@ function renderDashboardStats() {
                 </div>
             </div>
         </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="stat-card p-4">
+                <div class="d-flex align-items-center">
+                    <div class="stat-icon me-3" style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);">
+                        <i class="fas fa-magic"></i>
+                    </div>
+                    <div>
+                        <h3 class="mb-0"><?php echo number_format($stats['enriched_contacts'] ?? 0); ?></h3>
+                        <p class="text-muted mb-0">Enriched Contacts</p>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
     <?php
 }

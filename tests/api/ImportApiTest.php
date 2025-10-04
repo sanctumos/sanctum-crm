@@ -1,28 +1,7 @@
 <?php
 /**
- * Sanctum CRM
- * 
- * This file is part of Sanctum CRM.
- * 
- * Copyright (C) 2025 Sanctum OS
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published
- * by the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
-
-/**
  * Import API Tests
- * Sanctum CRM - CSV Import API Endpoint Testing
+ * Best Jobs in TA - CSV Import API Endpoint Testing
  */
 
 require_once __DIR__ . '/../bootstrap.php';
@@ -33,7 +12,7 @@ class ImportApiTest {
     private $headers;
     
     public function __construct() {
-        $this->baseUrl = 'http://localhost:8000';
+        $this->baseUrl = 'http://localhost:6789';
         
         // Get admin API key from production database (same as server)
         $prodDb = new SQLite3(__DIR__ . '/../../db/crm.db');
@@ -50,6 +29,27 @@ class ImportApiTest {
             'Authorization: Bearer ' . $this->apiKey,
             'Content-Type: application/json'
         ];
+        
+        // Clean up test data before running tests
+        $this->cleanupTestData();
+    }
+    
+    private function cleanupTestData() {
+        // Clean up any existing test data
+        $testEmails = [
+            'upload1@example.com', 'upload2@example.com',
+            'testuser1@example.com', 'testuser2@example.com',
+            'split1@example.com', 'split2@example.com', 'split3@example.com',
+            'validtest@example.com', 'errortest@example.com'
+        ];
+        
+        $db = new SQLite3(__DIR__ . '/../../db/crm.db');
+        foreach ($testEmails as $email) {
+            $stmt = $db->prepare("DELETE FROM contacts WHERE email = ?");
+            $stmt->bindValue(1, $email);
+            $stmt->execute();
+        }
+        $db->close();
     }
     
     public function runAllTests() {
@@ -76,16 +76,16 @@ class ImportApiTest {
         // Test CSV data as JSON (more reliable for testing)
         $csvData = [
             [
-                'Full Name' => 'John Doe',
-                'Email' => 'john@example.com',
+                'Full Name' => 'Upload Test 1',
+                'Email' => 'upload1@example.com',
                 'Phone' => '+1234567890',
-                'Company' => 'Test Corp'
+                'Company' => 'Upload Corp 1'
             ],
             [
-                'Full Name' => 'Jane Smith',
-                'Email' => 'jane@example.com',
+                'Full Name' => 'Upload Test 2',
+                'Email' => 'upload2@example.com',
                 'Phone' => '+0987654321',
-                'Company' => 'Another Corp'
+                'Company' => 'Upload Corp 2'
             ]
         ];
         
@@ -138,16 +138,16 @@ class ImportApiTest {
         
         $csvData = [
             [
-                'Full Name' => 'John Doe',
-                'Email' => 'john@example.com',
+                'Full Name' => 'Test User 1',
+                'Email' => 'testuser1@example.com',
                 'Phone' => '+1234567890',
-                'Company' => 'Test Corp'
+                'Company' => 'Test Corp 1'
             ],
             [
-                'Full Name' => 'Jane Smith',
-                'Email' => 'jane@example.com',
+                'Full Name' => 'Test User 2',
+                'Email' => 'testuser2@example.com',
                 'Phone' => '+0987654321',
-                'Company' => 'Another Corp'
+                'Company' => 'Test Corp 2'
             ]
         ];
         
@@ -205,16 +205,16 @@ class ImportApiTest {
         
         $csvData = [
             [
-                'Full Name' => 'John Doe',
-                'Email' => 'john@example.com'
+                'Full Name' => 'Split Test 1',
+                'Email' => 'split1@example.com'
             ],
             [
-                'Full Name' => 'Smith, Jane',
-                'Email' => 'jane@example.com'
+                'Full Name' => 'Smith, Split Test 2',
+                'Email' => 'split2@example.com'
             ],
             [
-                'Full Name' => 'Johnson|Mike',
-                'Email' => 'mike@example.com'
+                'Full Name' => 'Split Test 3|Johnson',
+                'Email' => 'split3@example.com'
             ]
         ];
         
@@ -294,13 +294,13 @@ class ImportApiTest {
         
         $csvData = [
             [
-                'First Name' => 'John',
-                'Last Name' => 'Doe',
-                'Email' => 'valid@example.com'
+                'First Name' => 'Valid Test',
+                'Last Name' => 'User',
+                'Email' => 'validtest@example.com'
             ],
             [
-                'First Name' => 'Jane',
-                'Last Name' => 'Smith',
+                'First Name' => 'Invalid Test',
+                'Last Name' => 'User',
                 'Email' => 'invalid-email'
             ],
             [
@@ -352,7 +352,7 @@ class ImportApiTest {
         // Test missing required fields
         $csvData = [
             [
-                'Email' => 'test@example.com'
+                'Email' => 'errortest@example.com'
                 // Missing first_name and last_name
             ]
         ];
@@ -456,7 +456,7 @@ class ImportApiTest {
         $ch = curl_init();
         
         curl_setopt_array($ch, [
-            CURLOPT_URL => $this->baseUrl . '/api/v1/index.php?action=import',
+            CURLOPT_URL => $this->baseUrl . '/api/v1/contacts/import',
             CURLOPT_POST => true,
             CURLOPT_POSTFIELDS => json_encode($data),
             CURLOPT_RETURNTRANSFER => true,

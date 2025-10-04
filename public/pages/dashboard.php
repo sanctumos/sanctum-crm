@@ -25,10 +25,33 @@
  * Sanctum CRM - Main Dashboard
  */
 
-// Remove any require_once for auth.php and layout.php
-
+// Get database instance and auth
+$db = Database::getInstance();
 $auth = new Auth();
 $auth->requireAuth();
+
+// Calculate dashboard statistics
+$stats = [];
+
+// Total contacts
+$total_contacts = $db->fetchOne("SELECT COUNT(*) as count FROM contacts")['count'];
+$stats['total_contacts'] = $total_contacts;
+
+// Total leads
+$total_leads = $db->fetchOne("SELECT COUNT(*) as count FROM contacts WHERE contact_type = 'lead'")['count'];
+$stats['total_leads'] = $total_leads;
+
+// Total customers
+$total_customers = $db->fetchOne("SELECT COUNT(*) as count FROM contacts WHERE contact_type = 'customer'")['count'];
+$stats['total_customers'] = $total_customers;
+
+// Total deal value
+$total_deal_value = $db->fetchOne("SELECT SUM(amount) as total FROM deals WHERE stage IN ('won', 'closed')")['total'] ?? 0;
+$stats['total_deal_value'] = $total_deal_value;
+
+// Enriched contacts
+$enriched_contacts = $db->fetchOne("SELECT COUNT(*) as count FROM contacts WHERE enrichment_status = 'enriched'")['count'];
+$stats['enriched_contacts'] = $enriched_contacts;
 
 // Render the page using the template system
 renderHeader('Dashboard');

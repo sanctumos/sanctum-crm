@@ -149,6 +149,12 @@ renderHeader('Contacts');
                     <a href="/?page=import_contacts" class="btn btn-success">
                         <i class="fas fa-file-import me-2"></i>Import CSV
                     </a>
+                    <button class="btn btn-info" onclick="exportContactsCSV()">
+                        <i class="fas fa-download me-2"></i>Export CSV
+                    </button>
+                    <button class="btn btn-warning" onclick="bulkEnrichContacts()">
+                        <i class="fas fa-magic me-2"></i>Bulk Enrich
+                    </button>
                     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addContactModal">
                         <i class="fas fa-plus me-2"></i>Add Contact
                     </button>
@@ -173,10 +179,13 @@ renderHeader('Contacts');
                         </h5>
                         <p class="text-muted mb-0"><?php echo $contact['email'] ? htmlspecialchars($contact['email']) : 'No email'; ?></p>
                     </div>
-                    <a href="/index.php?page=view_contact&id=<?php echo $contact['id']; ?>" 
+                    <a href="/index.php?page=view_contact&id=<?php echo $contact['id']; ?>"
                        class="btn btn-sm btn-outline-primary">
                         <i class="fas fa-eye me-1"></i>View
                     </a>
+                    <button class="btn btn-sm btn-outline-success" onclick="enrichContact(<?php echo $contact['id']; ?>)">
+                        <i class="fas fa-magic me-1"></i>Enrich
+                    </button>
                 </div>
                 
                 <div class="mb-3">
@@ -198,9 +207,15 @@ renderHeader('Contacts');
                         <span class="badge bg-<?php echo $contact['contact_type'] === 'lead' ? 'warning' : 'success'; ?> me-2">
                             <?php echo ucfirst($contact['contact_type']); ?>
                         </span>
-                        <span class="badge bg-secondary">
+                        <span class="badge bg-secondary me-2">
                             <?php echo ucfirst($contact['contact_status']); ?>
                         </span>
+                        <?php if ($contact['enrichment_status']): ?>
+                            <span class="badge bg-<?php echo $contact['enrichment_status'] === 'enriched' ? 'success' : 'warning'; ?>">
+                                <i class="fas fa-magic me-1"></i>
+                                <?php echo ucfirst($contact['enrichment_status']); ?>
+                            </span>
+                        <?php endif; ?>
                     </div>
                     <small class="text-muted">
                         <?php echo date('M j, Y', strtotime($contact['created_at'])); ?>
@@ -243,9 +258,15 @@ renderHeader('Contacts');
                         <td><?php echo $contact['phone'] ? htmlspecialchars($contact['phone']) : '-'; ?></td>
                         <td><?php echo $contact['company'] ? htmlspecialchars($contact['company']) : '-'; ?></td>
                         <td>
-                            <span class="badge bg-<?php echo $contact['contact_type'] === 'lead' ? 'warning' : 'success'; ?>">
+                            <span class="badge bg-<?php echo $contact['contact_type'] === 'lead' ? 'warning' : 'success'; ?> me-1">
                                 <?php echo ucfirst($contact['contact_type']); ?>
                             </span>
+                            <?php if ($contact['enrichment_status']): ?>
+                                <span class="badge bg-<?php echo $contact['enrichment_status'] === 'enriched' ? 'success' : 'warning'; ?>">
+                                    <i class="fas fa-magic me-1"></i>
+                                    <?php echo ucfirst($contact['enrichment_status']); ?>
+                                </span>
+                            <?php endif; ?>
                         </td>
                         <td>
                             <span class="badge bg-secondary">
@@ -255,11 +276,14 @@ renderHeader('Contacts');
                         <td><?php echo date('M j, Y', strtotime($contact['created_at'])); ?></td>
                         <td>
                             <div class="btn-group" role="group">
-                                <a href="/index.php?page=view_contact&id=<?php echo $contact['id']; ?>" 
+                                <a href="/index.php?page=view_contact&id=<?php echo $contact['id']; ?>"
                                    class="btn btn-sm btn-outline-primary" title="View">
                                     <i class="fas fa-eye"></i>
                                 </a>
-                                <a href="/index.php?page=edit_contact&id=<?php echo $contact['id']; ?>" 
+                                <button class="btn btn-sm btn-outline-success" onclick="enrichContact(<?php echo $contact['id']; ?>)" title="Enrich">
+                                    <i class="fas fa-magic"></i>
+                                </button>
+                                <a href="/index.php?page=edit_contact&id=<?php echo $contact['id']; ?>"
                                    class="btn btn-sm btn-outline-secondary" title="Edit">
                                     <i class="fas fa-edit"></i>
                                 </a>
@@ -666,6 +690,161 @@ function deleteContactFromModal() {
             alert('Network error: ' + error.message);
         });
     }
+}
+
+// Individual contact enrichment
+async function enrichContact(contactId) {
+    const button = event.target.closest('button');
+    const originalText = button.innerHTML;
+
+    try {
+        // Show loading state
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Enriching...';
+
+        const response = await fetch(`/api/v1/contacts/${contactId}/enrich`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${getApiKey()}`
+            },
+            body: JSON.stringify({ strategy: 'auto' })
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            showSuccess('Contact enriched successfully!');
+
+            // Update button state
+            button.innerHTML = '<i class="fas fa-check me-2"></i>Enriched';
+            button.classList.remove('btn-success', 'btn-outline-success');
+            button.classList.add('btn-secondary');
+
+            // Refresh page to show updated data
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            const error = await response.json();
+            showError(error.error || 'Enrichment failed');
+            button.innerHTML = originalText;
+            button.disabled = false;
+        }
+    } catch (error) {
+        showError('Network error: ' + error.message);
+        button.innerHTML = originalText;
+        button.disabled = false;
+    }
+}
+
+// Bulk enrichment functions
+async function bulkEnrichContacts() {
+    const modal = new bootstrap.Modal(document.getElementById('bulkEnrichModal'));
+    modal.show();
+
+    // Load contacts for selection
+    await loadContactsForBulkEnrichment();
+}
+
+async function loadContactsForBulkEnrichment() {
+    try {
+        const response = await fetch('/api/v1/contacts', {
+            headers: { 'Authorization': `Bearer ${getApiKey()}` }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            const container = document.getElementById('contactSelection');
+
+            container.innerHTML = data.contacts.map(contact => `
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="${contact.id}"
+                           id="contact_${contact.id}">
+                    <label class="form-check-label" for="contact_${contact.id}">
+                        ${contact.first_name} ${contact.last_name}
+                        ${contact.email ? `(${contact.email})` : ''}
+                        ${contact.enrichment_status ? `<span class="badge bg-${contact.enrichment_status === 'enriched' ? 'success' : 'warning'} ms-2">${contact.enrichment_status}</span>` : ''}
+                    </label>
+                </div>
+            `).join('');
+        }
+    } catch (error) {
+        showError('Failed to load contacts: ' + error.message);
+    }
+}
+
+async function startBulkEnrichment() {
+    const selectedContacts = Array.from(document.querySelectorAll('#contactSelection input:checked'))
+        .map(input => parseInt(input.value));
+
+    if (selectedContacts.length === 0) {
+        showError('Please select at least one contact');
+        return;
+    }
+
+    const strategy = document.getElementById('bulkEnrichStrategy').value;
+
+    try {
+        const response = await fetch('/api/v1/contacts/bulk-enrich', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${getApiKey()}`
+            },
+            body: JSON.stringify({
+                contact_ids: selectedContacts,
+                strategy: strategy
+            })
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            showSuccess(`Bulk enrichment completed: ${result.successful} successful, ${result.failed} failed`);
+
+            // Close modal and refresh page
+            bootstrap.Modal.getInstance(document.getElementById('bulkEnrichModal')).hide();
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            const error = await response.json();
+            showError(error.error || 'Bulk enrichment failed');
+        }
+    } catch (error) {
+        showError('Network error: ' + error.message);
+    }
+}
+
+// Utility functions
+function getApiKey() {
+    // Get API key from localStorage or session
+    return localStorage.getItem('api_key') || '';
+}
+
+function showSuccess(message) {
+    // Use existing notification system or create toast
+    const alert = document.createElement('div');
+    alert.className = 'alert alert-success alert-dismissible fade show position-fixed';
+    alert.style.top = '20px';
+    alert.style.right = '20px';
+    alert.style.zIndex = '9999';
+    alert.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(alert);
+    setTimeout(() => alert.remove(), 5000);
+}
+
+function showError(message) {
+    // Use existing notification system or create toast
+    const alert = document.createElement('div');
+    alert.className = 'alert alert-danger alert-dismissible fade show position-fixed';
+    alert.style.top = '20px';
+    alert.style.right = '20px';
+    alert.style.zIndex = '9999';
+    alert.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(alert);
+    setTimeout(() => alert.remove(), 5000);
 }
 </script>
 

@@ -34,7 +34,11 @@ if (!defined('CRM_LOADED')) {
 if (!defined('APP_NAME')) define('APP_NAME', 'Sanctum CRM');
 if (!defined('APP_VERSION')) define('APP_VERSION', '1.0.0');
 if (!defined('APP_URL')) define('APP_URL', 'http://localhost'); // Default URL - will be overridden by configuration
-if (!defined('DEBUG_MODE')) define('DEBUG_MODE', false); // Set to false in production
+// Auto-detect environment based on OS and other factors
+if (!defined('DEBUG_MODE')) {
+    // Enable debug mode on Windows development, disable on Ubuntu production
+    define('DEBUG_MODE', PHP_OS_FAMILY === 'Windows');
+}
 
 // Database Configuration
 if (!defined('DB_PATH')) define('DB_PATH', dirname(dirname(__DIR__)) . '/db/crm.db');
@@ -46,19 +50,15 @@ if (!defined('SESSION_LIFETIME')) define('SESSION_LIFETIME', 3600); // 1 hour
 if (!defined('API_KEY_LENGTH')) define('API_KEY_LENGTH', 32);
 if (!defined('PASSWORD_MIN_LENGTH')) define('PASSWORD_MIN_LENGTH', 8);
 
+// Set session name before any session is started
+if (session_status() === PHP_SESSION_NONE) {
+    session_name(SESSION_NAME);
+}
+
 // API Configuration
 if (!defined('API_VERSION')) define('API_VERSION', 'v1');
 if (!defined('API_RATE_LIMIT')) define('API_RATE_LIMIT', 1000); // requests per hour
 if (!defined('API_MAX_PAYLOAD_SIZE')) define('API_MAX_PAYLOAD_SIZE', 1048576); // 1MB
-
-// File Upload Configuration
-if (!defined('UPLOAD_MAX_SIZE')) define('UPLOAD_MAX_SIZE', 5242880); // 5MB
-if (!defined('UPLOAD_ALLOWED_TYPES')) define('UPLOAD_ALLOWED_TYPES', ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx']);
-
-// Email functionality removed - use webhooks and API for integrations
-
-// Custom Fields Configuration
-// Custom field settings will be managed through the database
 
 // Error Reporting
 if (DEBUG_MODE) {
@@ -85,7 +85,7 @@ function customErrorHandler($errno, $errstr, $errfile, $errline) {
     if (DEBUG_MODE) {
         error_log("Error [$errno] $errstr on line $errline in file $errfile");
     }
-    
+
     if (isApiRequest()) {
         http_response_code(500);
         echo json_encode([
@@ -97,7 +97,7 @@ function customErrorHandler($errno, $errstr, $errfile, $errline) {
         // For web requests, show error page
         include dirname(__DIR__) . '/pages/error.php';
     }
-    
+
     return true;
 }
 
@@ -129,6 +129,30 @@ function sanitizeInput($input) {
     }
     return htmlspecialchars(trim($input), ENT_QUOTES, 'UTF-8');
 }
+
+// File Upload Configuration
+if (!defined('UPLOAD_MAX_SIZE')) define('UPLOAD_MAX_SIZE', 5242880); // 5MB
+if (!defined('UPLOAD_ALLOWED_TYPES')) define('UPLOAD_ALLOWED_TYPES', ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx']);
+
+// RocketReach Configuration
+if (!defined('ROCKETREACH_API_KEY')) define('ROCKETREACH_API_KEY', '');
+if (!defined('ROCKETREACH_ENABLED')) define('ROCKETREACH_ENABLED', false);
+if (!defined('ROCKETREACH_RATE_LIMIT')) define('ROCKETREACH_RATE_LIMIT', 100); // per hour
+
+// Email functionality removed - use webhooks and API for integrations
+
+// Custom Fields Configuration
+// Custom field settings will be managed through the database
+
+// Error Reporting
+if (DEBUG_MODE) {
+    error_reporting(E_ALL);
+    ini_set('display_errors', 1);
+} else {
+    error_reporting(0);
+    ini_set('display_errors', 0);
+}
+
 
 // Helper function to validate custom field values
 function validateCustomField($value, $fieldType) {

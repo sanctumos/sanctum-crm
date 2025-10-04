@@ -1,28 +1,7 @@
 <?php
 /**
- * Sanctum CRM
- * 
- * This file is part of Sanctum CRM.
- * 
- * Copyright (C) 2025 Sanctum OS
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published
- * by the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
-
-/**
  * Database Management Class
- * Sanctum CRM - SQLite Database Handler (sqlite3 extension)
+ * Best Jobs in TA - SQLite Database Handler (sqlite3 extension)
  */
 
 // Prevent direct access
@@ -59,6 +38,9 @@ class Database {
     
     private function initializeTables() {
         $this->createTables();
+        $this->migrateContactsEmailNullable();
+        $this->ensureEnrichmentColumns();
+        $this->ensureSettingsColumns();
     }
     
     private function createTables() {
@@ -83,7 +65,7 @@ class Database {
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     first_name VARCHAR(50) NOT NULL,
                     last_name VARCHAR(50) NOT NULL,
-                    email VARCHAR(100) UNIQUE NOT NULL,
+                    email VARCHAR(100) UNIQUE,
                     phone VARCHAR(20),
                     company VARCHAR(100),
                     position VARCHAR(100),
@@ -92,6 +74,7 @@ class Database {
                     state VARCHAR(50),
                     zip_code VARCHAR(20),
                     country VARCHAR(50),
+                    evm_address VARCHAR(42),
                     twitter_handle VARCHAR(50),
                     linkedin_profile VARCHAR(255),
                     telegram_username VARCHAR(50),
@@ -162,38 +145,6 @@ class Database {
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
-            ",
-            'system_config' => "
-                CREATE TABLE IF NOT EXISTS system_config (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    category VARCHAR(50) NOT NULL,
-                    config_key VARCHAR(100) NOT NULL,
-                    config_value TEXT,
-                    data_type VARCHAR(20) DEFAULT 'string',
-                    is_encrypted BOOLEAN DEFAULT 0,
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    UNIQUE(category, config_key)
-                )
-            ",
-            'company_info' => "
-                CREATE TABLE IF NOT EXISTS company_info (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    company_name VARCHAR(255) NOT NULL,
-                    timezone VARCHAR(50) DEFAULT 'UTC',
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-                )
-            ",
-            'installation_state' => "
-                CREATE TABLE IF NOT EXISTS installation_state (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    step VARCHAR(50) NOT NULL,
-                    is_completed BOOLEAN DEFAULT 0,
-                    completed_at DATETIME,
-                    data TEXT,
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-                )
             "
         ];
         foreach ($tables as $table => $sql) {
@@ -227,7 +178,7 @@ class Database {
             $sql = "INSERT INTO users (username, email, password_hash, first_name, last_name, role, api_key) VALUES (?, ?, ?, ?, ?, ?, ?)";
             $stmt = $this->db->prepare($sql);
             $stmt->bindValue(1, 'admin', SQLITE3_TEXT);
-            $stmt->bindValue(2, 'admin@sanctum-crm.local', SQLITE3_TEXT);
+            $stmt->bindValue(2, 'admin@bestjobsinta.com', SQLITE3_TEXT);
             $stmt->bindValue(3, $adminPassword, SQLITE3_TEXT);
             $stmt->bindValue(4, 'Admin', SQLITE3_TEXT);
             $stmt->bindValue(5, 'User', SQLITE3_TEXT);
@@ -249,6 +200,26 @@ class Database {
             $stmt->bindValue(2, getCurrentTimestamp(), SQLITE3_TEXT);
             $stmt->bindValue(3, getCurrentTimestamp(), SQLITE3_TEXT);
             $stmt->execute();
+        }
+    }
+    
+    private function ensureSettingsColumns() {
+        // Check if RocketReach columns exist in settings table, add them if they don't
+        $columns = $this->getTableInfo('settings');
+        $existingColumns = array_column($columns, 'name');
+
+        $settingsColumns = [
+            'rocketreach_api_key' => 'VARCHAR(255)'
+        ];
+
+        foreach ($settingsColumns as $columnName => $columnDef) {
+            if (!in_array($columnName, $existingColumns)) {
+                try {
+                    $this->db->exec("ALTER TABLE settings ADD COLUMN {$columnName} {$columnDef}");
+                } catch (Exception $e) {
+                    // Column might already exist, ignore error
+                }
+            }
         }
     }
     
@@ -287,6 +258,7 @@ class Database {
                         state VARCHAR(50),
                         zip_code VARCHAR(20),
                         country VARCHAR(50),
+                        evm_address VARCHAR(42),
                         twitter_handle VARCHAR(50),
                         linkedin_profile VARCHAR(255),
                         telegram_username VARCHAR(50),
@@ -461,4 +433,30 @@ class Database {
     public function getLastInsertId() {
         return $this->db->lastInsertRowID();
     }
+    
+    private function ensureEnrichmentColumns() {
+        // Check if enrichment columns exist, add them if they don't
+        $columns = $this->getTableInfo('contacts');
+        $existingColumns = array_column($columns, 'name');
+        
+        $enrichmentColumns = [
+            'enriched_at' => 'DATETIME',
+            'enrichment_source' => 'VARCHAR(50)',
+            'enrichment_data' => 'TEXT',
+            'enrichment_status' => 'VARCHAR(20) DEFAULT "pending"',
+            'enrichment_attempts' => 'INTEGER DEFAULT 0',
+            'enrichment_error' => 'TEXT'
+        ];
+        
+        foreach ($enrichmentColumns as $columnName => $columnDef) {
+            if (!in_array($columnName, $existingColumns)) {
+                try {
+                    $this->db->exec("ALTER TABLE contacts ADD COLUMN {$columnName} {$columnDef}");
+                } catch (Exception $e) {
+                    // Column might already exist, ignore error
+                }
+            }
+        }
+    }
+    
 } 

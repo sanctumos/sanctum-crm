@@ -1,28 +1,7 @@
 <?php
 /**
- * Sanctum CRM
- * 
- * This file is part of Sanctum CRM.
- * 
- * Copyright (C) 2025 Sanctum OS
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published
- * by the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
-
-/**
  * API Integration Tests
- * Sanctum CRM - API Endpoint Testing
+ * Best Jobs in TA - API Endpoint Testing
  */
 
 require_once __DIR__ . '/../bootstrap.php';
@@ -33,7 +12,7 @@ class ApiTest {
     private $headers;
     
     public function __construct() {
-        $this->baseUrl = 'http://localhost:8000';
+        $this->baseUrl = 'http://localhost:6789';
         
         // Get admin API key from production database (same as server)
         $prodDb = new SQLite3(__DIR__ . '/../../db/crm.db');
@@ -851,16 +830,16 @@ class ApiTest {
         // Test CSV import endpoint
         $csvData = [
             [
-                'Full Name' => 'John Doe',
-                'Email' => 'john@example.com',
+                'Full Name' => 'API Test User 1',
+                'Email' => 'apitest1_' . uniqid() . '@example.com',
                 'Phone' => '+1234567890',
-                'Company' => 'Test Corp'
+                'Company' => 'API Test Corp 1'
             ],
             [
-                'Full Name' => 'Jane Smith',
-                'Email' => 'jane@example.com',
+                'Full Name' => 'API Test User 2',
+                'Email' => 'apitest2_' . uniqid() . '@example.com',
                 'Phone' => '+0987654321',
-                'Company' => 'Another Corp'
+                'Company' => 'API Test Corp 2'
             ]
         ];
         

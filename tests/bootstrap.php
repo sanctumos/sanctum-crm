@@ -1,28 +1,7 @@
 <?php
 /**
- * Sanctum CRM
- * 
- * This file is part of Sanctum CRM.
- * 
- * Copyright (C) 2025 Sanctum OS
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published
- * by the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
-
-/**
  * Test Bootstrap
- * Sanctum CRM - Test Environment Setup
+ * Best Jobs in TA - Test Environment Setup
  */
 
 // Set test environment
@@ -41,7 +20,7 @@ if (!file_exists($testDbPath)) {
         mkdir($dbDir, 0755, true);
     }
     
-    // Initialize test database
+    // Initialize test database using Database class
     $db = new SQLite3($testDbPath);
     $db->close();
 }
@@ -49,7 +28,12 @@ if (!file_exists($testDbPath)) {
 // Include required files
 require_once __DIR__ . '/../public/includes/config.php';
 require_once __DIR__ . '/../public/includes/database.php';
+
+// Use Database class to ensure proper table creation
+$database = Database::getInstance();
+// This will create all tables including contacts with enrichment fields
 require_once __DIR__ . '/../public/includes/auth.php';
+require_once __DIR__ . '/../public/includes/LeadEnrichmentService.php';
 
 // Test utilities
 class TestUtils {

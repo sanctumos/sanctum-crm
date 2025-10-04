@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Sanctum CRM - Test Results</title>
+    <title>Best Jobs in TA - Test Results</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
         .header { background: #f0f0f0; padding: 20px; border-radius: 5px; }
@@ -14,16 +14,16 @@
 </head>
 <body>
     <div class="header">
-        <h1>Sanctum CRM - Test Results</h1>
-        <p>Generated on: 2025-09-05 01:30:02</p>
+        <h1>Best Jobs in TA - Test Results</h1>
+        <p>Generated on: 2025-09-22 21:09:12</p>
     </div>
     
     <div class="summary">
         <h2>Summary</h2>
-        <p>Total Tests: 120</p>
-        <p>Passed: 120</p>
-        <p>Failed: 0</p>
-        <p>Success Rate: 100%</p>
+        <p>Total Tests: 230</p>
+        <p>Passed: 174</p>
+        <p>Failed: 56</p>
+        <p>Success Rate: 75.65%</p>
     </div>
     <div class="test-suite pass">
         <h3>AuthTest</h3>
@@ -52,28 +52,33 @@
     </div>
     <div class="test-suite pass">
         <h3>ImportTest</h3>
-        <p>Tests: 2/2 passed</p>
+        <p>Tests: 35/35 passed</p>
         <p>Success Rate: 100%</p>
     </div>
     <div class="test-suite pass">
-        <h3>PageCoverageTest</h3>
-        <p>Tests: 0/0 passed</p>
+        <h3>EnrichmentTest</h3>
+        <p>Tests: 7/7 passed</p>
+        <p>Success Rate: 100%</p>
+    </div>
+    <div class="test-suite fail">
+        <h3>ApiTest</h3>
+        <p>Tests: 0/22 passed</p>
         <p>Success Rate: 0%</p>
     </div>
-    <div class="test-suite pass">
-        <h3>ConfigManagerCustomTest</h3>
-        <p>Tests: 0/0 passed</p>
+    <div class="test-suite fail">
+        <h3>ImportApiTest</h3>
+        <p>Tests: 0/7 passed</p>
         <p>Success Rate: 0%</p>
     </div>
-    <div class="test-suite pass">
-        <h3>MockApiTest</h3>
-        <p>Tests: 0/0 passed</p>
+    <div class="test-suite fail">
+        <h3>EnrichmentApiTest</h3>
+        <p>Tests: 0/6 passed</p>
         <p>Success Rate: 0%</p>
     </div>
-    <div class="test-suite pass">
-        <h3>MockImportApiTest</h3>
-        <p>Tests: 0/0 passed</p>
-        <p>Success Rate: 0%</p>
+    <div class="test-suite fail">
+        <h3>CsvImportTest</h3>
+        <p>Tests: 3/7 passed</p>
+        <p>Success Rate: 42.857142857143%</p>
     </div>
     <div class="test-suite pass">
         <h3>IntegrationTest</h3>
@@ -81,8 +86,28 @@
         <p>Success Rate: 100%</p>
     </div>
     <div class="test-suite pass">
-        <h3>MockImportIntegrationTest</h3>
-        <p>Tests: 0/0 passed</p>
+        <h3>ImportIntegrationTest</h3>
+        <p>Tests: 6/6 passed</p>
+        <p>Success Rate: 100%</p>
+    </div>
+    <div class="test-suite fail">
+        <h3>EnrichmentIntegrationTest</h3>
+        <p>Tests: 5/6 passed</p>
+        <p>Success Rate: 83.333333333333%</p>
+    </div>
+    <div class="test-suite fail">
+        <h3>EnrichmentE2ETest</h3>
+        <p>Tests: 0/6 passed</p>
+        <p>Success Rate: 0%</p>
+    </div>
+    <div class="test-suite fail">
+        <h3>CsvImportE2ETest</h3>
+        <p>Tests: 0/5 passed</p>
+        <p>Success Rate: 0%</p>
+    </div>
+    <div class="test-suite fail">
+        <h3>CsvImportErrorHandlingTest</h3>
+        <p>Tests: 0/5 passed</p>
         <p>Success Rate: 0%</p>
     </div>
 </body>

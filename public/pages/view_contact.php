@@ -47,6 +47,11 @@ renderHeader('View Contact');
             <a href="/index.php?page=edit_contact&id=<?php echo $contactId; ?>" class="btn btn-primary">
                 <i class="fas fa-edit me-2"></i>Edit Contact
             </a>
+            <button class="btn btn-success" onclick="enrichContact(<?php echo $contactId; ?>)"
+                    <?php echo $contact['enrichment_status'] === 'enriched' ? 'disabled' : ''; ?>>
+                <i class="fas fa-magic me-2"></i>
+                <?php echo $contact['enrichment_status'] === 'enriched' ? 'Enriched' : 'Enrich Contact'; ?>
+            </button>
         </div>
     </div>
     
@@ -92,6 +97,12 @@ renderHeader('View Contact');
             <div class="mb-3">
                 <span class="badge bg-warning text-dark me-2"><?php echo ucfirst($contact['contact_type'] ?? ''); ?></span>
                 <span class="badge bg-secondary me-2"><?php echo ucfirst($contact['contact_status'] ?? ''); ?></span>
+                <?php if ($contact['enrichment_status']): ?>
+                    <span class="badge bg-<?php echo $contact['enrichment_status'] === 'enriched' ? 'success' : 'warning'; ?>">
+                        <i class="fas fa-magic me-1"></i>
+                        <?php echo ucfirst($contact['enrichment_status']); ?>
+                    </span>
+                <?php endif; ?>
                 <?php if (!empty($contact['source'])): ?>
                     <span class="badge bg-info text-dark me-2">Source: <?php echo htmlspecialchars($contact['source']); ?></span>
                 <?php endif; ?>

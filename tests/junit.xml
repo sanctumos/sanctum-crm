@@ -90,17 +90,101 @@
     <testcase name="test_10" status="passed" />
     <testcase name="test_11" status="passed" />
   </testsuite>
-  <testsuite name="ImportTest" tests="2" failures="0">
+  <testsuite name="ImportTest" tests="35" failures="0">
     <testcase name="test_0" status="passed" />
     <testcase name="test_1" status="passed" />
+    <testcase name="test_2" status="passed" />
+    <testcase name="test_3" status="passed" />
+    <testcase name="test_4" status="passed" />
+    <testcase name="test_5" status="passed" />
+    <testcase name="test_6" status="passed" />
+    <testcase name="test_7" status="passed" />
+    <testcase name="test_8" status="passed" />
+    <testcase name="test_9" status="passed" />
+    <testcase name="test_10" status="passed" />
+    <testcase name="test_11" status="passed" />
+    <testcase name="test_12" status="passed" />
+    <testcase name="test_13" status="passed" />
+    <testcase name="test_14" status="passed" />
+    <testcase name="test_15" status="passed" />
+    <testcase name="test_16" status="passed" />
+    <testcase name="test_17" status="passed" />
+    <testcase name="test_18" status="passed" />
+    <testcase name="test_19" status="passed" />
+    <testcase name="test_20" status="passed" />
+    <testcase name="test_21" status="passed" />
+    <testcase name="test_22" status="passed" />
+    <testcase name="test_23" status="passed" />
+    <testcase name="test_24" status="passed" />
+    <testcase name="test_25" status="passed" />
+    <testcase name="test_26" status="passed" />
+    <testcase name="test_27" status="passed" />
+    <testcase name="test_28" status="passed" />
+    <testcase name="test_29" status="passed" />
+    <testcase name="test_30" status="passed" />
+    <testcase name="test_31" status="passed" />
+    <testcase name="test_32" status="passed" />
+    <testcase name="test_33" status="passed" />
+    <testcase name="test_34" status="passed" />
   </testsuite>
-  <testsuite name="PageCoverageTest" tests="0" failures="0">
+  <testsuite name="EnrichmentTest" tests="7" failures="0">
+    <testcase name="test_0" status="passed" />
+    <testcase name="test_1" status="passed" />
+    <testcase name="test_2" status="passed" />
+    <testcase name="test_3" status="passed" />
+    <testcase name="test_4" status="passed" />
+    <testcase name="test_5" status="passed" />
+    <testcase name="test_6" status="passed" />
   </testsuite>
-  <testsuite name="ConfigManagerCustomTest" tests="0" failures="0">
+  <testsuite name="ApiTest" tests="22" failures="22">
+    <testcase name="test_0" status="failed" />
+    <testcase name="test_1" status="failed" />
+    <testcase name="test_2" status="failed" />
+    <testcase name="test_3" status="failed" />
+    <testcase name="test_4" status="failed" />
+    <testcase name="test_5" status="failed" />
+    <testcase name="test_6" status="failed" />
+    <testcase name="test_7" status="failed" />
+    <testcase name="test_8" status="failed" />
+    <testcase name="test_9" status="failed" />
+    <testcase name="test_10" status="failed" />
+    <testcase name="test_11" status="failed" />
+    <testcase name="test_12" status="failed" />
+    <testcase name="test_13" status="failed" />
+    <testcase name="test_14" status="failed" />
+    <testcase name="test_15" status="failed" />
+    <testcase name="test_16" status="failed" />
+    <testcase name="test_17" status="failed" />
+    <testcase name="test_18" status="failed" />
+    <testcase name="test_19" status="failed" />
+    <testcase name="test_20" status="failed" />
+    <testcase name="test_21" status="failed" />
   </testsuite>
-  <testsuite name="MockApiTest" tests="0" failures="0">
+  <testsuite name="ImportApiTest" tests="7" failures="7">
+    <testcase name="test_0" status="failed" />
+    <testcase name="test_1" status="failed" />
+    <testcase name="test_2" status="failed" />
+    <testcase name="test_3" status="failed" />
+    <testcase name="test_4" status="failed" />
+    <testcase name="test_5" status="failed" />
+    <testcase name="test_6" status="failed" />
   </testsuite>
-  <testsuite name="MockImportApiTest" tests="0" failures="0">
+  <testsuite name="EnrichmentApiTest" tests="6" failures="6">
+    <testcase name="test_0" status="failed" />
+    <testcase name="test_1" status="failed" />
+    <testcase name="test_2" status="failed" />
+    <testcase name="test_3" status="failed" />
+    <testcase name="test_4" status="failed" />
+    <testcase name="test_5" status="failed" />
+  </testsuite>
+  <testsuite name="CsvImportTest" tests="7" failures="4">
+    <testcase name="test_0" status="passed" />
+    <testcase name="test_1" status="passed" />
+    <testcase name="test_2" status="passed" />
+    <testcase name="test_3" status="failed" />
+    <testcase name="test_4" status="failed" />
+    <testcase name="test_5" status="failed" />
+    <testcase name="test_6" status="failed" />
   </testsuite>
   <testsuite name="IntegrationTest" tests="38" failures="0">
     <testcase name="test_0" status="passed" />
@@ -142,6 +226,42 @@
     <testcase name="test_36" status="passed" />
     <testcase name="test_37" status="passed" />
   </testsuite>
-  <testsuite name="MockImportIntegrationTest" tests="0" failures="0">
+  <testsuite name="ImportIntegrationTest" tests="6" failures="0">
+    <testcase name="test_0" status="passed" />
+    <testcase name="test_1" status="passed" />
+    <testcase name="test_2" status="passed" />
+    <testcase name="test_3" status="passed" />
+    <testcase name="test_4" status="passed" />
+    <testcase name="test_5" status="passed" />
+  </testsuite>
+  <testsuite name="EnrichmentIntegrationTest" tests="6" failures="1">
+    <testcase name="test_0" status="passed" />
+    <testcase name="test_1" status="passed" />
+    <testcase name="test_2" status="passed" />
+    <testcase name="test_3" status="passed" />
+    <testcase name="test_4" status="passed" />
+    <testcase name="test_5" status="failed" />
+  </testsuite>
+  <testsuite name="EnrichmentE2ETest" tests="6" failures="6">
+    <testcase name="test_0" status="failed" />
+    <testcase name="test_1" status="failed" />
+    <testcase name="test_2" status="failed" />
+    <testcase name="test_3" status="failed" />
+    <testcase name="test_4" status="failed" />
+    <testcase name="test_5" status="failed" />
+  </testsuite>
+  <testsuite name="CsvImportE2ETest" tests="5" failures="5">
+    <testcase name="test_0" status="failed" />
+    <testcase name="test_1" status="failed" />
+    <testcase name="test_2" status="failed" />
+    <testcase name="test_3" status="failed" />
+    <testcase name="test_4" status="failed" />
+  </testsuite>
+  <testsuite name="CsvImportErrorHandlingTest" tests="5" failures="5">
+    <testcase name="test_0" status="failed" />
+    <testcase name="test_1" status="failed" />
+    <testcase name="test_2" status="failed" />
+    <testcase name="test_3" status="failed" />
+    <testcase name="test_4" status="failed" />
   </testsuite>
 </testsuites>

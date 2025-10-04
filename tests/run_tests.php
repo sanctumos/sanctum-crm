@@ -1,28 +1,7 @@
 <?php
 /**
- * Sanctum CRM
- * 
- * This file is part of Sanctum CRM.
- * 
- * Copyright (C) 2025 Sanctum OS
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published
- * by the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
-
-/**
  * Test Runner
- * Sanctum CRM - Comprehensive Test Suite
+ * Best Jobs in TA - Comprehensive Test Suite
  */
 
 require_once __DIR__ . '/bootstrap.php';
@@ -40,20 +19,20 @@ class TestRunner {
     
     public function runAllTests() {
         echo "==========================================\n";
-        echo "Sanctum CRM - Comprehensive Test Suite\n";
+        echo "Best Jobs in TA - Comprehensive Test Suite\n";
         echo "==========================================\n\n";
         
         // Run unit tests
         $this->runUnitTests();
-        
-        // Run configuration tests
-        $this->runConfigurationTests();
         
         // Run API tests
         $this->runApiTests();
         
         // Run integration tests
         $this->runIntegrationTests();
+        
+        // Run E2E tests
+        $this->runE2ETests();
         
         // Generate coverage report
         $this->generateCoverageReport();
@@ -73,7 +52,7 @@ class TestRunner {
             'UserManagementTest.php' => 'UserManagementTest',
             'ReportsTest.php' => 'ReportsTest',
             'ImportTest.php' => 'ImportTest',
-            'PageCoverageTest.php' => 'PageCoverageTest'
+            'EnrichmentTest.php' => 'EnrichmentTest'
         ];
         
         foreach ($unitTests as $file => $class) {
@@ -88,27 +67,14 @@ class TestRunner {
         echo "=========\n";
         
         $apiTests = [
-            'MockApiTest.php' => 'MockApiTest',
-            'MockImportApiTest.php' => 'MockImportApiTest'
+            'ApiTest.php' => 'ApiTest',
+            'ImportApiTest.php' => 'ImportApiTest',
+            'EnrichmentApiTest.php' => 'EnrichmentApiTest',
+            'CsvImportTest.php' => 'CsvImportTest'
         ];
         
         foreach ($apiTests as $file => $class) {
             $this->runTestFile("api/{$file}", $class);
-        }
-        
-        echo "\n";
-    }
-    
-    public function runConfigurationTests() {
-        echo "CONFIGURATION TESTS\n";
-        echo "===================\n";
-        
-        $configTests = [
-            'ConfigManagerCustomTest.php' => 'ConfigManagerCustomTest'
-        ];
-        
-        foreach ($configTests as $file => $class) {
-            $this->runTestFile("unit/{$file}", $class);
         }
         
         echo "\n";
@@ -120,11 +86,29 @@ class TestRunner {
         
         $integrationTests = [
             'IntegrationTest.php' => 'IntegrationTest',
-            'MockImportIntegrationTest.php' => 'MockImportIntegrationTest'
+            'ImportIntegrationTest.php' => 'ImportIntegrationTest',
+            'EnrichmentIntegrationTest.php' => 'EnrichmentIntegrationTest'
         ];
         
         foreach ($integrationTests as $file => $class) {
             $this->runTestFile("integration/{$file}", $class);
+        }
+        
+        echo "\n";
+    }
+    
+    public function runE2ETests() {
+        echo "E2E TESTS\n";
+        echo "=========\n";
+        
+        $e2eTests = [
+            'EnrichmentE2ETest.php' => 'EnrichmentE2ETest',
+            'CsvImportE2ETest.php' => 'CsvImportE2ETest',
+            'CsvImportErrorHandlingTest.php' => 'CsvImportErrorHandlingTest'
+        ];
+        
+        foreach ($e2eTests as $file => $class) {
+            $this->runTestFile("e2e/{$file}", $class);
         }
         
         echo "\n";
@@ -190,10 +174,10 @@ class TestRunner {
         $failCount = 0;
         
         foreach ($lines as $line) {
-            if (strpos($line, 'PASS') !== false) {
+            if (strpos($line, 'PASS') !== false || strpos($line, '✓') !== false) {
                 $passCount++;
                 $testCount++;
-            } elseif (strpos($line, 'FAIL') !== false) {
+            } elseif (strpos($line, 'FAIL') !== false || strpos($line, '✗') !== false) {
                 $failCount++;
                 $testCount++;
             }
@@ -260,7 +244,7 @@ class TestRunner {
         ];
         
         // Analyze includes directory
-        $includesDir = __DIR__ . '/../includes';
+        $includesDir = __DIR__ . '/../public/includes';
         $files = glob($includesDir . '/*.php');
         
         foreach ($files as $file) {
@@ -304,7 +288,8 @@ class TestRunner {
             'auth.php' => ['AuthTest.php', 'UserManagementTest.php'],
             'database.php' => ['DatabaseTest.php'],
             'config.php' => ['WebhookTest.php', 'ReportsTest.php'],
-            'layout.php' => ['ImportTest.php', 'ImportApiTest.php', 'ImportIntegrationTest.php']
+            'layout.php' => ['ImportTest.php', 'ImportApiTest.php', 'ImportIntegrationTest.php'],
+            'LeadEnrichmentService.php' => ['EnrichmentTest.php', 'EnrichmentApiTest.php', 'EnrichmentIntegrationTest.php', 'EnrichmentE2ETest.php']
         ];
         
         return isset($testFiles[$filename]);
@@ -378,7 +363,7 @@ class TestRunner {
         $html = '<!DOCTYPE html>
 <html>
 <head>
-    <title>Sanctum CRM - Test Results</title>
+    <title>Best Jobs in TA - Test Results</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
         .header { background: #f0f0f0; padding: 20px; border-radius: 5px; }
@@ -391,7 +376,7 @@ class TestRunner {
 </head>
 <body>
     <div class="header">
-        <h1>Sanctum CRM - Test Results</h1>
+        <h1>Best Jobs in TA - Test Results</h1>
         <p>Generated on: ' . date('Y-m-d H:i:s') . '</p>
     </div>
     
