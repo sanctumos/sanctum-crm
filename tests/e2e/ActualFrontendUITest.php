@@ -12,7 +12,7 @@ class ActualFrontendUITest {
     private $sessionCookie;
     
     public function __construct() {
-        $this->baseUrl = 'http://localhost:6789';
+        $this->baseUrl = 'http://localhost:8181';
         $this->csvFile = __DIR__ . '/../source-data/KinISO_staffing_leads_SEP25.csv';
         
         // Start a session to get cookies

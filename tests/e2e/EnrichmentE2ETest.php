@@ -11,7 +11,7 @@ class EnrichmentE2ETest {
     private $apiKey;
     
     public function __construct() {
-        $this->baseUrl = 'http://localhost:6789';
+        $this->baseUrl = 'http://localhost:8181';
         // Get admin API key from production database
         $prodDb = new SQLite3(__DIR__ . '/../../db/crm.db');
         $admin = $prodDb->querySingle("SELECT api_key FROM users WHERE username = 'admin'", true);

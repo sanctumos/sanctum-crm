@@ -12,7 +12,7 @@ class CsvImportTest {
     private $testCsvPath;
     
     public function __construct() {
-        $this->baseUrl = 'http://localhost:6789';
+        $this->baseUrl = 'http://localhost:8181';
         $this->testCsvPath = __DIR__ . '/../source-data/KinISO_staffing_leads_SEP25.csv';
         
         // Get admin API key from production database

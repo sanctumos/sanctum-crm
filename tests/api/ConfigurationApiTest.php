@@ -38,7 +38,7 @@ class ConfigurationApiTest extends TestCase {
     protected function setUp(): void {
         $this->db = Database::getInstance();
         $this->config = ConfigManager::getInstance();
-        $this->baseUrl = 'http://localhost:8000/api/v1';
+        $this->baseUrl = 'http://localhost:8181/api/v1';
         
         // Clear test data
         $this->db->query("DELETE FROM system_config");

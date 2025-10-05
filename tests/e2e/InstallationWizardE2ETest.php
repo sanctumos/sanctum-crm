@@ -39,7 +39,7 @@ class InstallationWizardE2ETest extends TestCase {
         $this->db = Database::getInstance();
         $this->config = ConfigManager::getInstance();
         $this->installationManager = new InstallationManager();
-        $this->baseUrl = 'http://localhost:8000';
+        $this->baseUrl = 'http://localhost:8181';
         
         // Clear all test data
         $this->db->query("DELETE FROM system_config");
