@@ -11,7 +11,7 @@ if (!defined('CRM_LOADED')) define('CRM_LOADED', true);
 // Use test database
 if (!defined('DB_PATH')) define('DB_PATH', __DIR__ . '/../db/test_crm.db');
 
-// Ensure test database exists
+// Ensure test database exists and is properly initialized
 $testDbPath = __DIR__ . '/../db/test_crm.db';
 if (!file_exists($testDbPath)) {
     // Create test database directory if it doesn't exist
@@ -19,19 +19,30 @@ if (!file_exists($testDbPath)) {
     if (!is_dir($dbDir)) {
         mkdir($dbDir, 0755, true);
     }
-    
-    // Initialize test database using Database class
-    $db = new SQLite3($testDbPath);
-    $db->close();
 }
 
 // Include required files
 require_once __DIR__ . '/../public/includes/config.php';
 require_once __DIR__ . '/../public/includes/database.php';
+require_once __DIR__ . '/../public/includes/ConfigManager.php';
 
-// Use Database class to ensure proper table creation
+// Use Database class to ensure proper table creation with test database
+// Temporarily override DB_PATH for test initialization
+$originalDbPath = defined('DB_PATH') ? DB_PATH : null;
+define('DB_PATH', $testDbPath);
+
+// Initialize test database - this will create all tables
 $database = Database::getInstance();
-// This will create all tables including contacts with enrichment fields
+
+// Restore original DB_PATH if it was defined
+if ($originalDbPath) {
+    define('DB_PATH', $originalDbPath);
+} else {
+    // Remove the test DB_PATH constant so it uses the default
+    if (defined('DB_PATH')) {
+        // Can't undefine constants in PHP, so we'll need to handle this differently
+    }
+}
 require_once __DIR__ . '/../public/includes/auth.php';
 require_once __DIR__ . '/../public/includes/LeadEnrichmentService.php';
 
