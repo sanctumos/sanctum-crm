@@ -38,11 +38,11 @@ class LeadEnrichmentService
     public function __construct()
     {
         $this->db = Database::getInstance();
-        
+
         // Get RocketReach API key from database
         $settings = $this->db->fetchOne("SELECT rocketreach_api_key FROM settings WHERE id = 1");
         $apiKey = $settings['rocketreach_api_key'] ?? '';
-        
+
         // Auto-detect if enrichment is available based on API key presence
         $this->enabled = !empty($apiKey);
         
@@ -460,7 +460,7 @@ class LeadEnrichmentService
             'enriched_count' => $stats['enriched_count'] ?? 0,
             'failed_count' => $stats['failed_count'] ?? 0,
             'pending_count' => $stats['pending_count'] ?? 0,
-            'enrichment_rate' => $stats['total_contacts'] > 0 ? 
+            'enrichment_rate' => $stats['total_contacts'] > 0 ?
                 round(($stats['enriched_count'] / $stats['total_contacts']) * 100, 2) : 0
         ];
     }
