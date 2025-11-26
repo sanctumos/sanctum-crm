@@ -159,11 +159,15 @@ renderHeader('Contacts');
             <div class="col-md-4 text-end">
                 <div class="d-flex align-items-center justify-content-end gap-2">
                     <div class="btn-group me-3 view-toggle" role="group" aria-label="View mode">
-                        <a href="?<?php echo http_build_query(array_merge($_GET, ['view' => 'cards'])); ?>" 
+                        <?php
+                        $view_params = $_GET;
+                        $view_params['page'] = 'contacts'; // Ensure page parameter is set
+                        ?>
+                        <a href="/index.php?<?php echo http_build_query(array_merge($view_params, ['view' => 'cards'])); ?>" 
                            class="btn btn-outline-secondary <?php echo $view_mode === 'cards' ? 'active' : ''; ?>">
                             <i class="fas fa-th-large"></i>
                         </a>
-                        <a href="?<?php echo http_build_query(array_merge($_GET, ['view' => 'list'])); ?>" 
+                        <a href="/index.php?<?php echo http_build_query(array_merge($view_params, ['view' => 'list'])); ?>" 
                            class="btn btn-outline-secondary <?php echo $view_mode === 'list' ? 'active' : ''; ?>">
                             <i class="fas fa-list"></i>
                         </a>
