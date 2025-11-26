@@ -41,6 +41,7 @@ class Database {
         $this->migrateContactsEmailNullable();
         $this->ensureEnrichmentColumns();
         $this->ensureSettingsColumns();
+        $this->ensureConfigTables();
     }
     
     private function createTables() {
@@ -144,6 +145,38 @@ class Database {
                     show_default_credentials BOOLEAN DEFAULT 1,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            ",
+            'company_info' => "
+                CREATE TABLE IF NOT EXISTS company_info (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    company_name VARCHAR(255) NOT NULL,
+                    timezone VARCHAR(50) DEFAULT 'UTC',
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            ",
+            'system_config' => "
+                CREATE TABLE IF NOT EXISTS system_config (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    category VARCHAR(50) NOT NULL,
+                    config_key VARCHAR(100) NOT NULL,
+                    config_value TEXT,
+                    data_type VARCHAR(20) DEFAULT 'string',
+                    is_encrypted BOOLEAN DEFAULT 0,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(category, config_key)
+                )
+            ",
+            'installation_state' => "
+                CREATE TABLE IF NOT EXISTS installation_state (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    step VARCHAR(50) NOT NULL,
+                    is_completed BOOLEAN DEFAULT 0,
+                    completed_at DATETIME,
+                    data TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
             "
         ];
@@ -309,11 +342,21 @@ class Database {
     }
     public function query($sql, $params = []) {
         $stmt = $this->db->prepare($sql);
+        if ($stmt === false) {
+            $error = $this->db->lastErrorMsg();
+            error_log("Database prepare error: " . $error . " | SQL: " . $sql);
+            throw new Exception("Database query preparation failed: " . $error);
+        }
         foreach ($params as $k => $v) {
             $type = is_int($v) ? SQLITE3_INTEGER : SQLITE3_TEXT;
             $stmt->bindValue(is_int($k) ? $k+1 : ':' . $k, $v, $type);
         }
         $result = $stmt->execute();
+        if ($result === false) {
+            $error = $this->db->lastErrorMsg();
+            error_log("Database execute error: " . $error . " | SQL: " . $sql);
+            throw new Exception("Database query execution failed: " . $error);
+        }
         return $result;
     }
     public function fetchAll($sql, $params = []) {
@@ -454,6 +497,58 @@ class Database {
                     $this->db->exec("ALTER TABLE contacts ADD COLUMN {$columnName} {$columnDef}");
                 } catch (Exception $e) {
                     // Column might already exist, ignore error
+                }
+            }
+        }
+    }
+    
+    private function ensureConfigTables() {
+        // Check if config tables exist, create them if they don't
+        $tables = ['company_info', 'system_config', 'installation_state'];
+        
+        foreach ($tables as $table) {
+            $result = $this->db->querySingle("SELECT name FROM sqlite_master WHERE type='table' AND name='{$table}'");
+            if (!$result) {
+                // Table doesn't exist, create it
+                switch ($table) {
+                    case 'company_info':
+                        $this->db->exec("
+                            CREATE TABLE IF NOT EXISTS company_info (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                company_name VARCHAR(255) NOT NULL,
+                                timezone VARCHAR(50) DEFAULT 'UTC',
+                                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                            )
+                        ");
+                        break;
+                    case 'system_config':
+                        $this->db->exec("
+                            CREATE TABLE IF NOT EXISTS system_config (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                category VARCHAR(50) NOT NULL,
+                                config_key VARCHAR(100) NOT NULL,
+                                config_value TEXT,
+                                data_type VARCHAR(20) DEFAULT 'string',
+                                is_encrypted BOOLEAN DEFAULT 0,
+                                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                                UNIQUE(category, config_key)
+                            )
+                        ");
+                        break;
+                    case 'installation_state':
+                        $this->db->exec("
+                            CREATE TABLE IF NOT EXISTS installation_state (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                step VARCHAR(50) NOT NULL,
+                                is_completed BOOLEAN DEFAULT 0,
+                                completed_at DATETIME,
+                                data TEXT,
+                                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                            )
+                        ");
+                        break;
                 }
             }
         }
