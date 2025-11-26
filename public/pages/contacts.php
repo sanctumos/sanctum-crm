@@ -35,6 +35,7 @@ $contact_id = $_GET['id'] ?? null;
 // Get filter parameters
 $type_filter = $_GET['type'] ?? '';
 $status_filter = $_GET['status'] ?? '';
+$enrichment_filter = $_GET['enrichment_status'] ?? '';
 
 // Handle view mode with session persistence
 if (isset($_GET['view'])) {
@@ -76,6 +77,15 @@ if ($type_filter) {
 if ($status_filter) {
     $where .= " AND contact_status = ?";
     $params[] = $status_filter;
+}
+
+if ($enrichment_filter) {
+    if ($enrichment_filter === 'null') {
+        $where .= " AND (enrichment_status IS NULL OR enrichment_status = '')";
+    } else {
+        $where .= " AND enrichment_status = ?";
+        $params[] = $enrichment_filter;
+    }
 }
 
 // Get total count for pagination
@@ -141,14 +151,14 @@ renderHeader('Contacts');
             <div class="col-md-8">
                 <form class="row g-3" method="GET" action="/index.php">
                     <input type="hidden" name="page" value="contacts">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <select name="type" class="form-select" onchange="this.form.submit()">
                             <option value="">All Types</option>
                             <option value="lead" <?php echo $type_filter === 'lead' ? 'selected' : ''; ?>>Leads</option>
                             <option value="customer" <?php echo $type_filter === 'customer' ? 'selected' : ''; ?>>Customers</option>
                         </select>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <select name="status" class="form-select" onchange="this.form.submit()">
                             <option value="">All Statuses</option>
                             <option value="new" <?php echo $status_filter === 'new' ? 'selected' : ''; ?>>New</option>
@@ -157,7 +167,17 @@ renderHeader('Contacts');
                             <option value="inactive" <?php echo $status_filter === 'inactive' ? 'selected' : ''; ?>>Inactive</option>
                         </select>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
+                        <select name="enrichment_status" class="form-select" onchange="this.form.submit()">
+                            <option value="">All Enrichment</option>
+                            <option value="enriched" <?php echo $enrichment_filter === 'enriched' ? 'selected' : ''; ?>>Enriched</option>
+                            <option value="not_found" <?php echo $enrichment_filter === 'not_found' ? 'selected' : ''; ?>>Not Found</option>
+                            <option value="failed" <?php echo $enrichment_filter === 'failed' ? 'selected' : ''; ?>>Failed</option>
+                            <option value="pending" <?php echo $enrichment_filter === 'pending' ? 'selected' : ''; ?>>Pending</option>
+                            <option value="null" <?php echo $enrichment_filter === 'null' ? 'selected' : ''; ?>>Not Enriched</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
                         <button type="submit" class="btn btn-outline-primary">
                             <i class="fas fa-filter me-2"></i>Filter
                         </button>
@@ -638,6 +658,33 @@ renderHeader('Contacts');
 </div>
 
 <script>
+// Export CSV function
+async function exportContactsCSV() {
+    try {
+        // Get current filter parameters from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const type = urlParams.get('type') || '';
+        const status = urlParams.get('status') || '';
+        const enrichmentStatus = urlParams.get('enrichment_status') || '';
+        
+        // Build API URL with current filters
+        let apiUrl = '/api/v1/contacts/export?format=csv';
+        if (type) apiUrl += `&type=${encodeURIComponent(type)}`;
+        if (status) apiUrl += `&status=${encodeURIComponent(status)}`;
+        if (enrichmentStatus) apiUrl += `&enrichment_status=${encodeURIComponent(enrichmentStatus)}`;
+        
+        // Create a temporary link to trigger download
+        const link = document.createElement('a');
+        link.href = apiUrl;
+        link.download = 'contacts_export_' + new Date().toISOString().split('T')[0] + '.csv';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    } catch (error) {
+        showError('Failed to export contacts: ' + error.message);
+    }
+}
+
 // Pagination function
 function changePerPage(value) {
     const urlParams = new URLSearchParams(window.location.search);
@@ -887,7 +934,19 @@ async function bulkEnrichContacts() {
 
 async function loadContactsForBulkEnrichment() {
     try {
-        const response = await fetch('/api/v1/contacts', {
+        // Get current filter parameters from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const type = urlParams.get('type') || '';
+        const status = urlParams.get('status') || '';
+        const enrichmentStatus = urlParams.get('enrichment_status') || '';
+        
+        // Build API URL with current filters
+        let apiUrl = '/api/v1/contacts?limit=100'; // Limit to 100 for bulk operations
+        if (type) apiUrl += `&type=${encodeURIComponent(type)}`;
+        if (status) apiUrl += `&status=${encodeURIComponent(status)}`;
+        if (enrichmentStatus) apiUrl += `&enrichment_status=${encodeURIComponent(enrichmentStatus)}`;
+        
+        const response = await fetch(apiUrl, {
             headers: { 'Authorization': `Bearer ${getApiKey()}` }
         });
 
