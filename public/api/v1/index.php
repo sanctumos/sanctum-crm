@@ -217,6 +217,15 @@ if ($resource === 'contacts' && $action === 'export') {
         }
     }
     
+    if (isset($_GET['source'])) {
+        if ($_GET['source'] === 'null') {
+            $where .= " AND (source IS NULL OR source = '')";
+        } else {
+            $where .= " AND source = ?";
+            $params[] = $_GET['source'];
+        }
+    }
+    
     // Get contacts with all fields
     $sql = "SELECT * FROM contacts WHERE $where ORDER BY created_at DESC";
     $contacts = $db->fetchAll($sql, $params);
@@ -634,6 +643,15 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
                     } else {
                         $where .= " AND enrichment_status = ?";
                         $params[] = $_GET['enrichment_status'];
+                    }
+                }
+                
+                if (isset($_GET['source'])) {
+                    if ($_GET['source'] === 'null') {
+                        $where .= " AND (source IS NULL OR source = '')";
+                    } else {
+                        $where .= " AND source = ?";
+                        $params[] = $_GET['source'];
                     }
                 }
                 

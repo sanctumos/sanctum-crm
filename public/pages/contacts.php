@@ -36,6 +36,12 @@ $contact_id = $_GET['id'] ?? null;
 $type_filter = $_GET['type'] ?? '';
 $status_filter = $_GET['status'] ?? '';
 $enrichment_filter = $_GET['enrichment_status'] ?? '';
+$source_filter = $_GET['source'] ?? '';
+
+// Get unique sources from database
+$sources_sql = "SELECT DISTINCT source FROM contacts WHERE source IS NOT NULL AND source != '' ORDER BY source";
+$sources_result = $db->fetchAll($sources_sql);
+$available_sources = array_column($sources_result, 'source');
 
 // Handle view mode with session persistence
 if (isset($_GET['view'])) {
@@ -85,6 +91,15 @@ if ($enrichment_filter) {
     } else {
         $where .= " AND enrichment_status = ?";
         $params[] = $enrichment_filter;
+    }
+}
+
+if ($source_filter) {
+    if ($source_filter === 'null') {
+        $where .= " AND (source IS NULL OR source = '')";
+    } else {
+        $where .= " AND source = ?";
+        $params[] = $source_filter;
     }
 }
 
@@ -151,14 +166,14 @@ renderHeader('Contacts');
             <div class="col-md-8">
                 <form class="row g-3" method="GET" action="/index.php">
                     <input type="hidden" name="page" value="contacts">
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <select name="type" class="form-select" onchange="this.form.submit()">
                             <option value="">All Types</option>
                             <option value="lead" <?php echo $type_filter === 'lead' ? 'selected' : ''; ?>>Leads</option>
                             <option value="customer" <?php echo $type_filter === 'customer' ? 'selected' : ''; ?>>Customers</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <select name="status" class="form-select" onchange="this.form.submit()">
                             <option value="">All Statuses</option>
                             <option value="new" <?php echo $status_filter === 'new' ? 'selected' : ''; ?>>New</option>
@@ -167,7 +182,7 @@ renderHeader('Contacts');
                             <option value="inactive" <?php echo $status_filter === 'inactive' ? 'selected' : ''; ?>>Inactive</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <select name="enrichment_status" class="form-select" onchange="this.form.submit()">
                             <option value="">All Enrichment</option>
                             <option value="enriched" <?php echo $enrichment_filter === 'enriched' ? 'selected' : ''; ?>>Enriched</option>
@@ -175,6 +190,17 @@ renderHeader('Contacts');
                             <option value="failed" <?php echo $enrichment_filter === 'failed' ? 'selected' : ''; ?>>Failed</option>
                             <option value="pending" <?php echo $enrichment_filter === 'pending' ? 'selected' : ''; ?>>Pending</option>
                             <option value="null" <?php echo $enrichment_filter === 'null' ? 'selected' : ''; ?>>Not Enriched</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select name="source" class="form-select" onchange="this.form.submit()">
+                            <option value="">All Sources</option>
+                            <option value="null" <?php echo $source_filter === 'null' ? 'selected' : ''; ?>>No Source</option>
+                            <?php foreach ($available_sources as $source): ?>
+                                <option value="<?php echo htmlspecialchars($source); ?>" <?php echo $source_filter === $source ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars(ucfirst(str_replace('_', ' ', $source))); ?>
+                                </option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
                     <div class="col-md-2">
@@ -666,12 +692,14 @@ async function exportContactsCSV() {
         const type = urlParams.get('type') || '';
         const status = urlParams.get('status') || '';
         const enrichmentStatus = urlParams.get('enrichment_status') || '';
+        const source = urlParams.get('source') || '';
         
         // Build API URL with current filters
         let apiUrl = '/api/v1/contacts/export?format=csv';
         if (type) apiUrl += `&type=${encodeURIComponent(type)}`;
         if (status) apiUrl += `&status=${encodeURIComponent(status)}`;
         if (enrichmentStatus) apiUrl += `&enrichment_status=${encodeURIComponent(enrichmentStatus)}`;
+        if (source) apiUrl += `&source=${encodeURIComponent(source)}`;
         
         // Create a temporary link to trigger download
         const link = document.createElement('a');
@@ -939,12 +967,14 @@ async function loadContactsForBulkEnrichment() {
         const type = urlParams.get('type') || '';
         const status = urlParams.get('status') || '';
         const enrichmentStatus = urlParams.get('enrichment_status') || '';
+        const source = urlParams.get('source') || '';
         
         // Build API URL with current filters
         let apiUrl = '/api/v1/contacts?limit=100'; // Limit to 100 for bulk operations
         if (type) apiUrl += `&type=${encodeURIComponent(type)}`;
         if (status) apiUrl += `&status=${encodeURIComponent(status)}`;
         if (enrichmentStatus) apiUrl += `&enrichment_status=${encodeURIComponent(enrichmentStatus)}`;
+        if (source) apiUrl += `&source=${encodeURIComponent(source)}`;
         
         const response = await fetch(apiUrl, {
             headers: { 'Authorization': `Bearer ${getApiKey()}` }
