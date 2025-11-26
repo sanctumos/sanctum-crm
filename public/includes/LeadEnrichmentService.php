@@ -89,6 +89,15 @@ class LeadEnrichmentService
             throw new Exception('Contact not found');
         }
         
+        // Skip contacts that are marked as not_found (prevents wasting API quota)
+        if ($contact['enrichment_status'] === 'not_found') {
+            return [
+                'success' => false,
+                'contact' => $contact,
+                'message' => 'Contact previously marked as not found in RocketReach database'
+            ];
+        }
+        
         // Check if already enriched recently
         if ($contact['enrichment_status'] === 'enriched' && 
             $contact['enriched_at'] && 
