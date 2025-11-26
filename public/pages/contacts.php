@@ -107,7 +107,8 @@ renderHeader('Contacts');
     <div class="card-body">
         <div class="row align-items-center">
             <div class="col-md-8">
-                <form class="row g-3">
+                <form class="row g-3" method="GET" action="/index.php">
+                    <input type="hidden" name="page" value="contacts">
                     <div class="col-md-4">
                         <select name="type" class="form-select" onchange="this.form.submit()">
                             <option value="">All Types</option>
