@@ -687,6 +687,133 @@ renderHeader('Contacts');
     </div>
 </div>
 
+<!-- Bulk Enrichment Modal -->
+<div class="modal fade" id="bulkEnrichModal" tabindex="-1" aria-labelledby="bulkEnrichModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="bulkEnrichModalLabel">Bulk Enrichment</h5>
+                <button type="button" class="btn-close" id="bulkEnrichCloseBtn" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Selection View (initially visible) -->
+                <div id="bulkEnrichSelectionView">
+                    <div class="mb-3">
+                        <label for="bulkEnrichStrategy" class="form-label">Enrichment Strategy</label>
+                        <select class="form-select" id="bulkEnrichStrategy">
+                            <option value="auto">Auto (Try email, then LinkedIn, then name+company)</option>
+                            <option value="email">Email Only</option>
+                            <option value="linkedin">LinkedIn Only</option>
+                            <option value="name_company">Name + Company</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Select Contacts to Enrich</label>
+                        <div id="contactSelection" style="max-height: 300px; overflow-y: auto; border: 1px solid #dee2e6; padding: 10px; border-radius: 5px;">
+                            <div class="text-center text-muted py-3">
+                                <i class="fas fa-spinner fa-spin me-2"></i>Loading contacts...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Progress View (initially hidden) -->
+                <div id="bulkEnrichProgressView" style="display: none;">
+                    <div class="text-center mb-3">
+                        <div class="spinner-border text-primary mb-2" role="status">
+                            <span class="visually-hidden">Processing...</span>
+                        </div>
+                        <h6>Processing Enrichment...</h6>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Progress</span>
+                            <span id="progressPercent">0%</span>
+                        </div>
+                        <div class="progress" style="height: 25px;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                 role="progressbar" 
+                                 id="progressBar" 
+                                 style="width: 0%"
+                                 aria-valuenow="0" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">0%</div>
+                        </div>
+                    </div>
+                    
+                    <div class="row text-center mb-3">
+                        <div class="col-4">
+                            <div class="card bg-success text-white">
+                                <div class="card-body p-2">
+                                    <div class="h4 mb-0" id="successCount">0</div>
+                                    <small>Successful</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="card bg-danger text-white">
+                                <div class="card-body p-2">
+                                    <div class="h4 mb-0" id="failedCount">0</div>
+                                    <small>Failed</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="card bg-secondary text-white">
+                                <div class="card-body p-2">
+                                    <div class="h4 mb-0" id="remainingCount">0</div>
+                                    <small>Remaining</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Current Contact</label>
+                        <div id="currentContact" class="card bg-light p-2">
+                            <small class="text-muted">Starting...</small>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Recent Results</label>
+                        <div id="recentResults" style="max-height: 200px; overflow-y: auto; border: 1px solid #dee2e6; padding: 10px; border-radius: 5px;">
+                            <small class="text-muted">No results yet...</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Completion View (initially hidden) -->
+                <div id="bulkEnrichCompletionView" style="display: none;">
+                    <div class="alert alert-success text-center">
+                        <i class="fas fa-check-circle fa-2x mb-2"></i>
+                        <h5>Enrichment Complete!</h5>
+                        <p class="mb-0">
+                            <strong id="finalSuccessCount">0</strong> successful, 
+                            <strong id="finalFailedCount">0</strong> failed
+                        </p>
+                    </div>
+                    <div id="completionErrors" class="mb-3" style="display: none;">
+                        <label class="form-label">Errors</label>
+                        <div id="errorList" style="max-height: 150px; overflow-y: auto; border: 1px solid #dee2e6; padding: 10px; border-radius: 5px;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="bulkEnrichCancelBtn" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="bulkEnrichStartBtn" onclick="startBulkEnrichment()">
+                    <i class="fas fa-magic me-2"></i>Start Enrichment
+                </button>
+                <button type="button" class="btn btn-primary" id="bulkEnrichCloseBtn2" onclick="closeBulkEnrichModal()" style="display: none;">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 // Export CSV function
 async function exportContactsCSV() {
@@ -1015,34 +1142,168 @@ async function startBulkEnrichment() {
     }
 
     const strategy = document.getElementById('bulkEnrichStrategy').value;
-
-    try {
-        const response = await fetch('/api/v1/contacts/bulk-enrich', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${getApiKey()}`
-            },
-            body: JSON.stringify({
-                contact_ids: selectedContacts,
-                strategy: strategy
-            })
-        });
-
-        if (response.ok) {
-            const result = await response.json();
-            showSuccess(`Bulk enrichment completed: ${result.successful} successful, ${result.failed} failed`);
-
-            // Close modal and refresh page
-            bootstrap.Modal.getInstance(document.getElementById('bulkEnrichModal')).hide();
-            setTimeout(() => location.reload(), 1000);
-        } else {
-            const error = await response.json();
-            showError(error.error || 'Bulk enrichment failed');
+    const total = selectedContacts.length;
+    
+    // Switch to progress view
+    document.getElementById('bulkEnrichSelectionView').style.display = 'none';
+    document.getElementById('bulkEnrichProgressView').style.display = 'block';
+    document.getElementById('bulkEnrichStartBtn').style.display = 'none';
+    document.getElementById('bulkEnrichCancelBtn').style.display = 'none';
+    document.getElementById('bulkEnrichCloseBtn').style.display = 'none';
+    
+    // Prevent modal from closing
+    const modal = bootstrap.Modal.getInstance(document.getElementById('bulkEnrichModal'));
+    modal._config.backdrop = 'static';
+    modal._config.keyboard = false;
+    
+    // Initialize counters
+    let successful = 0;
+    let failed = 0;
+    const errors = [];
+    
+    // Update initial counts
+    updateProgressCounts(0, 0, total);
+    
+    // Process contacts one by one
+    for (let i = 0; i < selectedContacts.length; i++) {
+        const contactId = selectedContacts[i];
+        const current = i + 1;
+        const percent = Math.round((current / total) * 100);
+        
+        // Update progress
+        updateProgress(current, total, percent);
+        
+        // Get contact name for display
+        const contactName = getContactName(contactId, selectedContacts);
+        updateCurrentContact(contactName, current, total);
+        
+        try {
+            const response = await fetch(`/api/v1/contacts/${contactId}/enrich`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${getApiKey()}`
+                },
+                body: JSON.stringify({ strategy: strategy })
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                successful++;
+                addProgressResult(contactName, true, null);
+            } else {
+                const error = await response.json();
+                failed++;
+                const errorMsg = error.error || 'Enrichment failed';
+                errors.push({ contactId, contactName, error: errorMsg });
+                addProgressResult(contactName, false, errorMsg);
+            }
+        } catch (error) {
+            failed++;
+            const errorMsg = error.message || 'Network error';
+            errors.push({ contactId, contactName, error: errorMsg });
+            addProgressResult(contactName, false, errorMsg);
         }
-    } catch (error) {
-        showError('Network error: ' + error.message);
+        
+        // Update counts
+        updateProgressCounts(successful, failed, total - current);
     }
+    
+    // Show completion view
+    showCompletionView(successful, failed, errors);
+}
+
+function getContactName(contactId, allContacts) {
+    // Try to get name from the checkbox label
+    const checkbox = document.querySelector(`#contactSelection input[value="${contactId}"]`);
+    if (checkbox) {
+        const label = checkbox.closest('.form-check')?.querySelector('label');
+        if (label) {
+            return label.textContent.trim().split('(')[0].trim();
+        }
+    }
+    return `Contact #${contactId}`;
+}
+
+function updateProgress(current, total, percent) {
+    document.getElementById('progressBar').style.width = percent + '%';
+    document.getElementById('progressBar').setAttribute('aria-valuenow', percent);
+    document.getElementById('progressBar').textContent = percent + '%';
+    document.getElementById('progressPercent').textContent = percent + '%';
+}
+
+function updateCurrentContact(contactName, current, total) {
+    document.getElementById('currentContact').innerHTML = `
+        <strong>${contactName}</strong>
+        <br><small class="text-muted">Contact ${current} of ${total}</small>
+    `;
+}
+
+function updateProgressCounts(successful, failed, remaining) {
+    document.getElementById('successCount').textContent = successful;
+    document.getElementById('failedCount').textContent = failed;
+    document.getElementById('remainingCount').textContent = remaining;
+}
+
+function addProgressResult(contactName, success, error) {
+    const resultsDiv = document.getElementById('recentResults');
+    const resultItem = document.createElement('div');
+    resultItem.className = `mb-2 p-2 rounded ${success ? 'bg-success bg-opacity-10' : 'bg-danger bg-opacity-10'}`;
+    resultItem.innerHTML = `
+        <div class="d-flex justify-content-between align-items-center">
+            <span><i class="fas fa-${success ? 'check-circle text-success' : 'times-circle text-danger'} me-2"></i>${contactName}</span>
+            ${error ? `<small class="text-danger">${error}</small>` : ''}
+        </div>
+    `;
+    resultsDiv.insertBefore(resultItem, resultsDiv.firstChild);
+    
+    // Keep only last 20 results
+    while (resultsDiv.children.length > 20) {
+        resultsDiv.removeChild(resultsDiv.lastChild);
+    }
+}
+
+function showCompletionView(successful, failed, errors) {
+    document.getElementById('bulkEnrichProgressView').style.display = 'none';
+    document.getElementById('bulkEnrichCompletionView').style.display = 'block';
+    document.getElementById('finalSuccessCount').textContent = successful;
+    document.getElementById('finalFailedCount').textContent = failed;
+    
+    if (errors.length > 0) {
+        document.getElementById('completionErrors').style.display = 'block';
+        const errorList = document.getElementById('errorList');
+        errorList.innerHTML = errors.map(e => `
+            <div class="mb-2 p-2 bg-danger bg-opacity-10 rounded">
+                <strong>${e.contactName}</strong><br>
+                <small class="text-danger">${e.error}</small>
+            </div>
+        `).join('');
+    }
+    
+    document.getElementById('bulkEnrichCloseBtn2').style.display = 'block';
+    
+    // Re-enable modal closing
+    const modal = bootstrap.Modal.getInstance(document.getElementById('bulkEnrichModal'));
+    modal._config.backdrop = true;
+    modal._config.keyboard = true;
+}
+
+function closeBulkEnrichModal() {
+    const modal = bootstrap.Modal.getInstance(document.getElementById('bulkEnrichModal'));
+    modal.hide();
+    // Reset modal state
+    setTimeout(() => {
+        document.getElementById('bulkEnrichSelectionView').style.display = 'block';
+        document.getElementById('bulkEnrichProgressView').style.display = 'none';
+        document.getElementById('bulkEnrichCompletionView').style.display = 'none';
+        document.getElementById('bulkEnrichStartBtn').style.display = 'block';
+        document.getElementById('bulkEnrichCancelBtn').style.display = 'block';
+        document.getElementById('bulkEnrichCloseBtn').style.display = 'block';
+        document.getElementById('bulkEnrichCloseBtn2').style.display = 'none';
+        document.getElementById('progressBar').style.width = '0%';
+        document.getElementById('recentResults').innerHTML = '<small class="text-muted">No results yet...</small>';
+        location.reload();
+    }, 300);
 }
 
 // Utility functions
