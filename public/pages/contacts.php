@@ -42,6 +42,17 @@ if (isset($_GET['view'])) {
 }
 $view_mode = $_SESSION['contacts_view_mode'] ?? 'cards'; // Default to cards view
 
+// Session-based per_page persistence
+if (isset($_GET['per_page'])) {
+    $_SESSION['contacts_per_page'] = (int)$_GET['per_page'];
+}
+$per_page = $_SESSION['contacts_per_page'] ?? 100; // Default to 100
+
+// Pagination calculation
+$page = isset($_GET['page_num']) ? (int)$_GET['page_num'] : 1;
+$page = max(1, $page); // Ensure page is at least 1
+$offset = ($page - 1) * $per_page;
+
 // Build query
 $where = "1=1";
 $params = [];
@@ -56,9 +67,19 @@ if ($status_filter) {
     $params[] = $status_filter;
 }
 
-// Get contacts
-$sql = "SELECT * FROM contacts WHERE $where ORDER BY created_at DESC";
-$contacts = $db->fetchAll($sql, $params);
+// Get total count for pagination
+$count_sql = "SELECT COUNT(*) as total FROM contacts WHERE $where";
+$count_params = $params; // Copy params for count query
+$total_result = $db->fetchOne($count_sql, $count_params);
+$total_contacts = $total_result['total'] ?? 0;
+$total_pages = ceil($total_contacts / $per_page);
+
+// Get contacts with pagination
+$sql = "SELECT * FROM contacts WHERE $where ORDER BY created_at DESC LIMIT ? OFFSET ?";
+$query_params = $params; // Copy params for main query
+$query_params[] = $per_page;
+$query_params[] = $offset;
+$contacts = $db->fetchAll($sql, $query_params);
 
 // Render the page using the template system
 renderHeader('Contacts');
@@ -303,6 +324,101 @@ renderHeader('Contacts');
 </div>
 <?php endif; ?>
 
+<!-- Pagination Controls -->
+<?php if ($total_pages > 1 || !empty($contacts)): ?>
+<div class="card mt-4">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <p class="mb-0 text-muted">
+                    Showing <?php echo count($contacts); ?> of <?php echo $total_contacts; ?> contacts
+                </p>
+            </div>
+            <div class="col-md-6 text-end">
+                <div class="d-flex align-items-center justify-content-end gap-3">
+                    <label for="perPageSelect" class="mb-0 text-muted">Show per page:</label>
+                    <select id="perPageSelect" class="form-select form-select-sm" style="width: auto;" onchange="changePerPage(this.value)">
+                        <option value="10" <?php echo $per_page == 10 ? 'selected' : ''; ?>>10</option>
+                        <option value="50" <?php echo $per_page == 50 ? 'selected' : ''; ?>>50</option>
+                        <option value="100" <?php echo $per_page == 100 ? 'selected' : ''; ?>>100</option>
+                        <option value="500" <?php echo $per_page == 500 ? 'selected' : ''; ?>>500</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <?php if ($total_pages > 1): ?>
+        <nav aria-label="Contacts pagination" class="mt-3">
+            <?php
+            // Build pagination parameters
+            $pagination_params = $_GET;
+            $pagination_params['page'] = 'contacts';
+            
+            // Calculate page range to show (max 10 pages)
+            $start_page = max(1, $page - 4);
+            $end_page = min($total_pages, $page + 5);
+            if ($end_page - $start_page < 9) {
+                if ($start_page == 1) {
+                    $end_page = min($total_pages, $start_page + 9);
+                } else {
+                    $start_page = max(1, $end_page - 9);
+                }
+            }
+            ?>
+            <ul class="pagination justify-content-center mb-0">
+                <!-- Previous button -->
+                <li class="page-item <?php echo $page <= 1 ? 'disabled' : ''; ?>">
+                    <a class="page-link" href="/index.php?<?php echo http_build_query(array_merge($pagination_params, ['page_num' => max(1, $page - 1)])); ?>">
+                        <i class="fas fa-chevron-left"></i> Previous
+                    </a>
+                </li>
+                
+                <!-- First page -->
+                <?php if ($start_page > 1): ?>
+                    <li class="page-item">
+                        <a class="page-link" href="/index.php?<?php echo http_build_query(array_merge($pagination_params, ['page_num' => 1])); ?>">1</a>
+                    </li>
+                    <?php if ($start_page > 2): ?>
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                    <?php endif; ?>
+                <?php endif; ?>
+                
+                <!-- Page numbers -->
+                <?php for ($i = $start_page; $i <= $end_page; $i++): ?>
+                    <li class="page-item <?php echo $i == $page ? 'active' : ''; ?>">
+                        <a class="page-link" href="/index.php?<?php echo http_build_query(array_merge($pagination_params, ['page_num' => $i])); ?>">
+                            <?php echo $i; ?>
+                        </a>
+                    </li>
+                <?php endfor; ?>
+                
+                <!-- Last page -->
+                <?php if ($end_page < $total_pages): ?>
+                    <?php if ($end_page < $total_pages - 1): ?>
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                    <?php endif; ?>
+                    <li class="page-item">
+                        <a class="page-link" href="/index.php?<?php echo http_build_query(array_merge($pagination_params, ['page_num' => $total_pages])); ?>"><?php echo $total_pages; ?></a>
+                    </li>
+                <?php endif; ?>
+                
+                <!-- Next button -->
+                <li class="page-item <?php echo $page >= $total_pages ? 'disabled' : ''; ?>">
+                    <a class="page-link" href="/index.php?<?php echo http_build_query(array_merge($pagination_params, ['page_num' => min($total_pages, $page + 1)])); ?>">
+                        Next <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        <?php endif; ?>
+    </div>
+</div>
+<?php endif; ?>
+
 <?php if (empty($contacts)): ?>
 <div class="text-center py-5">
     <i class="fas fa-users fa-3x text-muted mb-3"></i>
@@ -507,6 +623,15 @@ renderHeader('Contacts');
 </div>
 
 <script>
+// Pagination function
+function changePerPage(value) {
+    const urlParams = new URLSearchParams(window.location.search);
+    urlParams.set('page', 'contacts'); // Ensure page parameter is set
+    urlParams.set('per_page', value);
+    urlParams.delete('page_num'); // Reset to page 1 when changing per_page
+    window.location.href = '/index.php?' + urlParams.toString();
+}
+
 // Handle form submissions
 document.getElementById('addContactForm').addEventListener('submit', function(e) {
     e.preventDefault();
