@@ -48,8 +48,19 @@ if (isset($_GET['per_page'])) {
 }
 $per_page = $_SESSION['contacts_per_page'] ?? 100; // Default to 100
 
+// Reset to page 1 if filters changed
+$filter_changed = false;
+if (isset($_GET['type']) || isset($_GET['status']) || isset($_GET['enrichment_status']) || isset($_GET['source'])) {
+    $filter_changed = true;
+}
+
 // Pagination calculation
-$page = isset($_GET['page_num']) ? (int)$_GET['page_num'] : 1;
+// Reset to page 1 if filters changed, otherwise use page_num from URL
+if ($filter_changed) {
+    $page = 1;
+} else {
+    $page = isset($_GET['page_num']) ? (int)$_GET['page_num'] : 1;
+}
 $page = max(1, $page); // Ensure page is at least 1
 $offset = ($page - 1) * $per_page;
 
