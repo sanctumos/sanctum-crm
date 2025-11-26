@@ -414,6 +414,10 @@ renderHeader('Contacts');
             // Build pagination parameters
             $pagination_params = $_GET;
             $pagination_params['page'] = 'contacts';
+            // Ensure view mode is preserved in pagination links
+            if ($view_mode) {
+                $pagination_params['view'] = $view_mode;
+            }
             
             // Calculate page range to show (max 10 pages)
             $start_page = max(1, $page - 4);
