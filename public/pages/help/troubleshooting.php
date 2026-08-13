@@ -1,17 +1,17 @@
 <?php
 /**
  * Troubleshooting Help Page
- * Best Jobs in TA - Troubleshooting guide
+ * Sanctum CRM - Troubleshooting guide
  */
 ?>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h4><i class="fas fa-tools me-2"></i>Troubleshooting Guide</h4>
+    <h4><i class="bi bi-tools me-2"></i>Troubleshooting Guide</h4>
     <span class="badge bg-danger">Common Issues</span>
 </div>
 
 <div class="alert alert-warning">
-    <i class="fas fa-exclamation-triangle me-2"></i>
+    <i class="bi bi-exclamation-triangle me-2"></i>
     <strong>Having issues?</strong> Check this guide for common problems and solutions.
 </div>
 
@@ -19,7 +19,7 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-header bg-danger text-white">
-                <h5 class="mb-0"><i class="fas fa-exclamation-circle me-2"></i>CSV Import Issues</h5>
+                <h5 class="mb-0"><i class="bi bi-exclamation-circle me-2"></i>CSV Import Issues</h5>
             </div>
             <div class="card-body">
                 <h6>Import Not Working</h6>
@@ -52,7 +52,7 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-header bg-warning text-dark">
-                <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>API Issues</h5>
+                <h5 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>API Issues</h5>
             </div>
             <div class="card-body">
                 <h6>Authentication Errors</h6>
@@ -87,7 +87,7 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-header bg-info text-white">
-                <h5 class="mb-0"><i class="fas fa-link me-2"></i>Webhook Issues</h5>
+                <h5 class="mb-0"><i class="bi bi-link-45deg me-2"></i>Webhook Issues</h5>
             </div>
             <div class="card-body">
                 <h6>Webhook Not Firing</h6>
@@ -120,7 +120,7 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-header bg-success text-white">
-                <h5 class="mb-0"><i class="fas fa-user-plus me-2"></i>Enrichment Issues</h5>
+                <h5 class="mb-0"><i class="bi bi-person-plus me-2"></i>Enrichment Issues</h5>
             </div>
             <div class="card-body">
                 <h6>Enrichment Not Working</h6>
@@ -155,17 +155,13 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header bg-secondary text-white">
-                <h5 class="mb-0"><i class="fas fa-server me-2"></i>Server Configuration Issues</h5>
+                <h5 class="mb-0"><i class="bi bi-hdd-network me-2"></i>Server Configuration Issues</h5>
             </div>
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-6">
                         <h6>Nginx Configuration</h6>
-                        <p>If API calls return 404 errors, check your Nginx configuration:</p>
-                        <pre class="bg-light p-2"><code># API routing: send all /api/v1/* requests to api/v1/index.php
-location ~ ^/api/v1/ {
-    try_files $uri $uri/ /api/v1/index.php?$query_string;
-}</code></pre>
+                        <p>Production uses the same stock vhost pattern as other Sanctum apps: <code>try_files $uri $uri/ =404;</code> and PHP only for <code>.php</code> files. The API is invoked as <code>/api/v1/index.php?path=/resource/…</code> (see Help → API). Custom rewrite blocks are not required.</p>
                         
                         <h6 class="mt-3">PHP Configuration</h6>
                         <ul>
@@ -202,7 +198,7 @@ location ~ ^/api/v1/ {
     <div class="col-12">
         <div class="card">
             <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="fas fa-bug me-2"></i>Debugging Tools</h5>
+                <h5 class="mb-0"><i class="bi bi-bug me-2"></i>Debugging Tools</h5>
             </div>
             <div class="card-body">
                 <div class="row">
@@ -243,7 +239,7 @@ location ~ ^/api/v1/ {
     <div class="col-12">
         <div class="card">
             <div class="card-header bg-warning text-dark">
-                <h5 class="mb-0"><i class="fas fa-life-ring me-2"></i>Getting Help</h5>
+                <h5 class="mb-0"><i class="bi bi-life-preserver me-2"></i>Getting Help</h5>
             </div>
             <div class="card-body">
                 <div class="row">

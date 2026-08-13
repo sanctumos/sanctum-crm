@@ -1,32 +1,13 @@
 <?php
 /**
- * Sanctum CRM
- * 
- * This file is part of Sanctum CRM.
- * 
- * Copyright (C) 2025 Sanctum OS
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published
- * by the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
-
-/**
  * Contacts Page
  * Sanctum CRM - Contact Management
  */
 
 // Get database instance
 $db = Database::getInstance();
+require_once __DIR__ . '/../includes/ContactTagService.php';
+$tagService = new ContactTagService($db);
 
 // Handle actions
 $action = $_GET['action'] ?? 'list';
@@ -37,11 +18,8 @@ $type_filter = $_GET['type'] ?? '';
 $status_filter = $_GET['status'] ?? '';
 $enrichment_filter = $_GET['enrichment_status'] ?? '';
 $source_filter = $_GET['source'] ?? '';
-
-// Get unique sources from database
-$sources_sql = "SELECT DISTINCT source FROM contacts WHERE source IS NOT NULL AND source != '' ORDER BY source";
-$sources_result = $db->fetchAll($sources_sql);
-$available_sources = array_column($sources_result, 'source');
+$tag_filter_raw = $_GET['tag'] ?? '';
+$tag_filter = $tag_filter_raw !== '' ? $tagService->normalizeTag($tag_filter_raw) : '';
 
 // Handle view mode with session persistence
 if (isset($_GET['view'])) {
@@ -49,24 +27,27 @@ if (isset($_GET['view'])) {
 }
 $view_mode = $_SESSION['contacts_view_mode'] ?? 'cards'; // Default to cards view
 
-// Session-based per_page persistence
+// Detect if filters are being applied (any filter parameter is present in URL)
+// This is used to reset to page 1 only when filters are first applied, not when paginating
+$filters_applied = !empty($type_filter) || !empty($status_filter) || !empty($enrichment_filter) || !empty($source_filter) || $tag_filter !== '';
+
+// Handle pagination with session persistence
 if (isset($_GET['per_page'])) {
     $_SESSION['contacts_per_page'] = (int)$_GET['per_page'];
 }
 $per_page = $_SESSION['contacts_per_page'] ?? 100; // Default to 100
 
-// Reset to page 1 if filters changed
-$filter_changed = false;
-if (isset($_GET['type']) || isset($_GET['status']) || isset($_GET['enrichment_status']) || isset($_GET['source'])) {
-    $filter_changed = true;
-}
-
-// Pagination calculation
-// Reset to page 1 if filters changed, otherwise use page_num from URL
-if ($filter_changed) {
+// Use page_num from URL if present, otherwise reset to page 1 if filters are being applied
+if (isset($_GET['page_num'])) {
+    // Always respect page_num from URL, even with filters
+    // This allows pagination to work correctly when filters are active
+    $page = (int)$_GET['page_num'];
+} elseif ($filters_applied) {
+    // Filters are being applied but no page_num, reset to page 1
     $page = 1;
 } else {
-    $page = isset($_GET['page_num']) ? (int)$_GET['page_num'] : 1;
+    // No filters and no page_num, default to page 1
+    $page = 1;
 }
 $page = max(1, $page); // Ensure page is at least 1
 $offset = ($page - 1) * $per_page;
@@ -87,7 +68,7 @@ if ($status_filter) {
 
 if ($enrichment_filter) {
     if ($enrichment_filter === 'null') {
-        $where .= " AND (enrichment_status IS NULL OR enrichment_status = '')";
+        $where .= " AND COALESCE(NULLIF(TRIM(enrichment_status), ''), '') != 'enriched'";
     } else {
         $where .= " AND enrichment_status = ?";
         $params[] = $enrichment_filter;
@@ -103,7 +84,12 @@ if ($source_filter) {
     }
 }
 
-// Get total count for pagination
+if ($tag_filter !== '') {
+    $where .= " AND contacts.id IN (SELECT contact_id FROM contact_tags WHERE tag = ?)";
+    $params[] = $tag_filter;
+}
+
+// Get total count for pagination (use copy of params)
 $count_sql = "SELECT COUNT(*) as total FROM contacts WHERE $where";
 $count_params = $params; // Copy params for count query
 $total_result = $db->fetchOne($count_sql, $count_params);
@@ -117,15 +103,33 @@ $query_params[] = $per_page;
 $query_params[] = $offset;
 $contacts = $db->fetchAll($sql, $query_params);
 
+$tagMap = $tagService->listTagsForContactIds(array_column($contacts, 'id'));
+foreach ($contacts as &$contact) {
+    $contact['tags'] = $tagMap[(int) $contact['id']] ?? [];
+}
+unset($contact);
+
+// Get unique sources for the dropdown
+$sources_sql = "SELECT DISTINCT source FROM contacts WHERE source IS NOT NULL AND source != '' ORDER BY source";
+$sources_result = $db->fetchAll($sources_sql);
+$available_sources = array_column($sources_result, 'source');
+
+$tags_result = $db->fetchAll("SELECT DISTINCT tag FROM contact_tags ORDER BY tag");
+$available_tags = array_column($tags_result, 'tag');
+
 // Render the page using the template system
 renderHeader('Contacts');
+ob_start();
+?>
+<a href="/?page=import_contacts" class="btn btn-success"><i class="bi bi-file-earmark-arrow-up me-1"></i>Import CSV</a>
+<button class="btn btn-info" type="button" onclick="exportContactsCSV()"><i class="bi bi-download me-1"></i>Export CSV</button>
+<button class="btn btn-warning" type="button" onclick="bulkEnrichContacts()"><i class="bi bi-magic me-1"></i>Bulk Enrich</button>
+<button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#addContactModal"><i class="bi bi-plus-lg me-1"></i>Add Contact</button>
+<?php
+renderPageHeader('Contacts', 'Leads and customers', ob_get_clean());
 ?>
 
 <style>
-    .card {
-        border-radius: 15px;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-    }
     .table {
         border-radius: 10px;
         overflow: hidden;
@@ -135,18 +139,12 @@ renderHeader('Contacts');
         padding: 6px 12px;
         font-size: 0.875rem;
     }
-    .contact-card {
-        transition: transform 0.3s ease;
-    }
-    .contact-card:hover {
-        transform: translateY(-2px);
-    }
     .view-toggle .btn {
         border-radius: 6px;
     }
     .view-toggle .btn.active {
-        background-color: #0d6efd;
-        border-color: #0d6efd;
+        background-color: var(--crm-accent, #0d6efd);
+        border-color: var(--crm-accent, #0d6efd);
         color: white;
     }
     .table th {
@@ -159,152 +157,259 @@ renderHeader('Contacts');
     }
 </style>
 
-<!-- Filters and Actions -->
+<!-- Filters -->
+<form class="filter-bar" method="GET" action="/index.php" role="search">
+    <input type="hidden" name="page" value="contacts">
+    <?php if (!empty($view_mode)): ?>
+        <input type="hidden" name="view" value="<?php echo htmlspecialchars($view_mode); ?>">
+    <?php endif; ?>
+    <div class="filter-bar__field">
+        <select name="type" class="form-select" aria-label="Contact type" onchange="this.form.submit()">
+            <option value="">All Types</option>
+            <option value="lead" <?php echo $type_filter === 'lead' ? 'selected' : ''; ?>>Leads</option>
+            <option value="customer" <?php echo $type_filter === 'customer' ? 'selected' : ''; ?>>Customers</option>
+        </select>
+    </div>
+    <div class="filter-bar__field">
+        <select name="status" class="form-select" aria-label="Contact status" onchange="this.form.submit()">
+            <option value="">All Statuses</option>
+            <option value="new" <?php echo $status_filter === 'new' ? 'selected' : ''; ?>>New</option>
+            <option value="qualified" <?php echo $status_filter === 'qualified' ? 'selected' : ''; ?>>Qualified</option>
+            <option value="active" <?php echo $status_filter === 'active' ? 'selected' : ''; ?>>Active</option>
+            <option value="inactive" <?php echo $status_filter === 'inactive' ? 'selected' : ''; ?>>Inactive</option>
+        </select>
+    </div>
+    <div class="filter-bar__field">
+        <select name="enrichment_status" class="form-select" aria-label="Enrichment status" onchange="this.form.submit()">
+            <option value="">All Enrichment</option>
+            <option value="enriched" <?php echo $enrichment_filter === 'enriched' ? 'selected' : ''; ?>>Enriched</option>
+            <option value="not_found" <?php echo $enrichment_filter === 'not_found' ? 'selected' : ''; ?>>Not Found</option>
+            <option value="failed" <?php echo $enrichment_filter === 'failed' ? 'selected' : ''; ?>>Failed</option>
+            <option value="pending" <?php echo $enrichment_filter === 'pending' ? 'selected' : ''; ?>>Pending</option>
+            <option value="null" <?php echo $enrichment_filter === 'null' ? 'selected' : ''; ?>>Not Enriched</option>
+        </select>
+    </div>
+    <div class="filter-bar__field">
+        <select name="source" class="form-select" aria-label="Source" onchange="this.form.submit()">
+            <option value="">All Sources</option>
+            <option value="null" <?php echo $source_filter === 'null' ? 'selected' : ''; ?>>No Source</option>
+            <?php foreach ($available_sources as $source): ?>
+                <option value="<?php echo htmlspecialchars($source); ?>" <?php echo $source_filter === $source ? 'selected' : ''; ?>>
+                    <?php echo htmlspecialchars(ucfirst(str_replace('_', ' ', $source))); ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+    <div class="filter-bar__field">
+        <select name="tag" class="form-select" aria-label="Tag" onchange="this.form.submit()">
+            <option value="">All Tags</option>
+            <?php foreach ($available_tags as $tagOption): ?>
+                <option value="<?php echo htmlspecialchars($tagOption); ?>" <?php echo $tag_filter === $tagOption ? 'selected' : ''; ?>>
+                    <?php echo htmlspecialchars(crm_format_tag_label($tagOption)); ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+    <div class="filter-bar__actions">
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-funnel-fill me-1"></i>Filter
+        </button>
+        <a href="/index.php?page=contacts<?php echo $view_mode ? '&view=' . urlencode($view_mode) : ''; ?>" class="btn btn-outline-secondary" title="Clear filters">
+            <i class="bi bi-x-lg"></i><span class="d-none d-sm-inline ms-1">Clear</span>
+        </a>
+        <div class="btn-group view-toggle" role="group" aria-label="View mode">
+            <?php
+            $view_params = $_GET;
+            $view_params['page'] = 'contacts';
+            ?>
+            <a href="/index.php?<?php echo http_build_query(array_merge($view_params, ['view' => 'cards'])); ?>"
+               class="btn btn-outline-secondary <?php echo $view_mode === 'cards' ? 'active' : ''; ?>"
+               aria-label="Cards view">
+                <i class="bi bi-grid-3x3-gap-fill"></i>
+            </a>
+            <a href="/index.php?<?php echo http_build_query(array_merge($view_params, ['view' => 'list'])); ?>"
+               class="btn btn-outline-secondary <?php echo $view_mode === 'list' ? 'active' : ''; ?>"
+               aria-label="List view">
+                <i class="bi bi-list-ul"></i>
+            </a>
+        </div>
+    </div>
+</form>
+
+<!-- Pagination Controls -->
+<?php if ($total_contacts > 0): ?>
 <div class="card mb-4">
     <div class="card-body">
         <div class="row align-items-center">
-            <div class="col-md-8">
-                <form class="row g-3" method="GET" action="/index.php">
-                    <input type="hidden" name="page" value="contacts">
-                    <div class="col-md-2">
-                        <select name="type" class="form-select" onchange="this.form.submit()">
-                            <option value="">All Types</option>
-                            <option value="lead" <?php echo $type_filter === 'lead' ? 'selected' : ''; ?>>Leads</option>
-                            <option value="customer" <?php echo $type_filter === 'customer' ? 'selected' : ''; ?>>Customers</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <select name="status" class="form-select" onchange="this.form.submit()">
-                            <option value="">All Statuses</option>
-                            <option value="new" <?php echo $status_filter === 'new' ? 'selected' : ''; ?>>New</option>
-                            <option value="qualified" <?php echo $status_filter === 'qualified' ? 'selected' : ''; ?>>Qualified</option>
-                            <option value="active" <?php echo $status_filter === 'active' ? 'selected' : ''; ?>>Active</option>
-                            <option value="inactive" <?php echo $status_filter === 'inactive' ? 'selected' : ''; ?>>Inactive</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <select name="enrichment_status" class="form-select" onchange="this.form.submit()">
-                            <option value="">All Enrichment</option>
-                            <option value="enriched" <?php echo $enrichment_filter === 'enriched' ? 'selected' : ''; ?>>Enriched</option>
-                            <option value="not_found" <?php echo $enrichment_filter === 'not_found' ? 'selected' : ''; ?>>Not Found</option>
-                            <option value="failed" <?php echo $enrichment_filter === 'failed' ? 'selected' : ''; ?>>Failed</option>
-                            <option value="pending" <?php echo $enrichment_filter === 'pending' ? 'selected' : ''; ?>>Pending</option>
-                            <option value="null" <?php echo $enrichment_filter === 'null' ? 'selected' : ''; ?>>Not Enriched</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <select name="source" class="form-select" onchange="this.form.submit()">
-                            <option value="">All Sources</option>
-                            <option value="null" <?php echo $source_filter === 'null' ? 'selected' : ''; ?>>No Source</option>
-                            <?php foreach ($available_sources as $source): ?>
-                                <option value="<?php echo htmlspecialchars($source); ?>" <?php echo $source_filter === $source ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars(ucfirst(str_replace('_', ' ', $source))); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <button type="submit" class="btn btn-outline-primary">
-                            <i class="fas fa-filter me-2"></i>Filter
-                        </button>
-                        <a href="/index.php?page=contacts" class="btn btn-outline-secondary">
-                            <i class="fas fa-times me-2"></i>Clear
-                        </a>
-                    </div>
-                </form>
-            </div>
-            <div class="col-md-4 text-end">
-                <div class="d-flex align-items-center justify-content-end gap-2">
-                    <div class="btn-group me-3 view-toggle" role="group" aria-label="View mode">
-                        <?php
-                        $view_params = $_GET;
-                        $view_params['page'] = 'contacts'; // Ensure page parameter is set
-                        ?>
-                        <a href="/index.php?<?php echo http_build_query(array_merge($view_params, ['view' => 'cards'])); ?>" 
-                           class="btn btn-outline-secondary <?php echo $view_mode === 'cards' ? 'active' : ''; ?>">
-                            <i class="fas fa-th-large"></i>
-                        </a>
-                        <a href="/index.php?<?php echo http_build_query(array_merge($view_params, ['view' => 'list'])); ?>" 
-                           class="btn btn-outline-secondary <?php echo $view_mode === 'list' ? 'active' : ''; ?>">
-                            <i class="fas fa-list"></i>
-                        </a>
-                    </div>
-                    <a href="/?page=import_contacts" class="btn btn-success">
-                        <i class="fas fa-file-import me-2"></i>Import CSV
-                    </a>
-                    <button class="btn btn-info" onclick="exportContactsCSV()">
-                        <i class="fas fa-download me-2"></i>Export CSV
-                    </button>
-                    <button class="btn btn-warning" onclick="bulkEnrichContacts()">
-                        <i class="fas fa-magic me-2"></i>Bulk Enrich
-                    </button>
-                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addContactModal">
-                        <i class="fas fa-plus me-2"></i>Add Contact
-                    </button>
+            <div class="col-md-6">
+                <div class="d-flex align-items-center gap-3">
+                    <label for="perPageSelect" class="mb-0">Show:</label>
+                    <select id="perPageSelect" class="form-select form-select-sm" style="width: auto;" onchange="changePerPage(this.value)">
+                        <option value="10" <?php echo $per_page == 10 ? 'selected' : ''; ?>>10</option>
+                        <option value="50" <?php echo $per_page == 50 ? 'selected' : ''; ?>>50</option>
+                        <option value="100" <?php echo $per_page == 100 ? 'selected' : ''; ?>>100</option>
+                        <option value="500" <?php echo $per_page == 500 ? 'selected' : ''; ?>>500</option>
+                    </select>
+                    <span class="text-muted">
+                        Showing <?php echo count($contacts); ?> of <?php echo number_format($total_contacts); ?> contacts
+                    </span>
                 </div>
+            </div>
+            <div class="col-md-6">
+                <?php if ($total_pages > 1): ?>
+                <nav aria-label="Contacts pagination">
+                    <ul class="pagination justify-content-end mb-0">
+                        <!-- Previous button -->
+                        <?php
+                        // Build pagination params from current filters and view mode
+                        // This ensures only relevant, non-empty parameters are included
+                        $pagination_params = [];
+                        $pagination_params['page'] = 'contacts'; // Ensure page parameter is set
+                        
+                        // Preserve view mode
+                        if ($view_mode) {
+                            $pagination_params['view'] = $view_mode;
+                        }
+                        
+                        // Preserve filter parameters (only if they have non-empty values)
+                        if (!empty($type_filter) && $type_filter !== '') {
+                            $pagination_params['type'] = $type_filter;
+                        }
+                        if (!empty($status_filter) && $status_filter !== '') {
+                            $pagination_params['status'] = $status_filter;
+                        }
+                        if (!empty($enrichment_filter) && $enrichment_filter !== '') {
+                            $pagination_params['enrichment_status'] = $enrichment_filter;
+                        }
+                        // Special handling for 'null' source filter to ensure it's preserved if explicitly set
+                        if ($source_filter === 'null') {
+                            $pagination_params['source'] = 'null';
+                        } elseif (!empty($source_filter) && $source_filter !== '') {
+                            $pagination_params['source'] = $source_filter;
+                        }
+                        if ($tag_filter !== '') {
+                            $pagination_params['tag'] = $tag_filter;
+                        }
+                        
+                        // Preserve per_page if set and valid
+                        if (isset($_GET['per_page']) && !empty($_GET['per_page'])) {
+                            $pagination_params['per_page'] = (int)$_GET['per_page'];
+                        }
+                        ?>
+                        <li class="page-item <?php echo $page <= 1 ? 'disabled' : ''; ?>">
+                            <a class="page-link" href="/index.php?<?php echo http_build_query(array_merge($pagination_params, ['page_num' => max(1, $page - 1)])); ?>">
+                                <i class="bi bi-chevron-left"></i> Previous
+                            </a>
+                        </li>
+                        
+                        <!-- Page numbers -->
+                        <?php
+                        $start_page = max(1, $page - 2);
+                        $end_page = min($total_pages, $page + 2);
+                        
+                        if ($start_page > 1): ?>
+                            <li class="page-item">
+                                <a class="page-link" href="/index.php?<?php echo http_build_query(array_merge($pagination_params, ['page_num' => 1])); ?>">1</a>
+                            </li>
+                            <?php if ($start_page > 2): ?>
+                                <li class="page-item disabled">
+                                    <span class="page-link">...</span>
+                                </li>
+                            <?php endif; ?>
+                        <?php endif; ?>
+                        
+                        <?php for ($i = $start_page; $i <= $end_page; $i++): ?>
+                            <li class="page-item <?php echo $i == $page ? 'active' : ''; ?>">
+                                <a class="page-link" href="/index.php?<?php echo http_build_query(array_merge($pagination_params, ['page_num' => $i])); ?>">
+                                    <?php echo $i; ?>
+                                </a>
+                            </li>
+                        <?php endfor; ?>
+                        
+                        <?php if ($end_page < $total_pages): ?>
+                            <?php if ($end_page < $total_pages - 1): ?>
+                                <li class="page-item disabled">
+                                    <span class="page-link">...</span>
+                                </li>
+                            <?php endif; ?>
+                            <li class="page-item">
+                                <a class="page-link" href="/index.php?<?php echo http_build_query(array_merge($pagination_params, ['page_num' => $total_pages])); ?>">
+                                    <?php echo $total_pages; ?>
+                                </a>
+                            </li>
+                        <?php endif; ?>
+                        
+                        <!-- Next button -->
+                        <li class="page-item <?php echo $page >= $total_pages ? 'disabled' : ''; ?>">
+                            <a class="page-link" href="/index.php?<?php echo http_build_query(array_merge($pagination_params, ['page_num' => min($total_pages, $page + 1)])); ?>">
+                                Next <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+                <?php endif; ?>
             </div>
         </div>
     </div>
 </div>
+<?php endif; ?>
 
 <!-- Contacts Display -->
 <?php if ($view_mode === 'cards'): ?>
 <!-- Cards View -->
-<div class="row">
+<div class="row crm-card-grid">
     <?php foreach ($contacts as $contact): ?>
     <div class="col-md-6 col-lg-4 mb-4">
-        <div class="card contact-card h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start mb-3">
-                    <div>
-                        <h5 class="card-title mb-1">
-                            <?php echo htmlspecialchars($contact['first_name'] . ' ' . $contact['last_name']); ?>
-                        </h5>
-                        <p class="text-muted mb-0"><?php echo $contact['email'] ? htmlspecialchars($contact['email']) : 'No email'; ?></p>
-                    </div>
+        <div class="crm-card crm-card--grid">
+            <div class="crm-card__header">
+                <div class="crm-card__heading">
+                    <h3 class="crm-card__title">
+                        <?php echo htmlspecialchars($contact['first_name'] . ' ' . $contact['last_name']); ?>
+                    </h3>
+                    <p class="crm-card__subtitle"><?php echo $contact['email'] ? htmlspecialchars($contact['email']) : 'No email'; ?></p>
+                </div>
+                <div class="crm-card__actions">
                     <a href="/index.php?page=view_contact&id=<?php echo $contact['id']; ?>"
                        class="btn btn-sm btn-outline-primary">
-                        <i class="fas fa-eye me-1"></i>View
+                        <i class="bi bi-eye me-1"></i>View
                     </a>
-                    <button class="btn btn-sm btn-outline-success" onclick="enrichContact(<?php echo $contact['id']; ?>)">
-                        <i class="fas fa-magic me-1"></i>Enrich
+                    <button type="button" class="btn btn-sm btn-outline-success" onclick="enrichContact(<?php echo $contact['id']; ?>)">
+                        <i class="bi bi-magic me-1"></i>Enrich
                     </button>
                 </div>
-                
-                <div class="mb-3">
-                    <?php if ($contact['phone']): ?>
-                    <p class="mb-1"><i class="fas fa-phone me-2 text-muted"></i><?php echo htmlspecialchars($contact['phone']); ?></p>
-                    <?php endif; ?>
-                    
-                    <?php if ($contact['company']): ?>
-                    <p class="mb-1"><i class="fas fa-building me-2 text-muted"></i><?php echo htmlspecialchars($contact['company']); ?></p>
-                    <?php endif; ?>
-                    
-                    <?php if (!empty($contact['position'])): ?>
-                    <p class="mb-1"><i class="fas fa-briefcase me-2 text-muted"></i><?php echo htmlspecialchars($contact['position']); ?></p>
-                    <?php endif; ?>
-                </div>
-                
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <span class="badge bg-<?php echo $contact['contact_type'] === 'lead' ? 'warning' : 'success'; ?> me-2">
-                            <?php echo ucfirst($contact['contact_type']); ?>
-                        </span>
-                        <span class="badge bg-secondary me-2">
-                            <?php echo ucfirst($contact['contact_status']); ?>
-                        </span>
-                        <?php if ($contact['enrichment_status']): ?>
-                            <span class="badge bg-<?php echo $contact['enrichment_status'] === 'enriched' ? 'success' : 'warning'; ?>">
-                                <i class="fas fa-magic me-1"></i>
-                                <?php echo ucfirst($contact['enrichment_status']); ?>
-                            </span>
-                        <?php endif; ?>
-                    </div>
-                    <small class="text-muted">
-                        <?php echo date('M j, Y', strtotime($contact['created_at'])); ?>
-                    </small>
-                </div>
             </div>
+
+            <?php if ($contact['phone'] || $contact['company'] || !empty($contact['position'])): ?>
+            <div class="crm-card__body">
+                <?php if ($contact['phone']): ?>
+                <p><i class="bi bi-telephone me-2 text-muted"></i><?php echo htmlspecialchars($contact['phone']); ?></p>
+                <?php endif; ?>
+                <?php if ($contact['company']): ?>
+                <p><i class="bi bi-building me-2 text-muted"></i><?php echo crm_h($contact['company']); ?></p>
+                <?php endif; ?>
+                <?php if (!empty($contact['position'])): ?>
+                <p><i class="bi bi-briefcase me-2 text-muted"></i><?php echo htmlspecialchars($contact['position']); ?></p>
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
+
+            <div class="crm-card__footer">
+                <div class="chip-row">
+                    <?php echo crm_status_pill(ucfirst((string)$contact['contact_type']), crm_pill_for_contact_type($contact['contact_type'])); ?>
+                    <?php echo crm_status_pill(ucfirst((string)$contact['contact_status']), crm_pill_for_contact_status($contact['contact_status'])); ?>
+                    <?php if ($contact['enrichment_status']): ?>
+                        <?php echo crm_status_pill(ucfirst((string)$contact['enrichment_status']), crm_pill_for_enrichment($contact['enrichment_status']), 'magic'); ?>
+                    <?php endif; ?>
+                </div>
+                <small class="text-muted text-nowrap">
+                    <?php echo date('M j, Y', strtotime($contact['created_at'])); ?>
+                </small>
+            </div>
+            <?php if (!empty($contact['tags'])): ?>
+                <div class="mt-2">
+                    <?php echo crm_render_tag_chips($contact['tags'], $tag_filter !== '' ? $tag_filter : null); ?>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
     <?php endforeach; ?>
@@ -315,7 +420,7 @@ renderHeader('Contacts');
 <div class="card">
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table table-hover">
+                    <table class="table table-hover crm-table">
                 <thead>
                     <tr>
                         <th>Name</th>
@@ -324,6 +429,8 @@ renderHeader('Contacts');
                         <th>Company</th>
                         <th>Type</th>
                         <th>Status</th>
+                        <th>Enrichment</th>
+                        <th>Tags</th>
                         <th>Created</th>
                         <th>Actions</th>
                     </tr>
@@ -339,40 +446,40 @@ renderHeader('Contacts');
                         </td>
                         <td><?php echo $contact['email'] ? htmlspecialchars($contact['email']) : '<span class="text-muted">No email</span>'; ?></td>
                         <td><?php echo $contact['phone'] ? htmlspecialchars($contact['phone']) : '-'; ?></td>
-                        <td><?php echo $contact['company'] ? htmlspecialchars($contact['company']) : '-'; ?></td>
+                        <td><?php echo $contact['company'] ? crm_h($contact['company']) : '-'; ?></td>
+                        <td><?php echo crm_status_pill(ucfirst((string)$contact['contact_type']), crm_pill_for_contact_type($contact['contact_type'])); ?></td>
+                        <td><?php echo crm_status_pill(ucfirst((string)$contact['contact_status']), crm_pill_for_contact_status($contact['contact_status'])); ?></td>
                         <td>
-                            <span class="badge bg-<?php echo $contact['contact_type'] === 'lead' ? 'warning' : 'success'; ?> me-1">
-                                <?php echo ucfirst($contact['contact_type']); ?>
-                            </span>
                             <?php if ($contact['enrichment_status']): ?>
-                                <span class="badge bg-<?php echo $contact['enrichment_status'] === 'enriched' ? 'success' : 'warning'; ?>">
-                                    <i class="fas fa-magic me-1"></i>
-                                    <?php echo ucfirst($contact['enrichment_status']); ?>
-                                </span>
+                                <?php echo crm_status_pill(ucfirst((string)$contact['enrichment_status']), crm_pill_for_enrichment($contact['enrichment_status']), 'magic'); ?>
+                            <?php else: ?>
+                                <span class="text-muted">&mdash;</span>
                             <?php endif; ?>
                         </td>
                         <td>
-                            <span class="badge bg-secondary">
-                                <?php echo ucfirst($contact['contact_status']); ?>
-                            </span>
+                            <?php if (!empty($contact['tags'])): ?>
+                                <?php echo crm_render_tag_chips($contact['tags'], $tag_filter !== '' ? $tag_filter : null); ?>
+                            <?php else: ?>
+                                <span class="text-muted">&mdash;</span>
+                            <?php endif; ?>
                         </td>
                         <td><?php echo date('M j, Y', strtotime($contact['created_at'])); ?></td>
                         <td>
                             <div class="btn-group" role="group">
-                                <a href="/index.php?page=view_contact&id=<?php echo $contact['id']; ?>"
+                                <a href="/index.php?page=view_contact&id=<?php echo $contact['id']; ?>" 
                                    class="btn btn-sm btn-outline-primary" title="View">
-                                    <i class="fas fa-eye"></i>
+                                    <i class="bi bi-eye"></i>
                                 </a>
                                 <button class="btn btn-sm btn-outline-success" onclick="enrichContact(<?php echo $contact['id']; ?>)" title="Enrich">
-                                    <i class="fas fa-magic"></i>
+                                    <i class="bi bi-magic"></i>
                                 </button>
-                                <a href="/index.php?page=edit_contact&id=<?php echo $contact['id']; ?>"
+                                <a href="/index.php?page=edit_contact&id=<?php echo $contact['id']; ?>" 
                                    class="btn btn-sm btn-outline-secondary" title="Edit">
-                                    <i class="fas fa-edit"></i>
+                                    <i class="bi bi-pencil-square"></i>
                                 </a>
                                 <button onclick="deleteContact(<?php echo $contact['id']; ?>)" 
                                         class="btn btn-sm btn-outline-danger" title="Delete">
-                                    <i class="fas fa-trash"></i>
+                                    <i class="bi bi-trash"></i>
                                 </button>
                             </div>
                         </td>
@@ -385,112 +492,13 @@ renderHeader('Contacts');
 </div>
 <?php endif; ?>
 
-<!-- Pagination Controls -->
-<?php if ($total_pages > 1 || !empty($contacts)): ?>
-<div class="card mt-4">
-    <div class="card-body">
-        <div class="row align-items-center">
-            <div class="col-md-6">
-                <p class="mb-0 text-muted">
-                    Showing <?php echo count($contacts); ?> of <?php echo $total_contacts; ?> contacts
-                </p>
-            </div>
-            <div class="col-md-6 text-end">
-                <div class="d-flex align-items-center justify-content-end gap-3">
-                    <label for="perPageSelect" class="mb-0 text-muted">Show per page:</label>
-                    <select id="perPageSelect" class="form-select form-select-sm" style="width: auto;" onchange="changePerPage(this.value)">
-                        <option value="10" <?php echo $per_page == 10 ? 'selected' : ''; ?>>10</option>
-                        <option value="50" <?php echo $per_page == 50 ? 'selected' : ''; ?>>50</option>
-                        <option value="100" <?php echo $per_page == 100 ? 'selected' : ''; ?>>100</option>
-                        <option value="500" <?php echo $per_page == 500 ? 'selected' : ''; ?>>500</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-        
-        <?php if ($total_pages > 1): ?>
-        <nav aria-label="Contacts pagination" class="mt-3">
-            <?php
-            // Build pagination parameters
-            $pagination_params = $_GET;
-            $pagination_params['page'] = 'contacts';
-            // Ensure view mode is preserved in pagination links
-            if ($view_mode) {
-                $pagination_params['view'] = $view_mode;
-            }
-            
-            // Calculate page range to show (max 10 pages)
-            $start_page = max(1, $page - 4);
-            $end_page = min($total_pages, $page + 5);
-            if ($end_page - $start_page < 9) {
-                if ($start_page == 1) {
-                    $end_page = min($total_pages, $start_page + 9);
-                } else {
-                    $start_page = max(1, $end_page - 9);
-                }
-            }
-            ?>
-            <ul class="pagination justify-content-center mb-0">
-                <!-- Previous button -->
-                <li class="page-item <?php echo $page <= 1 ? 'disabled' : ''; ?>">
-                    <a class="page-link" href="/index.php?<?php echo http_build_query(array_merge($pagination_params, ['page_num' => max(1, $page - 1)])); ?>">
-                        <i class="fas fa-chevron-left"></i> Previous
-                    </a>
-                </li>
-                
-                <!-- First page -->
-                <?php if ($start_page > 1): ?>
-                    <li class="page-item">
-                        <a class="page-link" href="/index.php?<?php echo http_build_query(array_merge($pagination_params, ['page_num' => 1])); ?>">1</a>
-                    </li>
-                    <?php if ($start_page > 2): ?>
-                        <li class="page-item disabled">
-                            <span class="page-link">...</span>
-                        </li>
-                    <?php endif; ?>
-                <?php endif; ?>
-                
-                <!-- Page numbers -->
-                <?php for ($i = $start_page; $i <= $end_page; $i++): ?>
-                    <li class="page-item <?php echo $i == $page ? 'active' : ''; ?>">
-                        <a class="page-link" href="/index.php?<?php echo http_build_query(array_merge($pagination_params, ['page_num' => $i])); ?>">
-                            <?php echo $i; ?>
-                        </a>
-                    </li>
-                <?php endfor; ?>
-                
-                <!-- Last page -->
-                <?php if ($end_page < $total_pages): ?>
-                    <?php if ($end_page < $total_pages - 1): ?>
-                        <li class="page-item disabled">
-                            <span class="page-link">...</span>
-                        </li>
-                    <?php endif; ?>
-                    <li class="page-item">
-                        <a class="page-link" href="/index.php?<?php echo http_build_query(array_merge($pagination_params, ['page_num' => $total_pages])); ?>"><?php echo $total_pages; ?></a>
-                    </li>
-                <?php endif; ?>
-                
-                <!-- Next button -->
-                <li class="page-item <?php echo $page >= $total_pages ? 'disabled' : ''; ?>">
-                    <a class="page-link" href="/index.php?<?php echo http_build_query(array_merge($pagination_params, ['page_num' => min($total_pages, $page + 1)])); ?>">
-                        Next <i class="fas fa-chevron-right"></i>
-                    </a>
-                </li>
-            </ul>
-        </nav>
-        <?php endif; ?>
-    </div>
-</div>
-<?php endif; ?>
-
 <?php if (empty($contacts)): ?>
 <div class="text-center py-5">
-    <i class="fas fa-users fa-3x text-muted mb-3"></i>
+    <i class="bi bi-people fs-1 text-muted mb-3"></i>
     <h5>No Contacts Found</h5>
     <p class="text-muted">Get started by adding your first contact.</p>
     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addContactModal">
-        <i class="fas fa-plus me-2"></i>Add Contact
+        <i class="bi bi-plus-lg me-2"></i>Add Contact
     </button>
 </div>
 <?php endif; ?>
@@ -677,7 +685,7 @@ renderHeader('Contacts');
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-danger me-auto" onclick="deleteContactFromModal()">
-                        <i class="fas fa-trash me-2"></i>Delete Contact
+                        <i class="bi bi-trash me-2"></i>Delete Contact
                     </button>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary">Update Contact</button>
@@ -687,179 +695,14 @@ renderHeader('Contacts');
     </div>
 </div>
 
-<!-- Bulk Enrichment Modal -->
-<div class="modal fade" id="bulkEnrichModal" tabindex="-1" aria-labelledby="bulkEnrichModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="bulkEnrichModalLabel">Bulk Enrichment</h5>
-                <button type="button" class="btn-close" id="bulkEnrichCloseBtn" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <!-- Selection View (initially visible) -->
-                <div id="bulkEnrichSelectionView">
-                    <div class="mb-3">
-                        <label for="bulkEnrichStrategy" class="form-label">Enrichment Strategy</label>
-                        <select class="form-select" id="bulkEnrichStrategy">
-                            <option value="auto">Auto (Try email, then LinkedIn, then name+company)</option>
-                            <option value="email">Email Only</option>
-                            <option value="linkedin">LinkedIn Only</option>
-                            <option value="name_company">Name + Company</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Select Contacts to Enrich</label>
-                        <div id="contactSelection" style="max-height: 300px; overflow-y: auto; border: 1px solid #dee2e6; padding: 10px; border-radius: 5px;">
-                            <div class="text-center text-muted py-3">
-                                <i class="fas fa-spinner fa-spin me-2"></i>Loading contacts...
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Progress View (initially hidden) -->
-                <div id="bulkEnrichProgressView" style="display: none;">
-                    <div class="text-center mb-3">
-                        <div class="spinner-border text-primary mb-2" role="status">
-                            <span class="visually-hidden">Processing...</span>
-                        </div>
-                        <h6>Processing Enrichment...</h6>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between mb-1">
-                            <span>Progress</span>
-                            <span id="progressPercent">0%</span>
-                        </div>
-                        <div class="progress" style="height: 25px;">
-                            <div class="progress-bar progress-bar-striped progress-bar-animated" 
-                                 role="progressbar" 
-                                 id="progressBar" 
-                                 style="width: 0%"
-                                 aria-valuenow="0" 
-                                 aria-valuemin="0" 
-                                 aria-valuemax="100">0%</div>
-                        </div>
-                    </div>
-                    
-                    <div class="row text-center mb-3">
-                        <div class="col-4">
-                            <div class="card bg-success text-white">
-                                <div class="card-body p-2">
-                                    <div class="h4 mb-0" id="successCount">0</div>
-                                    <small>Successful</small>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-4">
-                            <div class="card bg-danger text-white">
-                                <div class="card-body p-2">
-                                    <div class="h4 mb-0" id="failedCount">0</div>
-                                    <small>Failed</small>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-4">
-                            <div class="card bg-secondary text-white">
-                                <div class="card-body p-2">
-                                    <div class="h4 mb-0" id="remainingCount">0</div>
-                                    <small>Remaining</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Current Contact</label>
-                        <div id="currentContact" class="card bg-light p-2">
-                            <small class="text-muted">Starting...</small>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Recent Results</label>
-                        <div id="recentResults" style="max-height: 200px; overflow-y: auto; border: 1px solid #dee2e6; padding: 10px; border-radius: 5px;">
-                            <small class="text-muted">No results yet...</small>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Completion View (initially hidden) -->
-                <div id="bulkEnrichCompletionView" style="display: none;">
-                    <div class="alert alert-success text-center">
-                        <i class="fas fa-check-circle fa-2x mb-2"></i>
-                        <h5>Enrichment Complete!</h5>
-                        <p class="mb-0">
-                            <strong id="finalSuccessCount">0</strong> successful, 
-                            <strong id="finalFailedCount">0</strong> failed
-                        </p>
-                    </div>
-                    <div id="completionErrors" class="mb-3" style="display: none;">
-                        <label class="form-label">Errors</label>
-                        <div id="errorList" style="max-height: 150px; overflow-y: auto; border: 1px solid #dee2e6; padding: 10px; border-radius: 5px;">
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" id="bulkEnrichCancelBtn" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="bulkEnrichStartBtn" onclick="startBulkEnrichment()">
-                    <i class="fas fa-magic me-2"></i>Start Enrichment
-                </button>
-                <button type="button" class="btn btn-primary" id="bulkEnrichCloseBtn2" onclick="closeBulkEnrichModal()" style="display: none;">
-                    Close
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <script>
-// Export CSV function
-async function exportContactsCSV() {
-    try {
-        // Get current filter parameters from URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const type = urlParams.get('type') || '';
-        const status = urlParams.get('status') || '';
-        const enrichmentStatus = urlParams.get('enrichment_status') || '';
-        const source = urlParams.get('source') || '';
-        
-        // Build API URL with current filters
-        let apiUrl = '/api/v1/contacts/export?format=csv';
-        if (type) apiUrl += `&type=${encodeURIComponent(type)}`;
-        if (status) apiUrl += `&status=${encodeURIComponent(status)}`;
-        if (enrichmentStatus) apiUrl += `&enrichment_status=${encodeURIComponent(enrichmentStatus)}`;
-        if (source) apiUrl += `&source=${encodeURIComponent(source)}`;
-        
-        // Create a temporary link to trigger download
-        const link = document.createElement('a');
-        link.href = apiUrl;
-        link.download = 'contacts_export_' + new Date().toISOString().split('T')[0] + '.csv';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    } catch (error) {
-        showError('Failed to export contacts: ' + error.message);
-    }
-}
-
-// Pagination function
-function changePerPage(value) {
-    const urlParams = new URLSearchParams(window.location.search);
-    urlParams.set('page', 'contacts'); // Ensure page parameter is set
-    urlParams.set('per_page', value);
-    urlParams.delete('page_num'); // Reset to page 1 when changing per_page
-    window.location.href = '/index.php?' + urlParams.toString();
-}
-
 // Handle form submissions
 document.getElementById('addContactForm').addEventListener('submit', function(e) {
     e.preventDefault();
     const formData = new FormData(this);
     const data = Object.fromEntries(formData.entries());
     
-    fetch('/api/v1/contacts', {
+    fetch(crmApiUrl('contacts'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -893,7 +736,7 @@ document.getElementById('editContactForm').addEventListener('submit', function(e
     const contactId = data.contact_id;
     delete data.contact_id;
     
-    fetch(`/api/v1/contacts/${contactId}`, {
+    fetch(crmApiUrl(`contacts/${contactId}`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -922,7 +765,7 @@ document.getElementById('editContactForm').addEventListener('submit', function(e
 
 function editContact(contactId) {
     // Fetch contact data and populate form
-    fetch(`/api/v1/contacts/${contactId}`, {
+    fetch(crmApiUrl(`contacts/${contactId}`), {
         credentials: 'include'
     })
     .then(response => {
@@ -966,7 +809,7 @@ function viewContact(contactId) {
 
 function deleteContact(contactId) {
     if (confirm('Are you sure you want to delete this contact? This action cannot be undone.')) {
-        fetch(`/api/v1/contacts/${contactId}`, {
+        fetch(crmApiUrl(`contacts/${contactId}`), {
             method: 'DELETE',
             credentials: 'include'
         })
@@ -978,7 +821,13 @@ function deleteContact(contactId) {
                     return { success: true };
                 } else {
                     // Other successful responses might have JSON content
-                    return response.json();
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                        return response.json();
+                    } else {
+                        // Non-JSON successful response
+                        return { success: true };
+                    }
                 }
             } else {
                 return response.json().then(error => {
@@ -1002,7 +851,7 @@ function deleteContact(contactId) {
 function deleteContactFromModal() {
     const contactId = document.getElementById('edit_contact_id').value;
     if (contactId && confirm('Are you sure you want to delete this contact? This action cannot be undone.')) {
-        fetch(`/api/v1/contacts/${contactId}`, {
+        fetch(crmApiUrl(`contacts/${contactId}`), {
             method: 'DELETE',
             credentials: 'include'
         })
@@ -1014,7 +863,13 @@ function deleteContactFromModal() {
                     return { success: true };
                 } else {
                     // Other successful responses might have JSON content
-                    return response.json();
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                        return response.json();
+                    } else {
+                        // Non-JSON successful response
+                        return { success: true };
+                    }
                 }
             } else {
                 return response.json().then(error => {
@@ -1043,13 +898,13 @@ function deleteContactFromModal() {
 async function enrichContact(contactId) {
     const button = event.target.closest('button');
     const originalText = button.innerHTML;
-
+    
     try {
         // Show loading state
         button.disabled = true;
-        button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Enriching...';
-
-        const response = await fetch(`/api/v1/contacts/${contactId}/enrich`, {
+        button.innerHTML = '<i class="bi bi-arrow-clockwise crm-spin me-1"></i>';
+        
+        const response = await fetch(crmApiUrl(`contacts/${contactId}/enrich`), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1057,24 +912,25 @@ async function enrichContact(contactId) {
             },
             body: JSON.stringify({ strategy: 'auto' })
         });
-
-        if (response.ok) {
-            const result = await response.json();
-            showSuccess('Contact enriched successfully!');
-
-            // Update button state
-            button.innerHTML = '<i class="fas fa-check me-2"></i>Enriched';
-            button.classList.remove('btn-success', 'btn-outline-success');
-            button.classList.add('btn-secondary');
-
-            // Refresh page to show updated data
-            setTimeout(() => location.reload(), 1000);
-        } else {
-            const error = await response.json();
-            showError(error.error || 'Enrichment failed');
+        
+        const result = await response.json().catch(() => ({}));
+        if (result.outcome === 'skipped') {
+            showSuccess(result.message || 'Already enriched recently; no new lookup.');
             button.innerHTML = originalText;
             button.disabled = false;
+            return;
         }
+        if (!response.ok) {
+            showError(result.error || 'Enrichment failed');
+            button.innerHTML = originalText;
+            button.disabled = false;
+            return;
+        }
+        showSuccess('Contact enriched successfully!');
+        button.innerHTML = '<i class="bi bi-check me-1"></i>';
+        button.classList.remove('btn-outline-success');
+        button.classList.add('btn-outline-secondary');
+        setTimeout(() => location.reload(), 1000);
     } catch (error) {
         showError('Network error: ' + error.message);
         button.innerHTML = originalText;
@@ -1082,16 +938,553 @@ async function enrichContact(contactId) {
     }
 }
 
-// Bulk enrichment functions
+// Build contacts API URL for bulk-enrich list (excludes enriched unless an enrichment filter is set)
+// includePageFilters: when false, omit type/status/source so the queue is not accidentally emptied by list filters (e.g. Customers while all rows are leads).
+function buildBulkEnrichContactsApiUrl(limit, opts) {
+    opts = opts || {};
+    const includePageFilters = opts.includePageFilters !== false;
+    const urlParams = new URLSearchParams(window.location.search);
+    const type = includePageFilters ? (urlParams.get('type') || '') : '';
+    const status = includePageFilters ? (urlParams.get('status') || '') : '';
+    const source = includePageFilters ? (urlParams.get('source') || '') : '';
+    const tag = includePageFilters ? (urlParams.get('tag') || '') : '';
+    const enrichmentStatus = urlParams.get('enrichment_status') || '';
+    let apiUrl = crmApiUrl('contacts?limit=' + limit);
+    if (type) apiUrl += `&type=${encodeURIComponent(type)}`;
+    if (status) apiUrl += `&status=${encodeURIComponent(status)}`;
+    if (enrichmentStatus) {
+        apiUrl += `&enrichment_status=${encodeURIComponent(enrichmentStatus)}`;
+    } else {
+        apiUrl += '&needs_enrichment=1';
+    }
+    if (source) apiUrl += `&source=${encodeURIComponent(source)}`;
+    if (tag) apiUrl += `&tag=${encodeURIComponent(tag)}`;
+    return apiUrl;
+}
+
+// Bulk enrichment
 async function bulkEnrichContacts() {
     const modal = new bootstrap.Modal(document.getElementById('bulkEnrichModal'));
     modal.show();
-
+    
     // Load contacts for selection
     await loadContactsForBulkEnrichment();
 }
 
 async function loadContactsForBulkEnrichment() {
+    const container = document.getElementById('contactSelection');
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasNarrowingFilters = !!(urlParams.get('type') || urlParams.get('status') || urlParams.get('source'));
+    const fetchOpts = {
+        headers: { 'Authorization': `Bearer ${getApiKey()}` },
+        credentials: 'include'
+    };
+
+    const fetchList = async (includePageFilters) => {
+        const response = await fetch(buildBulkEnrichContactsApiUrl(100, { includePageFilters }), fetchOpts);
+        let data = {};
+        try {
+            data = await response.json();
+        } catch (e) {
+            data = {};
+        }
+        return { response, data };
+    };
+
+    try {
+        container.innerHTML = '<div class="text-muted">Loading…</div>';
+
+        let { response, data } = await fetchList(true);
+        if (!response.ok) {
+            const msg = (data && data.error) ? data.error : ('HTTP ' + response.status);
+            container.innerHTML = '<p class="text-danger small mb-0">' + escapeHtmlCrm(msg) + '</p>';
+            showError('Failed to load contacts: ' + msg);
+            return;
+        }
+
+        let list = Array.isArray(data.contacts) ? data.contacts : [];
+        let banner = '';
+        const totalFirst = data.total != null ? Number(data.total) : NaN;
+
+        bulkListUsedStrictPageFilters = true;
+        if (list.length === 0 && totalFirst === 0 && hasNarrowingFilters) {
+            const retry = await fetchList(false);
+            if (retry.response.ok) {
+                const list2 = Array.isArray(retry.data.contacts) ? retry.data.contacts : [];
+                if (list2.length > 0) {
+                    response = retry.response;
+                    data = retry.data;
+                    list = list2;
+                    bulkListUsedStrictPageFilters = false;
+                    banner = '<div class="alert alert-info py-2 small mb-2">No contacts matched your <strong>type / status / source</strong> filters in the enrich queue. Showing the <strong>full queue</strong> instead (enrichment filter still applies).</div>';
+                }
+            }
+        }
+
+        if (list.length === 0) {
+            const t = data.total != null ? Number(data.total) : NaN;
+            const hint = Number.isFinite(t) ? ` API reports <strong>${t}</strong> matching rows.` : '';
+            container.innerHTML = '<div class="text-muted">No contacts in this list.' + hint + ' Try clearing filters on the contacts page or changing enrichment filter (e.g. include failed / not found).</div>';
+            return;
+        }
+
+        container.innerHTML = banner + list.map(contact => `
+                <div class="form-check">
+                    <input class="form-check-input contact-checkbox" type="checkbox" value="${contact.id}" 
+                           id="contact_${contact.id}" onchange="updateSelectedCount()">
+                    <label class="form-check-label" for="contact_${contact.id}">
+                        ${contact.first_name} ${contact.last_name} 
+                        ${contact.email ? `(${contact.email})` : ''}
+                        ${contact.enrichment_status ? `<span class="status-pill status-pill--${contact.enrichment_status === 'enriched' ? 'done' : contact.enrichment_status === 'failed' ? 'blocked' : 'doing'} ms-2"><i class="bi bi-magic"></i>${contact.enrichment_status}</span>` : ''}
+                    </label>
+                </div>
+            `).join('');
+
+        updateSelectedCount();
+    } catch (error) {
+        container.innerHTML = '<p class="text-danger small mb-0">' + escapeHtmlCrm(error.message) + '</p>';
+        showError('Failed to load contacts: ' + error.message);
+    }
+}
+
+// Show progress modal and hide selection view
+function showProgressModal(total) {
+    // Set processing flag
+    isProcessing = true;
+    
+    // Hide selection view
+    document.getElementById('contactSelectionView').style.display = 'none';
+    document.getElementById('selectionFooter').style.display = 'none';
+    
+    // Show progress view
+    document.getElementById('progressView').style.display = 'block';
+    document.getElementById('progressFooter').style.display = 'flex';
+    
+    // Initialize counters
+    document.getElementById('totalContacts').textContent = total;
+    document.getElementById('remainingCount').textContent = total;
+    document.getElementById('successCount').textContent = '0';
+    document.getElementById('failCount').textContent = '0';
+    document.getElementById('currentContactNum').textContent = '0';
+    
+    // Clear recent results
+    document.getElementById('recentResults').innerHTML = 
+        '<div class="text-center text-muted py-3"><small>Results will appear here as contacts are processed...</small></div>';
+    
+    // Disable modal close button
+    document.querySelector('#bulkEnrichModal .btn-close').style.display = 'none';
+}
+
+// Update progress display
+function updateProgress(current, total, contactId, contactName, contactEmail, successful, failed) {
+    const percentage = Math.round((current / total) * 100);
+    const remaining = total - current;
+    
+    // Update progress bar
+    const progressBar = document.getElementById('progressBar');
+    progressBar.style.width = percentage + '%';
+    progressBar.setAttribute('aria-valuenow', percentage);
+    document.getElementById('progressText').textContent = percentage + '%';
+    
+    // Update counters
+    document.getElementById('currentContactNum').textContent = current;
+    document.getElementById('successCount').textContent = successful;
+    document.getElementById('failCount').textContent = failed;
+    document.getElementById('remainingCount').textContent = remaining;
+    
+    // Update current contact
+    document.getElementById('currentContactName').textContent = contactName || `Contact #${contactId}`;
+    document.getElementById('currentContactEmail').textContent = contactEmail || '-';
+    
+    // Calculate and update estimated time
+    const avgTimePerContact = 3; // seconds (adjust based on actual performance)
+    const estimatedSeconds = remaining * avgTimePerContact;
+    document.getElementById('estimatedTime').textContent = formatTime(estimatedSeconds);
+}
+
+// Add result to recent results list
+// status: enriched | skipped | failed
+function addProgressResult(contactId, contactName, contactEmail, status, error) {
+    const resultsDiv = document.getElementById('recentResults');
+    
+    // Remove placeholder if exists
+    const placeholder = resultsDiv.querySelector('.text-center.text-muted');
+    if (placeholder) {
+        placeholder.remove();
+    }
+    
+    // Create result item
+    const resultItem = document.createElement('div');
+    resultItem.className = 'd-flex align-items-center justify-content-between p-2 border-bottom';
+    resultItem.setAttribute('data-contact-id', contactId);
+    
+    let icon = '<i class="bi bi-x-circle text-danger me-2"></i>';
+    if (status === 'enriched') {
+        icon = '<i class="bi bi-check-circle text-success me-2"></i>';
+    } else if (status === 'skipped') {
+        icon = '<i class="bi bi-skip-forward text-warning me-2"></i>';
+    }
+    
+    const name = contactName || `Contact #${contactId}`;
+    const email = contactEmail ? ` (${contactEmail})` : '';
+    const errClass = status === 'skipped' ? 'text-warning' : 'text-danger';
+    const errorText = error ? `<small class="${errClass} d-block">${error}</small>` : '';
+    
+    resultItem.innerHTML = `
+        ${icon}
+        <div class="flex-grow-1 ms-2">
+            <div class="fw-bold">${name}${email}</div>
+            ${errorText}
+        </div>
+        <small class="text-muted">${new Date().toLocaleTimeString()}</small>
+    `;
+    
+    // Prepend to results (newest first)
+    resultsDiv.insertBefore(resultItem, resultsDiv.firstChild);
+    
+    // Limit to last 20 results
+    while (resultsDiv.children.length > 20) {
+        resultsDiv.removeChild(resultsDiv.lastChild);
+    }
+}
+
+// Show completion summary
+function showCompletionSummary(successful, failed, skipped, errors) {
+    // Update progress bar to 100%
+    const progressBar = document.getElementById('progressBar');
+    progressBar.style.width = '100%';
+    progressBar.setAttribute('aria-valuenow', 100);
+    document.getElementById('progressText').textContent = '100%';
+    
+    // Hide spinner, show completion message
+    document.querySelector('#progressView .spinner-border').style.display = 'none';
+    document.querySelector('#progressView h5').textContent = 'Enrichment Complete!';
+    const parts = [`${successful} enriched`];
+    if (skipped > 0) parts.push(`${skipped} skipped`);
+    if (failed > 0) parts.push(`${failed} failed`);
+    document.querySelector('#progressView .text-muted.mb-0').textContent = 
+        `Processed ${successful + failed + skipped} contacts (${parts.join(', ')})`;
+    
+    // Update estimated time
+    document.getElementById('estimatedTime').textContent = 'Complete';
+    
+    // Update footer
+    const footer = document.getElementById('progressFooter');
+    footer.innerHTML = `
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            Close
+        </button>
+        ${failed > 0 ? `
+            <button type="button" class="btn btn-warning" onclick="retryFailedContacts()">
+                <i class="bi bi-arrow-clockwise me-2"></i>Retry Failed (${failed})
+            </button>
+        ` : ''}
+        <button type="button" class="btn btn-primary" onclick="viewEnrichedContacts()">
+            <i class="bi bi-eye me-2"></i>View Results
+        </button>
+    `;
+    
+    // Re-enable modal close button
+    document.querySelector('#bulkEnrichModal .btn-close').style.display = 'block';
+    
+    // Clear processing flag to allow modal closing
+    isProcessing = false;
+    
+    // Show success notification
+    if (successful > 0) {
+        showSuccess(`Successfully enriched ${successful} contact${successful !== 1 ? 's' : ''}`);
+    }
+    if (failed > 0) {
+        showError(`${failed} contact${failed !== 1 ? 's' : ''} failed to enrich. Check recent results for details.`);
+    }
+}
+
+// Format time helper
+function formatTime(seconds) {
+    if (seconds < 60) {
+        return `${seconds} second${seconds !== 1 ? 's' : ''}`;
+    } else if (seconds < 3600) {
+        const minutes = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${minutes}m ${secs}s`;
+    } else {
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        return `${hours}h ${minutes}m`;
+    }
+}
+
+// Clear recent results
+function clearRecentResults() {
+    document.getElementById('recentResults').innerHTML = 
+        '<div class="text-center text-muted py-3"><small>Results cleared</small></div>';
+}
+
+// Cancel bulk enrichment (placeholder for future async implementation)
+function cancelBulkEnrichment() {
+    if (confirm('Are you sure you want to cancel bulk enrichment? Contacts already processed will remain enriched.')) {
+        // Clear processing flag
+        isProcessing = false;
+        // For now, just close modal
+        // In future async implementation, this would cancel the job
+        bootstrap.Modal.getInstance(document.getElementById('bulkEnrichModal')).hide();
+        location.reload();
+    }
+}
+
+// View enriched contacts (filter by enriched status)
+function viewEnrichedContacts() {
+    bootstrap.Modal.getInstance(document.getElementById('bulkEnrichModal')).hide();
+    window.location.href = '/index.php?page=contacts&enrichment_status=enriched';
+}
+
+// Retry failed contacts (reload modal with failed contact IDs)
+function retryFailedContacts() {
+    // Get failed contact IDs from recent results
+    const failedContactIds = [];
+    document.querySelectorAll('#recentResults .fa-times-circle').forEach(icon => {
+        const resultItem = icon.closest('[data-contact-id]');
+        if (resultItem) {
+            const contactId = resultItem.getAttribute('data-contact-id');
+            if (contactId) {
+                failedContactIds.push(parseInt(contactId));
+            }
+        }
+    });
+    
+    // Check the checkboxes for failed contacts
+    failedContactIds.forEach(contactId => {
+        const checkbox = document.querySelector(`#contactSelection input[value="${contactId}"]`);
+        if (checkbox) {
+            checkbox.checked = true;
+        }
+    });
+    
+    // Close completion view, show selection view again
+    document.getElementById('progressView').style.display = 'none';
+    document.getElementById('progressFooter').style.display = 'none';
+    document.getElementById('contactSelectionView').style.display = 'block';
+    document.getElementById('selectionFooter').style.display = 'flex';
+    document.querySelector('#bulkEnrichModal .btn-close').style.display = 'block';
+    
+    // Reset progress view elements
+    document.querySelector('#progressView .spinner-border').style.display = 'block';
+    document.querySelector('#progressView h5').textContent = 'Enriching Contacts...';
+    
+    updateSelectedCount();
+}
+
+async function startBulkEnrichment() {
+    const selectedContacts = Array.from(document.querySelectorAll('#contactSelection input:checked'))
+        .map(input => parseInt(input.value));
+    
+    if (selectedContacts.length === 0) {
+        showError('Please select at least one contact');
+        return;
+    }
+    
+    const strategy = document.getElementById('bulkEnrichStrategy').value;
+    const total = selectedContacts.length;
+    
+    // Get contact names for display (from the loaded contacts)
+    // We'll fetch the contact data to get names and emails
+    const contactMap = new Map();
+    try {
+        const apiUrl = buildBulkEnrichContactsApiUrl(100, { includePageFilters: bulkListUsedStrictPageFilters });
+        
+        const response = await fetch(apiUrl, {
+            headers: { 'Authorization': `Bearer ${getApiKey()}` },
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const rows = Array.isArray(data.contacts) ? data.contacts : [];
+            rows.forEach(contact => {
+                if (selectedContacts.includes(contact.id)) {
+                    contactMap.set(contact.id, {
+                        name: `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || `Contact #${contact.id}`,
+                        email: contact.email || null
+                    });
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Failed to load contact details:', error);
+    }
+    
+    // Fallback: if we couldn't load from API, parse from labels
+    if (contactMap.size === 0) {
+        document.querySelectorAll('#contactSelection .form-check').forEach(check => {
+            const checkbox = check.querySelector('input');
+            const label = check.querySelector('label');
+            if (checkbox && label) {
+                const id = parseInt(checkbox.value);
+                const text = label.textContent.trim();
+                // Extract name and email from label text (format: "Name (email)" or "Name")
+                const match = text.match(/^(.+?)(?:\s*\(([^)]+)\))?/);
+                contactMap.set(id, {
+                    name: match ? match[1].trim() : `Contact #${id}`,
+                    email: match && match[2] ? match[2].trim() : null
+                });
+            }
+        });
+    }
+    
+    // Show progress modal
+    showProgressModal(total);
+    
+    // Process contacts one by one
+    let successful = 0;
+    let failed = 0;
+    let skipped = 0;
+    const errors = [];
+    const betweenMs = 650;
+    
+    for (let i = 0; i < selectedContacts.length; i++) {
+        const contactId = selectedContacts[i];
+        const contactInfo = contactMap.get(contactId) || { name: `Contact #${contactId}`, email: null };
+        
+        // Update progress UI
+        updateProgress(
+            i + 1, 
+            total, 
+            contactId, 
+            contactInfo.name, 
+            contactInfo.email, 
+            successful, 
+            failed
+        );
+        
+        try {
+            const response = await fetch(crmApiUrl(`contacts/${contactId}/enrich`), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${getApiKey()}`
+                },
+                credentials: 'include',
+                body: JSON.stringify({ strategy: strategy })
+            });
+            const result = await response.json().catch(() => ({}));
+            if (result.outcome === 'skipped') {
+                skipped++;
+                addProgressResult(contactId, contactInfo.name, contactInfo.email, 'skipped', result.message || 'Skipped');
+            } else if (!response.ok) {
+                failed++;
+                const errorMessage = result.error || result.message || ('HTTP ' + response.status);
+                errors.push({ 
+                    contact_id: contactId, 
+                    contact_name: contactInfo.name,
+                    error: errorMessage 
+                });
+                addProgressResult(contactId, contactInfo.name, contactInfo.email, 'failed', errorMessage);
+            } else if (result.outcome === 'enriched' || (result.success && result.outcome !== 'skipped')) {
+                successful++;
+                addProgressResult(contactId, contactInfo.name, contactInfo.email, 'enriched', null);
+            } else {
+                failed++;
+                const errorMessage = result.error || result.message || 'Enrichment did not complete';
+                errors.push({ 
+                    contact_id: contactId, 
+                    contact_name: contactInfo.name,
+                    error: errorMessage 
+                });
+                addProgressResult(contactId, contactInfo.name, contactInfo.email, 'failed', errorMessage);
+            }
+        } catch (error) {
+            failed++;
+            const errorMessage = error.message || 'Network error';
+            errors.push({ 
+                contact_id: contactId, 
+                contact_name: contactInfo.name,
+                error: errorMessage 
+            });
+            addProgressResult(contactId, contactInfo.name, contactInfo.email, 'failed', errorMessage);
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, betweenMs));
+    }
+    
+    // Show completion summary
+    showCompletionSummary(successful, failed, skipped, errors);
+    
+    // Auto-refresh page after 3 seconds to show updated enrichment statuses
+    setTimeout(() => {
+        // Don't auto-refresh, let user decide via "View Results" button
+    }, 3000);
+}
+
+// Prevent modal from closing during processing
+let isProcessing = false;
+// Matches last bulk list load (strict URL filters vs relaxed after auto-retry)
+let bulkListUsedStrictPageFilters = true;
+
+// Add event listener to prevent modal closing during processing
+document.addEventListener('DOMContentLoaded', function() {
+    const bulkEnrichModal = document.getElementById('bulkEnrichModal');
+    if (bulkEnrichModal) {
+        // Prevent closing via backdrop click or ESC key during processing
+        bulkEnrichModal.addEventListener('hide.bs.modal', function(event) {
+            if (isProcessing) {
+                event.preventDefault();
+                return false;
+            }
+        });
+        
+        // Reset modal when it's closed
+        bulkEnrichModal.addEventListener('hidden.bs.modal', function() {
+            // Reset to selection view
+            document.getElementById('contactSelectionView').style.display = 'block';
+            document.getElementById('selectionFooter').style.display = 'flex';
+            document.getElementById('progressView').style.display = 'none';
+            document.getElementById('progressFooter').style.display = 'none';
+            document.querySelector('#bulkEnrichModal .btn-close').style.display = 'block';
+            
+            // Reset progress view elements
+            const spinner = document.querySelector('#progressView .spinner-border');
+            if (spinner) spinner.style.display = 'block';
+            const h5 = document.querySelector('#progressView h5');
+            if (h5) h5.textContent = 'Enriching Contacts...';
+            
+            isProcessing = false;
+        });
+    }
+});
+
+// Select all/deselect all functions
+function selectAllContacts() {
+    const checkboxes = document.querySelectorAll('#contactSelection .contact-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = true;
+    });
+    updateSelectedCount();
+}
+
+function deselectAllContacts() {
+    const checkboxes = document.querySelectorAll('#contactSelection .contact-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    updateSelectedCount();
+}
+
+function updateSelectedCount() {
+    const selectedCount = document.querySelectorAll('#contactSelection .contact-checkbox:checked').length;
+    document.getElementById('selectedCount').textContent = selectedCount;
+}
+
+// Change per page function
+function changePerPage(value) {
+    const urlParams = new URLSearchParams(window.location.search);
+    urlParams.set('page', 'contacts'); // Ensure page parameter is set
+    urlParams.set('per_page', value);
+    urlParams.delete('page_num'); // Reset to page 1 when changing per_page
+    window.location.href = '/index.php?' + urlParams.toString();
+}
+
+// Export CSV function
+async function exportContactsCSV() {
     try {
         // Get current filter parameters from URL
         const urlParams = new URLSearchParams(window.location.search);
@@ -1099,214 +1492,59 @@ async function loadContactsForBulkEnrichment() {
         const status = urlParams.get('status') || '';
         const enrichmentStatus = urlParams.get('enrichment_status') || '';
         const source = urlParams.get('source') || '';
+        const tag = urlParams.get('tag') || '';
         
         // Build API URL with current filters
-        let apiUrl = '/api/v1/contacts?limit=100'; // Limit to 100 for bulk operations
+        let apiUrl = crmApiUrl('contacts/export?format=csv');
         if (type) apiUrl += `&type=${encodeURIComponent(type)}`;
         if (status) apiUrl += `&status=${encodeURIComponent(status)}`;
         if (enrichmentStatus) apiUrl += `&enrichment_status=${encodeURIComponent(enrichmentStatus)}`;
         if (source) apiUrl += `&source=${encodeURIComponent(source)}`;
+        if (tag) apiUrl += `&tag=${encodeURIComponent(tag)}`;
+        
+        // Show loading state
+        const exportBtn = document.querySelector('button[onclick="exportContactsCSV()"]');
+        const originalText = exportBtn.innerHTML;
+        exportBtn.innerHTML = '<i class="bi bi-arrow-clockwise crm-spin me-2"></i>Exporting...';
+        exportBtn.disabled = true;
         
         const response = await fetch(apiUrl, {
             headers: { 'Authorization': `Bearer ${getApiKey()}` }
         });
-
+        
         if (response.ok) {
-            const data = await response.json();
-            const container = document.getElementById('contactSelection');
-
-            container.innerHTML = data.contacts.map(contact => `
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" value="${contact.id}"
-                           id="contact_${contact.id}">
-                    <label class="form-check-label" for="contact_${contact.id}">
-                        ${contact.first_name} ${contact.last_name}
-                        ${contact.email ? `(${contact.email})` : ''}
-                        ${contact.enrichment_status ? `<span class="badge bg-${contact.enrichment_status === 'enriched' ? 'success' : 'warning'} ms-2">${contact.enrichment_status}</span>` : ''}
-                    </label>
-                </div>
-            `).join('');
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `contacts_export_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            showSuccess('Contacts exported successfully!');
+        } else {
+            const error = await response.json();
+            showError(error.error || 'Export failed');
         }
     } catch (error) {
-        showError('Failed to load contacts: ' + error.message);
+        showError('Network error: ' + error.message);
+    } finally {
+        // Restore button state
+        const exportBtn = document.querySelector('button[onclick="exportContactsCSV()"]');
+        exportBtn.innerHTML = '<i class="bi bi-download me-2"></i>Export CSV';
+        exportBtn.disabled = false;
     }
-}
-
-async function startBulkEnrichment() {
-    const selectedContacts = Array.from(document.querySelectorAll('#contactSelection input:checked'))
-        .map(input => parseInt(input.value));
-
-    if (selectedContacts.length === 0) {
-        showError('Please select at least one contact');
-        return;
-    }
-
-    const strategy = document.getElementById('bulkEnrichStrategy').value;
-    const total = selectedContacts.length;
-    
-    // Switch to progress view
-    document.getElementById('bulkEnrichSelectionView').style.display = 'none';
-    document.getElementById('bulkEnrichProgressView').style.display = 'block';
-    document.getElementById('bulkEnrichStartBtn').style.display = 'none';
-    document.getElementById('bulkEnrichCancelBtn').style.display = 'none';
-    document.getElementById('bulkEnrichCloseBtn').style.display = 'none';
-    
-    // Prevent modal from closing
-    const modal = bootstrap.Modal.getInstance(document.getElementById('bulkEnrichModal'));
-    modal._config.backdrop = 'static';
-    modal._config.keyboard = false;
-    
-    // Initialize counters
-    let successful = 0;
-    let failed = 0;
-    const errors = [];
-    
-    // Update initial counts
-    updateProgressCounts(0, 0, total);
-    
-    // Process contacts one by one
-    for (let i = 0; i < selectedContacts.length; i++) {
-        const contactId = selectedContacts[i];
-        const current = i + 1;
-        const percent = Math.round((current / total) * 100);
-        
-        // Update progress
-        updateProgress(current, total, percent);
-        
-        // Get contact name for display
-        const contactName = getContactName(contactId, selectedContacts);
-        updateCurrentContact(contactName, current, total);
-        
-        try {
-            const response = await fetch(`/api/v1/contacts/${contactId}/enrich`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${getApiKey()}`
-                },
-                body: JSON.stringify({ strategy: strategy })
-            });
-            
-            if (response.ok) {
-                const result = await response.json();
-                successful++;
-                addProgressResult(contactName, true, null);
-            } else {
-                const error = await response.json();
-                failed++;
-                const errorMsg = error.error || 'Enrichment failed';
-                errors.push({ contactId, contactName, error: errorMsg });
-                addProgressResult(contactName, false, errorMsg);
-            }
-        } catch (error) {
-            failed++;
-            const errorMsg = error.message || 'Network error';
-            errors.push({ contactId, contactName, error: errorMsg });
-            addProgressResult(contactName, false, errorMsg);
-        }
-        
-        // Update counts
-        updateProgressCounts(successful, failed, total - current);
-    }
-    
-    // Show completion view
-    showCompletionView(successful, failed, errors);
-}
-
-function getContactName(contactId, allContacts) {
-    // Try to get name from the checkbox label
-    const checkbox = document.querySelector(`#contactSelection input[value="${contactId}"]`);
-    if (checkbox) {
-        const label = checkbox.closest('.form-check')?.querySelector('label');
-        if (label) {
-            return label.textContent.trim().split('(')[0].trim();
-        }
-    }
-    return `Contact #${contactId}`;
-}
-
-function updateProgress(current, total, percent) {
-    document.getElementById('progressBar').style.width = percent + '%';
-    document.getElementById('progressBar').setAttribute('aria-valuenow', percent);
-    document.getElementById('progressBar').textContent = percent + '%';
-    document.getElementById('progressPercent').textContent = percent + '%';
-}
-
-function updateCurrentContact(contactName, current, total) {
-    document.getElementById('currentContact').innerHTML = `
-        <strong>${contactName}</strong>
-        <br><small class="text-muted">Contact ${current} of ${total}</small>
-    `;
-}
-
-function updateProgressCounts(successful, failed, remaining) {
-    document.getElementById('successCount').textContent = successful;
-    document.getElementById('failedCount').textContent = failed;
-    document.getElementById('remainingCount').textContent = remaining;
-}
-
-function addProgressResult(contactName, success, error) {
-    const resultsDiv = document.getElementById('recentResults');
-    const resultItem = document.createElement('div');
-    resultItem.className = `mb-2 p-2 rounded ${success ? 'bg-success bg-opacity-10' : 'bg-danger bg-opacity-10'}`;
-    resultItem.innerHTML = `
-        <div class="d-flex justify-content-between align-items-center">
-            <span><i class="fas fa-${success ? 'check-circle text-success' : 'times-circle text-danger'} me-2"></i>${contactName}</span>
-            ${error ? `<small class="text-danger">${error}</small>` : ''}
-        </div>
-    `;
-    resultsDiv.insertBefore(resultItem, resultsDiv.firstChild);
-    
-    // Keep only last 20 results
-    while (resultsDiv.children.length > 20) {
-        resultsDiv.removeChild(resultsDiv.lastChild);
-    }
-}
-
-function showCompletionView(successful, failed, errors) {
-    document.getElementById('bulkEnrichProgressView').style.display = 'none';
-    document.getElementById('bulkEnrichCompletionView').style.display = 'block';
-    document.getElementById('finalSuccessCount').textContent = successful;
-    document.getElementById('finalFailedCount').textContent = failed;
-    
-    if (errors.length > 0) {
-        document.getElementById('completionErrors').style.display = 'block';
-        const errorList = document.getElementById('errorList');
-        errorList.innerHTML = errors.map(e => `
-            <div class="mb-2 p-2 bg-danger bg-opacity-10 rounded">
-                <strong>${e.contactName}</strong><br>
-                <small class="text-danger">${e.error}</small>
-            </div>
-        `).join('');
-    }
-    
-    document.getElementById('bulkEnrichCloseBtn2').style.display = 'block';
-    
-    // Re-enable modal closing
-    const modal = bootstrap.Modal.getInstance(document.getElementById('bulkEnrichModal'));
-    modal._config.backdrop = true;
-    modal._config.keyboard = true;
-}
-
-function closeBulkEnrichModal() {
-    const modal = bootstrap.Modal.getInstance(document.getElementById('bulkEnrichModal'));
-    modal.hide();
-    // Reset modal state
-    setTimeout(() => {
-        document.getElementById('bulkEnrichSelectionView').style.display = 'block';
-        document.getElementById('bulkEnrichProgressView').style.display = 'none';
-        document.getElementById('bulkEnrichCompletionView').style.display = 'none';
-        document.getElementById('bulkEnrichStartBtn').style.display = 'block';
-        document.getElementById('bulkEnrichCancelBtn').style.display = 'block';
-        document.getElementById('bulkEnrichCloseBtn').style.display = 'block';
-        document.getElementById('bulkEnrichCloseBtn2').style.display = 'none';
-        document.getElementById('progressBar').style.width = '0%';
-        document.getElementById('recentResults').innerHTML = '<small class="text-muted">No results yet...</small>';
-        location.reload();
-    }, 300);
 }
 
 // Utility functions
+function escapeHtmlCrm(s) {
+    const d = document.createElement('div');
+    d.textContent = s == null ? '' : String(s);
+    return d.innerHTML;
+}
+
 function getApiKey() {
     // Get API key from localStorage or session
     return localStorage.getItem('api_key') || '';
@@ -1342,6 +1580,142 @@ function showError(message) {
     setTimeout(() => alert.remove(), 5000);
 }
 </script>
+
+<!-- Bulk Enrichment Modal -->
+<div class="modal fade" id="bulkEnrichModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Bulk Enrich Contacts</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Contact Selection View -->
+                <div id="contactSelectionView">
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label mb-0">Select contacts to enrich:</label>
+                            <div>
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="selectAllContacts()">
+                                    <i class="bi bi-check-square me-1"></i>Select All
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="deselectAllContacts()">
+                                    <i class="bi bi-square me-1"></i>Deselect All
+                                </button>
+                            </div>
+                        </div>
+                        <small class="text-muted d-block mb-2">
+                            Lists up to 100 contacts that still need a run (excludes enriched, failed, and not found). Pending and never-run are included.
+                            Type, status, and source filters apply; if they match nobody in the queue, the list reloads without those filters so you still see work.
+                            To retry failures or not-found rows, set the enrichment filter first, then open Bulk Enrich.
+                        </small>
+                        <div id="contactSelection">
+                            <!-- Dynamic contact list with checkboxes -->
+                        </div>
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                <span id="selectedCount">0</span> contacts selected
+                            </small>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Enrichment Strategy:</label>
+                        <select class="form-select" id="bulkEnrichStrategy">
+                            <option value="auto">Auto (Best Available)</option>
+                            <option value="email">Email Only</option>
+                            <option value="linkedin">LinkedIn Only</option>
+                            <option value="name_company">Name + Company</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Progress View (initially hidden) -->
+                <div id="progressView" style="display: none;">
+                    <div class="text-center mb-4">
+                        <div class="spinner-border text-warning mb-3" role="status" style="width: 3rem; height: 3rem;">
+                            <span class="visually-hidden">Processing...</span>
+                        </div>
+                        <h5>Enriching Contacts...</h5>
+                        <p class="text-muted mb-0">
+                            Processing contact <span id="currentContactNum">0</span> of <span id="totalContacts">0</span>
+                        </p>
+                    </div>
+                    
+                    <!-- Progress Bar -->
+                    <div class="progress mb-3" style="height: 30px;">
+                        <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-warning" 
+                             role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                            <span id="progressText" class="fw-bold">0%</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Stats Row -->
+                    <div class="row text-center mb-3">
+                        <div class="col-4">
+                            <div class="h4 text-success mb-0" id="successCount">0</div>
+                            <small class="text-muted">Successful</small>
+                        </div>
+                        <div class="col-4">
+                            <div class="h4 text-danger mb-0" id="failCount">0</div>
+                            <small class="text-muted">Failed</small>
+                        </div>
+                        <div class="col-4">
+                            <div class="h4 text-info mb-0" id="remainingCount">0</div>
+                            <small class="text-muted">Remaining</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Estimated Time -->
+                    <div class="text-center mb-3">
+                        <small class="text-muted">
+                            Estimated time remaining: <span id="estimatedTime">-</span>
+                        </small>
+                    </div>
+                    
+                    <!-- Current Contact Card -->
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <small class="text-muted d-block mb-1">Currently Processing:</small>
+                            <div id="currentContactName" class="fw-bold">-</div>
+                            <div id="currentContactEmail" class="text-muted small">-</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Recent Results (Scrollable) -->
+                    <div class="card" style="max-height: 250px; overflow-y: auto;">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <small class="text-muted fw-bold">Recent Results</small>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearRecentResults()">
+                                <i class="bi bi-x-lg"></i> Clear
+                            </button>
+                        </div>
+                        <div class="card-body p-2" id="recentResults">
+                            <div class="text-center text-muted py-3">
+                                <small>Results will appear here as contacts are processed...</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" id="selectionFooter">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" onclick="startBulkEnrichment()">
+                    <i class="bi bi-magic me-2"></i>Start Enrichment
+                </button>
+            </div>
+            <div class="modal-footer" id="progressFooter" style="display: none;">
+                <button type="button" class="btn btn-secondary" onclick="cancelBulkEnrichment()" id="cancelBtn">
+                    <i class="bi bi-x-lg me-2"></i>Cancel
+                </button>
+                <div class="ms-auto">
+                    <small class="text-muted">
+                        Processing... Please wait
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <?php
 renderFooter();

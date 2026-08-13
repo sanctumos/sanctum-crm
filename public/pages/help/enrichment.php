@@ -1,17 +1,17 @@
 <?php
 /**
  * Lead Enrichment Help Page
- * Best Jobs in TA - Lead enrichment documentation
+ * Sanctum CRM - Lead enrichment documentation
  */
 ?>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h4><i class="fas fa-user-plus me-2"></i>Lead Enrichment Guide</h4>
+    <h4><i class="bi bi-person-plus me-2"></i>Lead Enrichment Guide</h4>
     <span class="badge bg-info">RocketReach Integration</span>
 </div>
 
 <div class="alert alert-info">
-    <i class="fas fa-info-circle me-2"></i>
+    <i class="bi bi-info-circle me-2"></i>
     <strong>Lead Enrichment</strong> automatically enhances contact data using RocketReach's database of professional information.
 </div>
 
@@ -19,7 +19,7 @@
     <div class="col-md-8">
         <div class="card">
             <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="fas fa-cog me-2"></i>Setup & Configuration</h5>
+                <h5 class="mb-0"><i class="bi bi-gear me-2"></i>Setup & Configuration</h5>
             </div>
             <div class="card-body">
                 <h6>Step 1: Get RocketReach API Key</h6>
@@ -40,7 +40,7 @@
                 </ol>
                 
                 <div class="alert alert-warning mt-3">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <i class="bi bi-exclamation-triangle me-2"></i>
                     <strong>Important:</strong> Keep your API key secure and don't share it publicly.
                 </div>
             </div>
@@ -50,19 +50,19 @@
     <div class="col-md-4">
         <div class="card">
             <div class="card-header bg-success text-white">
-                <h5 class="mb-0"><i class="fas fa-database me-2"></i>Enrichment Data</h5>
+                <h5 class="mb-0"><i class="bi bi-hdd-stack me-2"></i>Enrichment Data</h5>
             </div>
             <div class="card-body">
                 <h6>Available Information:</h6>
                 <ul class="list-unstyled">
-                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Professional email</li>
-                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Phone numbers</li>
-                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Social profiles</li>
-                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Company information</li>
-                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Job title</li>
-                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Location data</li>
-                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Education history</li>
-                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Work experience</li>
+                    <li class="mb-2"><i class="bi bi-check text-success me-2"></i>Professional email</li>
+                    <li class="mb-2"><i class="bi bi-check text-success me-2"></i>Phone numbers</li>
+                    <li class="mb-2"><i class="bi bi-check text-success me-2"></i>Social profiles</li>
+                    <li class="mb-2"><i class="bi bi-check text-success me-2"></i>Company information</li>
+                    <li class="mb-2"><i class="bi bi-check text-success me-2"></i>Job title</li>
+                    <li class="mb-2"><i class="bi bi-check text-success me-2"></i>Location data</li>
+                    <li class="mb-2"><i class="bi bi-check text-success me-2"></i>Education history</li>
+                    <li class="mb-2"><i class="bi bi-check text-success me-2"></i>Work experience</li>
                 </ul>
             </div>
         </div>
@@ -73,7 +73,7 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0"><i class="fas fa-play me-2"></i>How to Use Enrichment</h5>
+                <h5 class="mb-0"><i class="bi bi-play me-2"></i>How to Use Enrichment</h5>
             </div>
             <div class="card-body">
                 <div class="row">
@@ -117,7 +117,7 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-header bg-warning text-dark">
-                <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Limitations & Costs</h5>
+                <h5 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Limitations & Costs</h5>
             </div>
             <div class="card-body">
                 <h6>RocketReach Limits</h6>
@@ -142,7 +142,7 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-header bg-info text-white">
-                <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Enrichment Statistics</h5>
+                <h5 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Enrichment Statistics</h5>
             </div>
             <div class="card-body">
                 <h6>Track Your Usage</h6>
@@ -165,7 +165,7 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header bg-secondary text-white">
-                <h5 class="mb-0"><i class="fas fa-question-circle me-2"></i>Troubleshooting</h5>
+                <h5 class="mb-0"><i class="bi bi-question-circle me-2"></i>Troubleshooting</h5>
             </div>
             <div class="card-body">
                 <div class="row">
@@ -197,7 +197,7 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header bg-success text-white">
-                <h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Tips for Better Results</h5>
+                <h5 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Tips for Better Results</h5>
             </div>
             <div class="card-body">
                 <div class="row">

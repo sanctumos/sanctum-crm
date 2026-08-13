@@ -1,29 +1,10 @@
 <?php
 /**
- * Sanctum CRM
- * 
- * This file is part of Sanctum CRM.
- * 
- * Copyright (C) 2025 Sanctum OS
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published
- * by the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
-
-/**
  * Settings Page
  * Sanctum CRM - System Settings (Admin Only)
  */
+
+// Remove any require_once for auth.php and layout.php
 
 $auth = new Auth();
 $auth->requireAuth();
@@ -35,511 +16,357 @@ if (!$auth->isAdmin()) {
     exit;
 }
 
-// Get configuration manager
-$config = ConfigManager::getInstance();
+// Get database instance
 $db = Database::getInstance();
-$envDetector = new EnvironmentDetector();
+require_once __DIR__ . '/../includes/LeadEnrichmentService.php';
+require_once __DIR__ . '/../includes/MockLeadEnrichmentService.php';
+require_once __DIR__ . '/../includes/EnrichmentCronService.php';
+$enrichmentCronService = new EnrichmentCronService(new MockLeadEnrichmentService());
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $action = $_POST['action'] ?? '';
-    $success = '';
-    $error = '';
-    
-    try {
-        switch ($action) {
-            case 'company':
-                $companyName = trim($_POST['company_name'] ?? '');
-                $timezone = $_POST['timezone'] ?? 'UTC';
-                
-                if (empty($companyName)) {
-                    throw new Exception('Company name is required');
-                }
-                
-                $config->setCompanyInfo([
-                    'company_name' => $companyName,
-                    'timezone' => $timezone
-                ]);
-                
-                $success = 'Company information updated successfully!';
-                break;
-                
-            case 'application':
-                $appName = trim($_POST['app_name'] ?? '');
-                $appUrl = trim($_POST['app_url'] ?? '');
-                $timezone = $_POST['timezone'] ?? 'UTC';
-                
-                if (empty($appName)) {
-                    throw new Exception('Application name is required');
-                }
-                
-                if (empty($appUrl)) {
-                    throw new Exception('Application URL is required');
-                }
-                
-                if (!validateUrl($appUrl)) {
-                    throw new Exception('Invalid application URL');
-                }
-                
-                $config->setCategory('application', [
-                    'app_name' => $appName,
-                    'app_url' => $appUrl,
-                    'timezone' => $timezone
-                ]);
-                
-                $success = 'Application settings updated successfully!';
-                break;
-                
-            case 'security':
-                $sessionLifetime = (int)($_POST['session_lifetime'] ?? 3600);
-                $apiRateLimit = (int)($_POST['api_rate_limit'] ?? 1000);
-                $passwordMinLength = (int)($_POST['password_min_length'] ?? 8);
-                
-                if ($sessionLifetime < 300) {
-                    throw new Exception('Session lifetime must be at least 5 minutes (300 seconds)');
-                }
-                
-                if ($apiRateLimit < 100) {
-                    throw new Exception('API rate limit must be at least 100 requests per hour');
-                }
-                
-                if ($passwordMinLength < 6) {
-                    throw new Exception('Password minimum length must be at least 6 characters');
-                }
-                
-                $config->setCategory('security', [
-                    'session_lifetime' => $sessionLifetime,
-                    'api_rate_limit' => $apiRateLimit,
-                    'password_min_length' => $passwordMinLength
-                ]);
-                
-                $success = 'Security settings updated successfully!';
-                break;
-                
-            case 'database':
-                $backupEnabled = isset($_POST['backup_enabled']) ? 1 : 0;
-                
-                $config->setCategory('database', [
-                    'backup_enabled' => $backupEnabled
-                ]);
-                
-                $success = 'Database settings updated successfully!';
-                break;
-                
-            case 'legacy':
-    $showDefaultCredentials = isset($_POST['show_default_credentials']) ? 1 : 0;
-    
-    $db->update('settings', [
-        'show_default_credentials' => $showDefaultCredentials,
-        'updated_at' => getCurrentTimestamp()
-    ], 'id = 1');
-    
-                $success = 'Legacy settings updated successfully!';
-                break;
-        }
-    } catch (Exception $e) {
-        $error = $e->getMessage();
+    $action = $_POST['action'] ?? 'credentials';
+
+    if ($action === 'save_skin') {
+        require_once __DIR__ . '/../includes/skin-lab-env.php';
+        $mine = crmSkinNormalizeSlug((string) ($_POST['skin_slug'] ?? ''));
+        $db->update('users', [
+            'skin_slug' => $mine,
+            'updated_at' => getCurrentTimestamp(),
+        ], 'id = ?', [(int) $user['id']]);
+        $orgDefault = crmSkinNormalizeSlug((string) ($_POST['default_skin_slug'] ?? '')) ?? 'hey';
+        $db->update('settings', [
+            'default_skin_slug' => $orgDefault,
+            'updated_at' => getCurrentTimestamp(),
+        ], 'id = 1');
+        $user = $db->fetchOne('SELECT * FROM users WHERE id = ?', [(int) $user['id']]) ?: $user;
+        $success = 'Theme preferences saved.';
+    } elseif ($action === 'enrichment_cron') {
+        $enrichmentCronService->updateConfig([
+            'enabled' => isset($_POST['enabled']) ? 1 : 0,
+            'interval_minutes' => $_POST['interval_minutes'] ?? 60,
+            'strategy' => $_POST['strategy'] ?? 'auto',
+            'max_per_run' => $_POST['max_per_run'] ?? 10,
+            'max_per_day' => $_POST['max_per_day'] ?? 400,
+            'max_attempts_per_contact' => $_POST['max_attempts_per_contact'] ?? 3,
+            'retry_failed' => isset($_POST['retry_failed']) ? 1 : 0,
+            'eligible_enrichment_statuses' => $_POST['eligible_enrichment_statuses'] ?? [],
+            'contact_types' => $_POST['contact_types'] ?? [],
+            'contact_statuses' => $_POST['contact_statuses'] ?? [],
+            'sources' => $_POST['sources'] ?? [],
+            'assigned_to' => $_POST['assigned_to'] ?? '',
+            'min_contact_age_days' => $_POST['min_contact_age_days'] ?? 0,
+        ]);
+        $success = 'Enrichment automation settings updated successfully!';
+    } else {
+        $showDefaultCredentials = isset($_POST['show_default_credentials']) ? 1 : 0;
+        $rocketreachApiKey = $_POST['rocketreach_api_key'] ?? '';
+        
+        // Update settings in database
+        $db->update('settings', [
+            'show_default_credentials' => $showDefaultCredentials,
+            'rocketreach_api_key' => $rocketreachApiKey,
+            'updated_at' => getCurrentTimestamp()
+        ], 'id = 1');
+        
+        $success = 'Settings updated successfully!';
     }
 }
 
 // Get current settings
-$companyInfo = $config->getCompanyInfo();
-$appConfig = $config->getCategory('application');
-$securityConfig = $config->getCategory('security');
-$databaseConfig = $config->getCategory('database');
-
-// Get legacy settings
-$legacySettings = $db->fetchOne("SELECT * FROM settings WHERE id = 1");
-if (!$legacySettings) {
-    $legacySettings = ['show_default_credentials' => 1];
+$settings = $db->fetchOne("SELECT * FROM settings WHERE id = 1");
+if (!$settings) {
+    // Create default settings if they don't exist
+    $db->insert('settings', [
+        'show_default_credentials' => 1,
+        'rocketreach_api_key' => '',
+        'created_at' => getCurrentTimestamp(),
+        'updated_at' => getCurrentTimestamp()
+    ]);
+    $settings = ['show_default_credentials' => 1, 'rocketreach_api_key' => ''];
 }
+$enrichmentCronConfig = $enrichmentCronService->getConfig();
+$lastEnrichmentCronRun = $enrichmentCronService->getLastRun();
+$availableSources = array_column(
+    $db->fetchAll("SELECT DISTINCT source FROM contacts WHERE source IS NOT NULL AND source != '' ORDER BY source"),
+    'source'
+);
+$activeUsers = $db->fetchAll("SELECT id, username, first_name, last_name FROM users WHERE is_active = 1 ORDER BY username");
 
-// Get server information
-$serverInfo = $envDetector->getEnvironmentInfo();
-$serverInfo['database_path'] = DB_PATH;
-$serverInfo['database_size'] = file_exists(DB_PATH) ? filesize(DB_PATH) : 0;
-
-// Get environment recommendations
-$envRecommendations = $envDetector->getRecommendedConfig();
-$deploymentGuide = $envDetector->getDeploymentGuide();
-$productionReady = $envDetector->isProductionReady();
+require_once __DIR__ . '/../includes/skin-lab-env.php';
+$userSkin = crmSkinUserOverrideSlug(is_array($user) ? $user : null) ?? '';
+$defaultSkin = crmSkinMasterSlug();
 
 // Render the page
-$pageTitle = 'System Settings';
-include __DIR__ . '/../includes/layout.php';
+renderHeader('Settings');
+renderPageHeader('Settings', 'System configuration');
 ?>
 
-<div class="container-fluid">
 <div class="row">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h1 class="h3 mb-0">System Settings</h1>
+    <div class="col-lg-8">
+        <div class="surface mb-3">
+            <div class="surface__header">
+                <h5 class="mb-0"><i class="bi bi-palette me-2"></i>Theme</h5>
             </div>
-            
-            <?php if (isset($success) && $success): ?>
-                <div class="alert alert-success alert-dismissible fade show">
-                    <?= htmlspecialchars($success) ?>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            <?php endif; ?>
-            
-            <?php if (isset($error) && $error): ?>
-                <div class="alert alert-danger alert-dismissible fade show">
-                    <?= htmlspecialchars($error) ?>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <div class="surface__body">
+                <?php if (isset($success) && (($_POST['action'] ?? '') === 'save_skin' || isset($_GET['skin']))): ?>
+                    <div class="alert alert-success" role="alert">
+                        <i class="bi bi-check-circle"></i> <?php echo htmlspecialchars($success); ?>
                     </div>
                 <?php endif; ?>
-                
-            <!-- Settings Tabs -->
-            <ul class="nav nav-tabs" id="settingsTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="company-tab" data-bs-toggle="tab" data-bs-target="#company" type="button" role="tab">
-                        <i class="bi bi-building"></i> Company
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="application-tab" data-bs-toggle="tab" data-bs-target="#application" type="button" role="tab">
-                        <i class="bi bi-gear"></i> Application
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="security-tab" data-bs-toggle="tab" data-bs-target="#security" type="button" role="tab">
-                        <i class="bi bi-shield-lock"></i> Security
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="database-tab" data-bs-toggle="tab" data-bs-target="#database" type="button" role="tab">
-                        <i class="bi bi-database"></i> Database
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="server-tab" data-bs-toggle="tab" data-bs-target="#server" type="button" role="tab">
-                        <i class="bi bi-server"></i> Server Info
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="environment-tab" data-bs-toggle="tab" data-bs-target="#environment" type="button" role="tab">
-                        <i class="bi bi-gear-wide-connected"></i> Environment
-                    </button>
-                </li>
-            </ul>
-            
-            <div class="tab-content" id="settingsTabsContent">
-                <!-- Company Settings -->
-                <div class="tab-pane fade show active" id="company" role="tabpanel">
-                    <div class="card mt-3">
-                        <div class="card-body">
-                            <h5 class="card-title">Company Information</h5>
-                            <form method="POST">
-                                <input type="hidden" name="action" value="company">
-                                
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="company_name" class="form-label">Company Name *</label>
-                                            <input type="text" class="form-control" id="company_name" name="company_name" 
-                                                   value="<?= htmlspecialchars($companyInfo['company_name'] ?? '') ?>" required>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="timezone" class="form-label">Timezone</label>
-                                            <select class="form-select" id="timezone" name="timezone">
-                                                <option value="UTC" <?= ($companyInfo['timezone'] ?? 'UTC') === 'UTC' ? 'selected' : '' ?>>UTC</option>
-                                                <option value="America/New_York" <?= ($companyInfo['timezone'] ?? '') === 'America/New_York' ? 'selected' : '' ?>>Eastern Time</option>
-                                                <option value="America/Chicago" <?= ($companyInfo['timezone'] ?? '') === 'America/Chicago' ? 'selected' : '' ?>>Central Time</option>
-                                                <option value="America/Denver" <?= ($companyInfo['timezone'] ?? '') === 'America/Denver' ? 'selected' : '' ?>>Mountain Time</option>
-                                                <option value="America/Los_Angeles" <?= ($companyInfo['timezone'] ?? '') === 'America/Los_Angeles' ? 'selected' : '' ?>>Pacific Time</option>
-                                                <option value="Europe/London" <?= ($companyInfo['timezone'] ?? '') === 'Europe/London' ? 'selected' : '' ?>>London</option>
-                                                <option value="Europe/Paris" <?= ($companyInfo['timezone'] ?? '') === 'Europe/Paris' ? 'selected' : '' ?>>Paris</option>
-                                                <option value="Asia/Tokyo" <?= ($companyInfo['timezone'] ?? '') === 'Asia/Tokyo' ? 'selected' : '' ?>>Tokyo</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <button type="submit" class="btn btn-primary">Update Company Settings</button>
-                            </form>
-                        </div>
+                <p class="text-muted small">
+                    Skins match Sanctum Tasks and Docket:
+                    <code>hey</code>, <code>ledger</code>, <code>brutalist</code>, <code>obsidian</code>.
+                    Preview any page with <code>?preview_skin=obsidian</code> (does not save).
+                </p>
+                <form method="POST" action="" class="row g-3">
+                    <input type="hidden" name="action" value="save_skin">
+                    <div class="col-md-6">
+                        <label class="form-label" for="skin_slug">Your skin</label>
+                        <select class="form-select" id="skin_slug" name="skin_slug">
+                            <option value="" <?php echo $userSkin === '' ? 'selected' : ''; ?>>Use site default</option>
+                            <?php foreach (crmSkinAvailableSlugs() as $slug): ?>
+                                <option value="<?php echo htmlspecialchars($slug); ?>" <?php echo $userSkin === $slug ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($slug); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="default_skin_slug">Site default</label>
+                        <select class="form-select" id="default_skin_slug" name="default_skin_slug">
+                            <?php foreach (crmSkinAvailableSlugs() as $slug): ?>
+                                <option value="<?php echo htmlspecialchars($slug); ?>" <?php echo $defaultSkin === $slug ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($slug); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save me-2"></i>Save theme
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="surface mb-3">
+            <div class="surface__header">
+                <h5 class="mb-0"><i class="bi bi-gear me-2"></i>System Settings</h5>
+            </div>
+            <div class="surface__body">
+                <?php if (isset($success) && ($_POST['action'] ?? 'credentials') !== 'save_skin' && ($_POST['action'] ?? '') !== 'enrichment_cron'): ?>
+                    <div class="alert alert-success" role="alert">
+                        <i class="bi bi-check-circle"></i> <?php echo htmlspecialchars($success); ?>
+                    </div>
+                <?php elseif (isset($success) && ($_POST['action'] ?? '') === 'enrichment_cron'): ?>
+                    <div class="alert alert-success" role="alert">
+                        <i class="bi bi-check-circle"></i> <?php echo htmlspecialchars($success); ?></div>
+                <?php endif; ?>
+                
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Need help with server configuration?</strong> 
+                    Check out the <a href="/help" class="text-decoration-none">Help & Configuration</a> page for Nginx setup and troubleshooting guides.
                 </div>
                 
-                <!-- Application Settings -->
-                <div class="tab-pane fade" id="application" role="tabpanel">
-                    <div class="card mt-3">
-                    <div class="card-body">
-                            <h5 class="card-title">Application Configuration</h5>
-                            <form method="POST">
-                                <input type="hidden" name="action" value="application">
-                                
-                        <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="app_name" class="form-label">Application Name *</label>
-                                            <input type="text" class="form-control" id="app_name" name="app_name" 
-                                                   value="<?= htmlspecialchars($appConfig['app_name'] ?? 'Sanctum CRM') ?>" required>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="app_url" class="form-label">Application URL *</label>
-                                            <input type="url" class="form-control" id="app_url" name="app_url" 
-                                                   value="<?= htmlspecialchars($appConfig['app_url'] ?? 'http://localhost') ?>" required>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label for="app_timezone" class="form-label">Application Timezone</label>
-                                    <select class="form-select" id="app_timezone" name="timezone">
-                                        <option value="UTC" <?= ($appConfig['timezone'] ?? 'UTC') === 'UTC' ? 'selected' : '' ?>>UTC</option>
-                                        <option value="America/New_York" <?= ($appConfig['timezone'] ?? '') === 'America/New_York' ? 'selected' : '' ?>>Eastern Time</option>
-                                        <option value="America/Chicago" <?= ($appConfig['timezone'] ?? '') === 'America/Chicago' ? 'selected' : '' ?>>Central Time</option>
-                                        <option value="America/Denver" <?= ($appConfig['timezone'] ?? '') === 'America/Denver' ? 'selected' : '' ?>>Mountain Time</option>
-                                        <option value="America/Los_Angeles" <?= ($appConfig['timezone'] ?? '') === 'America/Los_Angeles' ? 'selected' : '' ?>>Pacific Time</option>
-                                        <option value="Europe/London" <?= ($appConfig['timezone'] ?? '') === 'Europe/London' ? 'selected' : '' ?>>London</option>
-                                        <option value="Europe/Paris" <?= ($appConfig['timezone'] ?? '') === 'Europe/Paris' ? 'selected' : '' ?>>Paris</option>
-                                        <option value="Asia/Tokyo" <?= ($appConfig['timezone'] ?? '') === 'Asia/Tokyo' ? 'selected' : '' ?>>Tokyo</option>
-                                    </select>
-                                </div>
-                                
-                                <button type="submit" class="btn btn-primary">Update Application Settings</button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Security Settings -->
-                <div class="tab-pane fade" id="security" role="tabpanel">
-                    <div class="card mt-3">
-                        <div class="card-body">
-                            <h5 class="card-title">Security Configuration</h5>
-                            <form method="POST">
-                                <input type="hidden" name="action" value="security">
-                                
-                                <div class="row">
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            <label for="session_lifetime" class="form-label">Session Lifetime (seconds) *</label>
-                                            <input type="number" class="form-control" id="session_lifetime" name="session_lifetime" 
-                                                   value="<?= htmlspecialchars($securityConfig['session_lifetime'] ?? 3600) ?>" 
-                                                   min="300" required>
-                                            <div class="form-text">Minimum 300 seconds (5 minutes)</div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                        <div class="mb-3">
-                                            <label for="api_rate_limit" class="form-label">API Rate Limit (per hour) *</label>
-                                            <input type="number" class="form-control" id="api_rate_limit" name="api_rate_limit" 
-                                                   value="<?= htmlspecialchars($securityConfig['api_rate_limit'] ?? 1000) ?>" 
-                                                   min="100" required>
-                                            <div class="form-text">Minimum 100 requests per hour</div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            <label for="password_min_length" class="form-label">Password Min Length *</label>
-                                            <input type="number" class="form-control" id="password_min_length" name="password_min_length" 
-                                                   value="<?= htmlspecialchars($securityConfig['password_min_length'] ?? 8) ?>" 
-                                                   min="6" required>
-                                            <div class="form-text">Minimum 6 characters</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <button type="submit" class="btn btn-primary">Update Security Settings</button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Database Settings -->
-                <div class="tab-pane fade" id="database" role="tabpanel">
-                    <div class="card mt-3">
-                        <div class="card-body">
-                            <h5 class="card-title">Database Configuration</h5>
-                            <form method="POST">
-                                <input type="hidden" name="action" value="database">
-                                
-                                <div class="mb-3">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="backup_enabled" name="backup_enabled" 
-                                               <?= ($databaseConfig['backup_enabled'] ?? false) ? 'checked' : '' ?>>
-                                        <label class="form-check-label" for="backup_enabled">
-                                            Enable Database Backups
+                <form method="POST" action="">
+                    <input type="hidden" name="action" value="credentials">
+                    <div class="mb-4">
+                        <h6 class="mb-3">Login Page Settings</h6>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="show_default_credentials" 
+                                   name="show_default_credentials" 
+                                   <?php echo ($settings['show_default_credentials'] ?? 1) ? 'checked' : ''; ?>>
+                            <label class="form-check-label" for="show_default_credentials">
+                                Show default login credentials on login page
                             </label>
                         </div>
-                                </div>
-                                
-                                <div class="alert alert-info">
-                                    <strong>Database Path:</strong> <?= htmlspecialchars(DB_PATH) ?><br>
-                                    <strong>Database Size:</strong> <?= number_format($serverInfo['database_size'] / 1024, 2) ?> KB
+                        <small class="text-muted">
+                            When enabled, the login page will display "Default credentials: admin / admin123" 
+                            to help with initial setup and testing.
+                        </small>
                     </div>
                     
-                                <button type="submit" class="btn btn-primary">Update Database Settings</button>
+                    <div class="mb-4">
+                        <h6 class="mb-3">RocketReach Lead Enrichment</h6>
+                        <div class="mb-3">
+                            <label for="rocketreach_api_key" class="form-label">RocketReach API Key</label>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="rocketreach_api_key" 
+                                       name="rocketreach_api_key" 
+                                       value="<?php echo htmlspecialchars($settings['rocketreach_api_key'] ?? ''); ?>"
+                                       placeholder="Enter your RocketReach API key">
+                                <button class="btn btn-outline-secondary" type="button" id="toggleRocketReachKey">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted">
+                                Lead enrichment will be automatically enabled when you add your RocketReach API key. 
+                                Get your API key from <a href="https://rocketreach.co" target="_blank">RocketReach.co</a>.
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save me-2"></i>Save Settings
+                    </button>
+                </form>
+
+                <hr class="my-5">
+
+                <form method="POST" action="">
+                    <input type="hidden" name="action" value="enrichment_cron">
+                    <div class="mb-4">
+                        <h6 class="mb-3">Enrichment Automation</h6>
+                        <p class="text-muted mb-3">Schedule RocketReach enrichment from cron while enforcing caps and filters before spending lookup quota.</p>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="enrichment_enabled" name="enabled" <?php echo $enrichmentCronConfig['enabled'] ? 'checked' : ''; ?>>
+                            <label class="form-check-label" for="enrichment_enabled">Enable scheduled enrichment</label>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label for="interval_minutes" class="form-label">Run Interval (minutes)</label>
+                            <input type="number" class="form-control" id="interval_minutes" name="interval_minutes" min="1" value="<?php echo htmlspecialchars($enrichmentCronConfig['interval_minutes']); ?>">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="strategy" class="form-label">Strategy</label>
+                            <select class="form-select" id="strategy" name="strategy">
+                                <?php foreach (['auto' => 'Auto', 'email' => 'Email', 'linkedin' => 'LinkedIn', 'name_company' => 'Name + Company'] as $value => $label): ?>
+                                    <option value="<?php echo $value; ?>" <?php echo $enrichmentCronConfig['strategy'] === $value ? 'selected' : ''; ?>><?php echo $label; ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="max_per_run" class="form-label">Max Per Run</label>
+                            <input type="number" class="form-control" id="max_per_run" name="max_per_run" min="1" value="<?php echo htmlspecialchars($enrichmentCronConfig['max_per_run']); ?>">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="max_per_day" class="form-label">Max Per Day</label>
+                            <input type="number" class="form-control" id="max_per_day" name="max_per_day" min="1" value="<?php echo htmlspecialchars($enrichmentCronConfig['max_per_day']); ?>">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="max_attempts_per_contact" class="form-label">Max Attempts Per Contact</label>
+                            <input type="number" class="form-control" id="max_attempts_per_contact" name="max_attempts_per_contact" min="1" value="<?php echo htmlspecialchars($enrichmentCronConfig['max_attempts_per_contact']); ?>">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="min_contact_age_days" class="form-label">Minimum Contact Age (days)</label>
+                            <input type="number" class="form-control" id="min_contact_age_days" name="min_contact_age_days" min="0" value="<?php echo htmlspecialchars($enrichmentCronConfig['min_contact_age_days']); ?>">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="assigned_to" class="form-label">Assigned User</label>
+                            <select class="form-select" id="assigned_to" name="assigned_to">
+                                <option value="">All users</option>
+                                <?php foreach ($activeUsers as $activeUser): ?>
+                                    <?php $userLabel = trim(($activeUser['first_name'] ?? '') . ' ' . ($activeUser['last_name'] ?? '')) ?: $activeUser['username']; ?>
+                                    <option value="<?php echo (int) $activeUser['id']; ?>" <?php echo (string) $enrichmentCronConfig['assigned_to'] === (string) $activeUser['id'] ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($userLabel); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="retry_failed" name="retry_failed" <?php echo $enrichmentCronConfig['retry_failed'] ? 'checked' : ''; ?>>
+                        <label class="form-check-label" for="retry_failed">Retry failed contacts</label>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Eligible Enrichment Statuses</label>
+                            <?php foreach (['empty' => 'Not Enriched', 'pending' => 'Pending', 'failed' => 'Failed'] as $value => $label): ?>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="eligible_enrichment_statuses[]" id="status_<?php echo $value; ?>" value="<?php echo $value; ?>" <?php echo in_array($value, $enrichmentCronConfig['eligible_enrichment_statuses'], true) ? 'checked' : ''; ?>>
+                                    <label class="form-check-label" for="status_<?php echo $value; ?>"><?php echo $label; ?></label>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Contact Types</label>
+                            <?php foreach (['lead' => 'Leads', 'customer' => 'Customers'] as $value => $label): ?>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="contact_types[]" id="type_<?php echo $value; ?>" value="<?php echo $value; ?>" <?php echo in_array($value, $enrichmentCronConfig['contact_types'], true) ? 'checked' : ''; ?>>
+                                    <label class="form-check-label" for="type_<?php echo $value; ?>"><?php echo $label; ?></label>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Contact Statuses</label>
+                            <?php foreach (['new' => 'New', 'qualified' => 'Qualified', 'active' => 'Active', 'inactive' => 'Inactive'] as $value => $label): ?>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="contact_statuses[]" id="contact_status_<?php echo $value; ?>" value="<?php echo $value; ?>" <?php echo in_array($value, $enrichmentCronConfig['contact_statuses'], true) ? 'checked' : ''; ?>>
+                                    <label class="form-check-label" for="contact_status_<?php echo $value; ?>"><?php echo $label; ?></label>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="sources" class="form-label">Sources</label>
+                        <select class="form-select" id="sources" name="sources[]" multiple size="5">
+                            <?php foreach ($availableSources as $source): ?>
+                                <option value="<?php echo htmlspecialchars($source); ?>" <?php echo in_array($source, $enrichmentCronConfig['sources'], true) ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars(ucfirst(str_replace('_', ' ', $source))); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <small class="text-muted">Leave blank to allow all sources.</small>
+                    </div>
+
+                    <div class="alert alert-secondary">
+                        <strong>Cron command:</strong><br>
+                        <code>php /var/www/localhost/html/cron/enrichment.php</code>
+                        <?php if ($lastEnrichmentCronRun): ?>
+                            <hr>
+                            <strong>Last run:</strong>
+                            <?php echo htmlspecialchars($lastEnrichmentCronRun['status']); ?>
+                            at <?php echo htmlspecialchars($lastEnrichmentCronRun['started_at']); ?>.
+                            Processed <?php echo (int) $lastEnrichmentCronRun['processed_count']; ?>,
+                            enriched <?php echo (int) $lastEnrichmentCronRun['enriched_count']; ?>,
+                            failed <?php echo (int) $lastEnrichmentCronRun['failed_count']; ?>.
+                            <?php if (!empty($lastEnrichmentCronRun['skipped_reason'])): ?>
+                                Skipped reason: <?php echo htmlspecialchars($lastEnrichmentCronRun['skipped_reason']); ?>.
+                            <?php endif; ?>
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="alert alert-secondary">
+                        <strong>Merge candidates cron</strong> (proposes only — never auto-merges):<br>
+                        <code>php /var/www/localhost/html/cron/merge_candidates.php</code><br>
+                        <small class="text-muted">Review and accept under <a href="/index.php?page=merges">Merge</a>. Mass accept is high confidence (≥0.85) only.</small>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save me-2"></i>Save Enrichment Automation
+                    </button>
                 </form>
             </div>
         </div>
     </div>
     
-                <!-- Server Information -->
-                <div class="tab-pane fade" id="server" role="tabpanel">
-                    <div class="card mt-3">
-            <div class="card-body">
-                            <h5 class="card-title">Server Information</h5>
-                            
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <table class="table table-sm">
-                                        <tr>
-                                            <td><strong>PHP Version</strong></td>
-                                            <td><?= htmlspecialchars($serverInfo['php_version']) ?></td>
-                                        </tr>
-                                        <tr>
-                                            <td><strong>Server Software</strong></td>
-                                            <td><?= htmlspecialchars($serverInfo['server_software']) ?></td>
-                                        </tr>
-                                        <tr>
-                                            <td><strong>Operating System</strong></td>
-                                            <td><?= htmlspecialchars($serverInfo['operating_system']) ?></td>
-                                        </tr>
-                                        <tr>
-                                            <td><strong>Memory Limit</strong></td>
-                                            <td><?= htmlspecialchars($serverInfo['memory_limit']) ?></td>
-                                        </tr>
-                                        <tr>
-                                            <td><strong>Max Execution Time</strong></td>
-                                            <td><?= htmlspecialchars($serverInfo['max_execution_time']) ?> seconds</td>
-                                        </tr>
-                                    </table>
-                                </div>
-                                <div class="col-md-6">
-                                    <table class="table table-sm">
-                                        <tr>
-                                            <td><strong>Upload Max Filesize</strong></td>
-                                            <td><?= htmlspecialchars($serverInfo['upload_max_filesize']) ?></td>
-                                        </tr>
-                                        <tr>
-                                            <td><strong>Post Max Size</strong></td>
-                                            <td><?= htmlspecialchars($serverInfo['post_max_size']) ?></td>
-                                        </tr>
-                                        <tr>
-                                            <td><strong>Timezone</strong></td>
-                                            <td><?= htmlspecialchars($serverInfo['timezone']) ?></td>
-                                        </tr>
-                                        <tr>
-                                            <td><strong>Database Path</strong></td>
-                                            <td><?= htmlspecialchars($serverInfo['database_path']) ?></td>
-                                        </tr>
-                                        <tr>
-                                            <td><strong>Database Size</strong></td>
-                                            <td><?= number_format($serverInfo['database_size'] / 1024, 2) ?> KB</td>
-                                        </tr>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+    <div class="col-lg-4">
+        <div class="surface mb-3">
+            <div class="surface__header">
+                <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>About Settings</h5>
+            </div>
+            <div class="surface__body">
+                <p class="text-muted">
+                    These settings control system-wide behavior and are only accessible to administrators.
+                </p>
                 
-                <!-- Environment Detection -->
-                <div class="tab-pane fade" id="environment" role="tabpanel">
-                    <div class="card mt-3">
-                        <div class="card-body">
-                            <h5 class="card-title">Environment Analysis</h5>
-                            
-                            <!-- Production Readiness Status -->
-                            <div class="alert alert-<?= $productionReady['ready'] ? 'success' : 'warning' ?>">
-                                <h6><i class="bi bi-<?= $productionReady['ready'] ? 'check-circle' : 'exclamation-triangle' ?>"></i> 
-                                    Production Readiness: <?= $productionReady['ready'] ? 'Ready' : 'Needs Attention' ?></h6>
-                                <?php if (!$productionReady['ready']): ?>
-                                    <p class="mb-0">Issues found: <?= implode(', ', $productionReady['issues']) ?></p>
-                                <?php endif; ?>
-                            </div>
-                            
-                            <!-- Environment Recommendations -->
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <h6>PHP Version</h6>
-                                    <div class="alert alert-<?= $envRecommendations['php_version']['status'] === 'success' ? 'success' : 'warning' ?>">
-                                        <strong>Current:</strong> <?= htmlspecialchars($envRecommendations['php_version']['current']) ?><br>
-                                        <strong>Recommended:</strong> <?= htmlspecialchars($envRecommendations['php_version']['recommended']) ?><br>
-                                        <small><?= htmlspecialchars($envRecommendations['php_version']['message']) ?></small>
-                                    </div>
-                                    
-                                    <h6>Memory Limit</h6>
-                                    <div class="alert alert-<?= $envRecommendations['memory_limit']['status'] === 'success' ? 'success' : 'warning' ?>">
-                                        <strong>Current:</strong> <?= htmlspecialchars($envRecommendations['memory_limit']['current']) ?><br>
-                                        <strong>Recommended:</strong> <?= htmlspecialchars($envRecommendations['memory_limit']['recommended']) ?><br>
-                                        <small><?= htmlspecialchars($envRecommendations['memory_limit']['message']) ?></small>
-                                    </div>
-                                </div>
-                                
-                                <div class="col-md-6">
-                                    <h6>PHP Extensions</h6>
-                                    <div class="alert alert-<?= $envRecommendations['extensions']['status'] === 'success' ? 'success' : 'danger' ?>">
-                                        <?php if (empty($envRecommendations['extensions']['missing'])): ?>
-                                            <i class="bi bi-check-circle"></i> All required extensions are installed
-                                        <?php else: ?>
-                                            <strong>Missing Extensions:</strong><br>
-                                            <?php foreach ($envRecommendations['extensions']['missing'] as $ext): ?>
-                                                <span class="badge bg-danger me-1"><?= htmlspecialchars($ext) ?></span>
-                                            <?php endforeach; ?>
-                                        <?php endif; ?>
-                                    </div>
-                                    
-                                    <h6>Security</h6>
-                                    <div class="alert alert-<?= $envRecommendations['security']['status'] === 'success' ? 'success' : 'warning' ?>">
-                                        <strong>HTTPS:</strong> <?= $envRecommendations['security']['https_enabled'] ? 'Enabled' : 'Disabled' ?><br>
-                                        <?php foreach ($envRecommendations['security']['recommendations'] as $rec): ?>
-                                            <small><?= htmlspecialchars($rec) ?></small><br>
-                                        <?php endforeach; ?>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Deployment Guide -->
-                            <?php if (!empty($deploymentGuide)): ?>
-                                <h6>Deployment Guide for <?= htmlspecialchars($deploymentGuide['platform']) ?></h6>
-                                <div class="card">
-                                    <div class="card-body">
-                                        <?php if (isset($deploymentGuide['commands'])): ?>
-                                            <h6>Commands:</h6>
-                                            <ul class="list-unstyled">
-                                                <?php foreach ($deploymentGuide['commands'] as $desc => $cmd): ?>
-                                                    <li class="mb-2">
-                                                        <strong><?= htmlspecialchars($desc) ?>:</strong><br>
-                                                        <code class="bg-light p-2 d-block"><?= htmlspecialchars($cmd) ?></code>
-                                                    </li>
-                                                <?php endforeach; ?>
-                                            </ul>
-                                        <?php endif; ?>
-                                        
-                                        <?php if (isset($deploymentGuide['additional_commands'])): ?>
-                                            <h6>Additional Commands for <?= htmlspecialchars($deploymentGuide['web_server']) ?>:</h6>
-                                            <ul class="list-unstyled">
-                                                <?php foreach ($deploymentGuide['additional_commands'] as $desc => $cmd): ?>
-                                                    <li class="mb-2">
-                                                        <strong><?= htmlspecialchars($desc) ?>:</strong><br>
-                                                        <code class="bg-light p-2 d-block"><?= htmlspecialchars($cmd) ?></code>
-                                                    </li>
-                                                <?php endforeach; ?>
-                                            </ul>
-                                        <?php endif; ?>
-                                        
-                                        <?php if (isset($deploymentGuide['recommendations'])): ?>
-                                            <h6>Recommendations:</h6>
-                                            <ul>
-                                                <?php foreach ($deploymentGuide['recommendations'] as $rec): ?>
-                                                    <li><?= htmlspecialchars($rec) ?></li>
-                                                <?php endforeach; ?>
-                                            </ul>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-                            <?php endif; ?>
-                        </div>
-                    </div>
+                <div class="alert alert-info">
+                    <h6><i class="bi bi-shield-check me-2"></i>Security Note</h6>
+                    <p class="mb-0 small">
+                        Consider disabling the default credentials display in production environments 
+                        for enhanced security.
+                    </p>
                 </div>
             </div>
         </div>
@@ -547,12 +374,25 @@ include __DIR__ . '/../includes/layout.php';
 </div>
 
 <script>
-// Auto-dismiss alerts after 5 seconds
-setTimeout(function() {
-    const alerts = document.querySelectorAll('.alert');
-    alerts.forEach(function(alert) {
-        const bsAlert = new bootstrap.Alert(alert);
-        bsAlert.close();
-    });
-}, 5000);
+// Toggle RocketReach API key visibility
+document.getElementById('toggleRocketReachKey').addEventListener('click', function() {
+    const apiKeyInput = document.getElementById('rocketreach_api_key');
+    const toggleBtn = this;
+    const icon = toggleBtn.querySelector('i');
+    
+    if (apiKeyInput.type === 'password') {
+        apiKeyInput.type = 'text';
+        icon.className = 'bi bi-eye-slash';
+        toggleBtn.title = 'Hide API Key';
+    } else {
+        apiKeyInput.type = 'password';
+        icon.className = 'bi bi-eye';
+        toggleBtn.title = 'Show API Key';
+    }
+});
+
 </script>
+
+<?php
+renderFooter();
+?> 

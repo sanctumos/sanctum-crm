@@ -1,26 +1,5 @@
 <?php
 /**
- * Sanctum CRM
- * 
- * This file is part of Sanctum CRM.
- * 
- * Copyright (C) 2025 Sanctum OS
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published
- * by the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
-
-/**
  * Webhook Management Page
  * Sanctum CRM
  */
@@ -32,6 +11,11 @@ $auth->requireAuth();
 
 // Render the page using the template system
 renderHeader('Webhooks');
+ob_start();
+?>
+<button class="btn btn-success" type="button" id="addWebhookBtn"><i class="bi bi-plus-lg me-1"></i>Add Webhook</button>
+<?php
+renderPageHeader('Webhooks', 'Outbound event delivery endpoints', ob_get_clean());
 ?>
 
 <style>
@@ -43,18 +27,12 @@ renderHeader('Webhooks');
 </style>
 
 <div class="webhooks-card">
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="fas fa-link"></i> Webhook Management</h2>
-        <button class="btn btn-success" id="addWebhookBtn"><i class="fas fa-plus"></i> Add Webhook</button>
-    </div>
-
     <!-- Help Card -->
-    <div class="card mb-4 border-info">
-        <div class="card-header bg-info text-white">
-            <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>What are Webhooks?</h5>
+    <div class="surface mb-4">
+        <div class="surface__header">
+            <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>What are Webhooks?</h5>
         </div>
-        <div class="card-body">
+        <div class="surface__body">
             <div class="row">
                 <div class="col-md-8">
                     <p class="mb-3">
@@ -79,12 +57,12 @@ renderHeader('Webhooks');
                 <div class="col-md-4">
                     <div class="text-center">
                         <div class="bg-light p-4 rounded mb-3">
-                            <i class="fas fa-exchange-alt fa-3x text-info mb-3"></i>
+                            <i class="bi bi-arrow-left-right fs-1 text-info mb-3"></i>
                             <h6>Real-time Integration</h6>
                             <p class="small text-muted mb-0">Connect your CRM with external tools automatically</p>
                         </div>
                         <div class="alert alert-warning alert-sm">
-                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            <i class="bi bi-exclamation-triangle me-1"></i>
                             <strong>Note:</strong> You'll need a webhook URL from the receiving system to get started.
                         </div>
                     </div>
@@ -95,6 +73,27 @@ renderHeader('Webhooks');
 
     <!-- Alerts -->
     <div id="webhooksAlert" class="alert d-none" role="alert"></div>
+
+    <form class="filter-bar" role="search" onsubmit="return false;">
+        <div class="filter-bar__search">
+            <div class="input-group">
+                <span class="input-group-text border-end-0"><i class="bi bi-search"></i></span>
+                <input type="search" class="form-control border-start-0" id="webhookSearchFilter" placeholder="Search URL or events…" aria-label="Search webhooks">
+            </div>
+        </div>
+        <div class="filter-bar__field">
+            <select class="form-select" id="webhookStatusFilter" aria-label="Webhook status">
+                <option value="">All Statuses</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+            </select>
+        </div>
+        <div class="filter-bar__actions">
+            <button type="button" class="btn btn-outline-secondary" id="webhookClearFiltersBtn">
+                <i class="bi bi-x-lg me-1"></i>Clear
+            </button>
+        </div>
+    </form>
 
     <!-- Webhooks List -->
     <div class="row" id="webhooksList">
@@ -214,11 +213,24 @@ function setupEventListeners() {
     document.getElementById('sendTestBtn').addEventListener('click', function() {
         sendTestWebhook();
     });
+
+    const searchEl = document.getElementById('webhookSearchFilter');
+    const statusEl = document.getElementById('webhookStatusFilter');
+    const clearBtn = document.getElementById('webhookClearFiltersBtn');
+    if (searchEl) searchEl.addEventListener('input', renderWebhooks);
+    if (statusEl) statusEl.addEventListener('change', renderWebhooks);
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function() {
+            if (searchEl) searchEl.value = '';
+            if (statusEl) statusEl.value = '';
+            renderWebhooks();
+        });
+    }
 }
 
 async function loadWebhooks() {
     try {
-        const response = await fetch('/api/v1/webhooks', {
+        const response = await fetch(crmApiUrl('webhooks'), {
             credentials: 'include'
         });
         const result = await response.json();
@@ -234,27 +246,55 @@ async function loadWebhooks() {
     }
 }
 
+function getFilteredWebhooks() {
+    const q = (document.getElementById('webhookSearchFilter')?.value || '').trim().toLowerCase();
+    const status = document.getElementById('webhookStatusFilter')?.value || '';
+    return webhooks.filter((webhook) => {
+        if (status === 'active' && !webhook.is_active) return false;
+        if (status === 'inactive' && webhook.is_active) return false;
+        if (!q) return true;
+        const events = (() => {
+            try { return JSON.parse(webhook.events || '[]'); } catch (e) { return []; }
+        })();
+        const hay = [webhook.url || '', events.join(' ')].join(' ').toLowerCase();
+        return hay.includes(q);
+    });
+}
+
 function renderWebhooks() {
     const container = document.getElementById('webhooksList');
     container.innerHTML = '';
+    const filtered = getFilteredWebhooks();
     
     if (webhooks.length === 0) {
         container.innerHTML = `
             <div class="col-12">
                 <div class="card text-center p-5">
-                    <i class="fas fa-link fa-3x text-muted mb-3"></i>
+                    <i class="bi bi-link-45deg fs-1 text-muted mb-3"></i>
                     <h5>No Webhooks Found</h5>
                     <p class="text-muted">Get started by creating your first webhook to receive real-time updates.</p>
                     <button class="btn btn-primary" onclick="document.getElementById('addWebhookBtn').click()">
-                        <i class="fas fa-plus"></i> Add Your First Webhook
+                        <i class="bi bi-plus-lg"></i> Add Your First Webhook
                     </button>
                 </div>
             </div>
         `;
         return;
     }
+
+    if (filtered.length === 0) {
+        container.innerHTML = `
+            <div class="col-12">
+                <div class="card text-center p-4">
+                    <h5 class="mb-2">No matching webhooks</h5>
+                    <p class="text-muted mb-0">Try clearing the search or status filter.</p>
+                </div>
+            </div>
+        `;
+        return;
+    }
     
-    webhooks.forEach(webhook => {
+    filtered.forEach(webhook => {
         const events = JSON.parse(webhook.events || '[]');
         const eventBadges = events.map(event => 
             `<span class="badge bg-info event-badge">${event}</span>`
@@ -265,12 +305,12 @@ function renderWebhooks() {
         card.innerHTML = `
             <div class="card webhook-card h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0"><i class="fas fa-link"></i> Webhook</h6>
+                    <h6 class="mb-0"><i class="bi bi-link-45deg"></i> Webhook</h6>
                     <span class="badge bg-${webhook.is_active ? 'success' : 'warning'} status-badge">
                         ${webhook.is_active ? 'Active' : 'Inactive'}
                     </span>
                 </div>
-                <div class="card-body">
+                <div class="surface__body">
                     <p class="card-text"><strong>URL:</strong><br><code class="small">${escapeHtml(webhook.url)}</code></p>
                     <p class="card-text"><strong>Events:</strong><br>${eventBadges}</p>
                     <p class="card-text"><small class="text-muted">Created: ${new Date(webhook.created_at).toLocaleDateString()}</small></p>
@@ -278,16 +318,16 @@ function renderWebhooks() {
                 <div class="card-footer">
                     <div class="btn-group w-100" role="group">
                         <button class="btn btn-sm btn-outline-primary" onclick="editWebhook(${webhook.id})" title="Edit">
-                            <i class="fas fa-edit"></i>
+                            <i class="bi bi-pencil-square"></i>
                         </button>
                         <button class="btn btn-sm btn-outline-info" onclick="testWebhook(${webhook.id})" title="Test">
-                            <i class="fas fa-paper-plane"></i>
+                            <i class="bi bi-send"></i>
                         </button>
                         <button class="btn btn-sm btn-outline-${webhook.is_active ? 'warning' : 'success'}" onclick="toggleWebhookStatus(${webhook.id})" title="${webhook.is_active ? 'Deactivate' : 'Activate'}">
-                            <i class="fas fa-${webhook.is_active ? 'pause' : 'play'}"></i>
+                            <i class="bi bi-${webhook.is_active ? 'pause-fill' : 'play-fill'}"></i>
                         </button>
                         <button class="btn btn-sm btn-outline-danger" onclick="deleteWebhook(${webhook.id})" title="Delete">
-                            <i class="fas fa-trash"></i>
+                            <i class="bi bi-trash"></i>
                         </button>
                     </div>
                 </div>
@@ -311,7 +351,7 @@ async function saveWebhook() {
     }
     
     try {
-        const url = currentWebhookId ? `/api/v1/webhooks/${currentWebhookId}` : '/api/v1/webhooks';
+        const url = currentWebhookId ? crmApiUrl(`webhooks/${currentWebhookId}`) : crmApiUrl('webhooks');
         const method = currentWebhookId ? 'PUT' : 'POST';
         
         const response = await fetch(url, {
@@ -375,10 +415,10 @@ async function sendTestWebhook() {
     const resultDiv = document.getElementById('testResult');
     
     sendBtn.disabled = true;
-    sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+    sendBtn.innerHTML = '<i class="bi bi-arrow-clockwise crm-spin"></i> Sending...';
     
     try {
-        const response = await fetch(`/api/v1/webhooks/${currentTestWebhookId}/test`, {
+        const response = await fetch(crmApiUrl(`webhooks/${currentTestWebhookId}/test`), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include'
@@ -410,7 +450,7 @@ async function toggleWebhookStatus(webhookId) {
     if (!webhook) return;
     
     try {
-        const response = await fetch(`/api/v1/webhooks/${webhookId}`, {
+        const response = await fetch(crmApiUrl(`webhooks/${webhookId}`), {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
@@ -434,7 +474,7 @@ async function deleteWebhook(webhookId) {
     if (!confirm('Are you sure you want to delete this webhook? This action cannot be undone.')) return;
     
     try {
-        const response = await fetch(`/api/v1/webhooks/${webhookId}`, {
+        const response = await fetch(crmApiUrl(`webhooks/${webhookId}`), {
             method: 'DELETE',
             credentials: 'include'
         });

@@ -1,7 +1,7 @@
 <?php
 /**
  * Help Navigation Module
- * Best Jobs in TA - Help system navigation
+ * Decision Science Corp CRM - Help system navigation
  */
 
 // Prevent direct access
@@ -17,37 +17,37 @@ $currentHelpPage = $_GET['help_page'] ?? 'overview';
     <div class="col-md-3">
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0"><i class="fas fa-question-circle me-2"></i>Help Center</h5>
+                <h5 class="mb-0"><i class="bi bi-question-circle me-2"></i>Help Center</h5>
             </div>
             <div class="card-body p-0">
                 <div class="list-group list-group-flush">
                     <a href="?page=help&help_page=overview" 
                        class="list-group-item list-group-item-action <?php echo $currentHelpPage === 'overview' ? 'active' : ''; ?>">
-                        <i class="fas fa-home me-2"></i>Overview
+                        <i class="bi bi-house me-2"></i>Overview
                     </a>
                     <a href="?page=help&help_page=api" 
                        class="list-group-item list-group-item-action <?php echo $currentHelpPage === 'api' ? 'active' : ''; ?>">
-                        <i class="fas fa-code me-2"></i>API Documentation
+                        <i class="bi bi-code-slash me-2"></i>API Documentation
                     </a>
                     <a href="?page=help&help_page=webhooks" 
                        class="list-group-item list-group-item-action <?php echo $currentHelpPage === 'webhooks' ? 'active' : ''; ?>">
-                        <i class="fas fa-link me-2"></i>Webhooks
+                        <i class="bi bi-link-45deg me-2"></i>Webhooks
                     </a>
                     <a href="?page=help&help_page=import" 
                        class="list-group-item list-group-item-action <?php echo $currentHelpPage === 'import' ? 'active' : ''; ?>">
-                        <i class="fas fa-file-import me-2"></i>CSV Import
+                        <i class="bi bi-file-earmark-arrow-up me-2"></i>CSV Import
                     </a>
                     <a href="?page=help&help_page=enrichment" 
                        class="list-group-item list-group-item-action <?php echo $currentHelpPage === 'enrichment' ? 'active' : ''; ?>">
-                        <i class="fas fa-user-plus me-2"></i>Lead Enrichment
+                        <i class="bi bi-person-plus me-2"></i>Lead Enrichment
                     </a>
                     <a href="?page=help&help_page=troubleshooting" 
                        class="list-group-item list-group-item-action <?php echo $currentHelpPage === 'troubleshooting' ? 'active' : ''; ?>">
-                        <i class="fas fa-tools me-2"></i>Troubleshooting
+                        <i class="bi bi-tools me-2"></i>Troubleshooting
                     </a>
                     <a href="?page=help&help_page=system" 
                        class="list-group-item list-group-item-action <?php echo $currentHelpPage === 'system' ? 'active' : ''; ?>">
-                        <i class="fas fa-info-circle me-2"></i>System Info
+                        <i class="bi bi-info-circle me-2"></i>System Info
                     </a>
                 </div>
             </div>

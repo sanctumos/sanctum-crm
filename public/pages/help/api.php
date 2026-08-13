@@ -1,18 +1,46 @@
 <?php
 /**
  * API Documentation Page
- * Best Jobs in TA - API documentation
+ * Sanctum CRM - API documentation
  */
+if (!function_exists('crm_help_api_url')) {
+    /**
+     * HTTP URL for API calls on stock nginx (no rewrite): index.php?path=/resource/...
+     *
+     * @param string $pathAndQuery Path under v1, e.g. "contacts", "contacts?limit=10"
+     */
+    function crm_help_api_url(string $pathAndQuery): string {
+        $pathAndQuery = ltrim($pathAndQuery, '/');
+        $qPos = strpos($pathAndQuery, '?');
+        if ($qPos !== false) {
+            $pathPart = substr($pathAndQuery, 0, $qPos);
+            $qs = substr($pathAndQuery, $qPos + 1);
+        } else {
+            $pathPart = $pathAndQuery;
+            $qs = '';
+        }
+        $segments = array_values(array_filter(explode('/', $pathPart), function ($s) {
+            return $s !== '';
+        }));
+        $encPath = implode('/', array_map('rawurlencode', $segments));
+        $url = APP_URL . '/api/v1/index.php?path=/' . $encPath;
+        if ($qs !== '') {
+            $url .= '&' . $qs;
+        }
+        return $url;
+    }
+}
 ?>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h4><i class="fas fa-code me-2"></i>API Documentation</h4>
+    <h4><i class="bi bi-code-slash me-2"></i>API Documentation</h4>
     <span class="badge bg-primary">REST API v1</span>
 </div>
 
 <div class="alert alert-info">
-    <i class="fas fa-info-circle me-2"></i>
-    <strong>Base URL:</strong> <code><?php echo APP_URL; ?>/api/v1/</code><br>
+    <i class="bi bi-info-circle me-2"></i>
+    <strong>Logical paths:</strong> <code>/api/v1/…</code> (same REST shape as always).<br>
+    <strong>HTTP URL on standard nginx:</strong> <code><?php echo APP_URL; ?>/api/v1/index.php?path=/…</code> plus any query string.<br>
     <strong>Authentication:</strong> Bearer token or session-based<br>
     <strong>Content-Type:</strong> <code>application/json</code>
 </div>
@@ -54,7 +82,7 @@
                     <div class="accordion-item">
                         <h2 class="accordion-header" id="contactsHeader">
                             <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#contactsCollapse">
-                                <i class="fas fa-users me-2"></i>Contacts
+                                <i class="bi bi-people me-2"></i>Contacts
                             </button>
                         </h2>
                         <div id="contactsCollapse" class="accordion-collapse collapse show" data-bs-parent="#apiEndpoints">
@@ -62,7 +90,7 @@
                                 <h6>GET /api/v1/contacts</h6>
                                 <p>List all contacts</p>
                                 <pre class="bg-light p-2"><code>curl -H "Authorization: Bearer YOUR_KEY" \
-  "<?php echo APP_URL; ?>/api/v1/contacts"</code></pre>
+  "<?php echo htmlspecialchars(crm_help_api_url('contacts')); ?>"</code></pre>
                                 
                                 <h6 class="mt-3">POST /api/v1/contacts</h6>
                                 <p>Create a new contact</p>
@@ -70,7 +98,7 @@
   -H "Authorization: Bearer YOUR_KEY" \
   -H "Content-Type: application/json" \
   -d '{"first_name":"John","last_name":"Doe","email":"john@example.com"}' \
-  "<?php echo APP_URL; ?>/api/v1/contacts"</code></pre>
+  "<?php echo htmlspecialchars(crm_help_api_url('contacts')); ?>"</code></pre>
                                 
                                 <h6 class="mt-3">GET /api/v1/contacts/{id}</h6>
                                 <p>Get specific contact</p>
@@ -88,7 +116,7 @@
                     <div class="accordion-item">
                         <h2 class="accordion-header" id="dealsHeader">
                             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#dealsCollapse">
-                                <i class="fas fa-handshake me-2"></i>Deals
+                                <i class="bi bi-cash-coin me-2"></i>Deals
                             </button>
                         </h2>
                         <div id="dealsCollapse" class="accordion-collapse collapse" data-bs-parent="#apiEndpoints">
@@ -115,7 +143,7 @@
                     <div class="accordion-item">
                         <h2 class="accordion-header" id="importHeader">
                             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#importCollapse">
-                                <i class="fas fa-file-import me-2"></i>Import
+                                <i class="bi bi-file-earmark-arrow-up me-2"></i>Import
                             </button>
                         </h2>
                         <div id="importCollapse" class="accordion-collapse collapse" data-bs-parent="#apiEndpoints">
@@ -125,7 +153,7 @@
                                 <pre class="bg-light p-2"><code>curl -X POST \
   -H "Authorization: Bearer YOUR_KEY" \
   -F "csvFile=@contacts.csv" \
-  "<?php echo APP_URL; ?>/api/v1/import"</code></pre>
+  "<?php echo htmlspecialchars(crm_help_api_url('import')); ?>"</code></pre>
                                 
                                 <h6 class="mt-3">POST /api/v1/import (JSON)</h6>
                                 <p>Process parsed CSV data</p>
@@ -133,7 +161,7 @@
   -H "Authorization: Bearer YOUR_KEY" \
   -H "Content-Type: application/json" \
   -d '{"csvData":[...],"fieldMapping":{...}}' \
-  "<?php echo APP_URL; ?>/api/v1/import"</code></pre>
+  "<?php echo htmlspecialchars(crm_help_api_url('import')); ?>"</code></pre>
                             </div>
                         </div>
                     </div>
@@ -142,7 +170,7 @@
                     <div class="accordion-item">
                         <h2 class="accordion-header" id="enrichmentHeader">
                             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#enrichmentCollapse">
-                                <i class="fas fa-user-plus me-2"></i>Enrichment
+                                <i class="bi bi-person-plus me-2"></i>Enrichment
                             </button>
                         </h2>
                         <div id="enrichmentCollapse" class="accordion-collapse collapse" data-bs-parent="#apiEndpoints">
@@ -153,7 +181,7 @@
   -H "Authorization: Bearer YOUR_KEY" \
   -H "Content-Type: application/json" \
   -d '{"contact_id":123}' \
-  "<?php echo APP_URL; ?>/api/v1/enrichment/enrich"</code></pre>
+  "<?php echo htmlspecialchars(crm_help_api_url('enrichment/enrich')); ?>"</code></pre>
                                 
                                 <h6 class="mt-3">GET /api/v1/enrichment/stats</h6>
                                 <p>Get enrichment statistics</p>
@@ -168,7 +196,7 @@
                     <div class="accordion-item">
                         <h2 class="accordion-header" id="webhooksHeader">
                             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#webhooksCollapse">
-                                <i class="fas fa-link me-2"></i>Webhooks
+                                <i class="bi bi-link-45deg me-2"></i>Webhooks
                             </button>
                         </h2>
                         <div id="webhooksCollapse" class="accordion-collapse collapse" data-bs-parent="#apiEndpoints">
@@ -203,7 +231,7 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header bg-warning text-dark">
-                <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Error Handling</h5>
+                <h5 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Error Handling</h5>
             </div>
             <div class="card-body">
                 <p>All API responses follow a consistent format:</p>

@@ -1,17 +1,17 @@
 <?php
 /**
  * CSV Import Help Page
- * Best Jobs in TA - CSV import documentation
+ * Sanctum CRM - CSV import documentation
  */
 ?>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h4><i class="fas fa-file-import me-2"></i>CSV Import Guide</h4>
+    <h4><i class="bi bi-file-earmark-arrow-up me-2"></i>CSV Import Guide</h4>
     <span class="badge bg-warning">Step-by-Step</span>
 </div>
 
 <div class="alert alert-success">
-    <i class="fas fa-check-circle me-2"></i>
+    <i class="bi bi-check-circle me-2"></i>
     <strong>CSV Import</strong> allows you to bulk import contacts with flexible field mapping and automatic name splitting.
 </div>
 
@@ -19,7 +19,7 @@
     <div class="col-md-8">
         <div class="card">
             <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="fas fa-list-ol me-2"></i>Import Process</h5>
+                <h5 class="mb-0"><i class="bi bi-list-ol me-2"></i>Import Process</h5>
             </div>
             <div class="card-body">
                 <div class="row">
@@ -65,20 +65,20 @@
     <div class="col-md-4">
         <div class="card">
             <div class="card-header bg-success text-white">
-                <h5 class="mb-0"><i class="fas fa-check me-2"></i>Required Fields</h5>
+                <h5 class="mb-0"><i class="bi bi-check me-2"></i>Required Fields</h5>
             </div>
             <div class="card-body">
                 <ul class="list-unstyled">
-                    <li class="mb-2"><i class="fas fa-star text-warning me-2"></i><strong>First Name</strong></li>
-                    <li class="mb-2"><i class="fas fa-star text-warning me-2"></i><strong>Last Name</strong></li>
-                    <li class="mb-2"><i class="fas fa-circle text-muted me-2"></i>Email</li>
-                    <li class="mb-2"><i class="fas fa-circle text-muted me-2"></i>Phone</li>
-                    <li class="mb-2"><i class="fas fa-circle text-muted me-2"></i>Company</li>
-                    <li class="mb-2"><i class="fas fa-circle text-muted me-2"></i>Job Title</li>
-                    <li class="mb-2"><i class="fas fa-circle text-muted me-2"></i>Address</li>
-                    <li class="mb-2"><i class="fas fa-circle text-muted me-2"></i>City</li>
-                    <li class="mb-2"><i class="fas fa-circle text-muted me-2"></i>State</li>
-                    <li class="mb-2"><i class="fas fa-circle text-muted me-2"></i>ZIP Code</li>
+                    <li class="mb-2"><i class="bi bi-star text-warning me-2"></i><strong>First Name</strong></li>
+                    <li class="mb-2"><i class="bi bi-star text-warning me-2"></i><strong>Last Name</strong></li>
+                    <li class="mb-2"><i class="bi bi-circle text-muted me-2"></i>Email</li>
+                    <li class="mb-2"><i class="bi bi-circle text-muted me-2"></i>Phone</li>
+                    <li class="mb-2"><i class="bi bi-circle text-muted me-2"></i>Company</li>
+                    <li class="mb-2"><i class="bi bi-circle text-muted me-2"></i>Job Title</li>
+                    <li class="mb-2"><i class="bi bi-circle text-muted me-2"></i>Address</li>
+                    <li class="mb-2"><i class="bi bi-circle text-muted me-2"></i>City</li>
+                    <li class="mb-2"><i class="bi bi-circle text-muted me-2"></i>State</li>
+                    <li class="mb-2"><i class="bi bi-circle text-muted me-2"></i>ZIP Code</li>
                 </ul>
             </div>
         </div>
@@ -89,7 +89,7 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0"><i class="fas fa-magic me-2"></i>Name Splitting Feature</h5>
+                <h5 class="mb-0"><i class="bi bi-magic me-2"></i>Name Splitting Feature</h5>
             </div>
             <div class="card-body">
                 <p>The name splitting feature automatically separates full names into first and last names:</p>
@@ -116,7 +116,7 @@
                 </div>
                 
                 <div class="alert alert-info mt-3">
-                    <i class="fas fa-lightbulb me-2"></i>
+                    <i class="bi bi-lightbulb me-2"></i>
                     <strong>Tip:</strong> Use the preview feature to see how names will be split before applying.
                 </div>
             </div>
@@ -128,7 +128,7 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-header bg-warning text-dark">
-                <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Common Issues</h5>
+                <h5 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Common Issues</h5>
             </div>
             <div class="card-body">
                 <h6>File Upload Errors</h6>
@@ -152,7 +152,7 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-header bg-info text-white">
-                <h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Best Practices</h5>
+                <h5 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Best Practices</h5>
             </div>
             <div class="card-body">
                 <h6>File Preparation</h6>
@@ -179,7 +179,7 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header bg-secondary text-white">
-                <h5 class="mb-0"><i class="fas fa-file-csv me-2"></i>CSV Format Examples</h5>
+                <h5 class="mb-0"><i class="bi bi-filetype-csv me-2"></i>CSV Format Examples</h5>
             </div>
             <div class="card-body">
                 <h6>Basic Contact Import</h6>
@@ -193,7 +193,7 @@ John Michael Doe,john@example.com,Acme Corp,CEO,555-0123,New York,NY
 Jane Elizabeth Smith,jane@example.com,Beta Inc,CTO,555-0124,San Francisco,CA</code></pre>
                 
                 <div class="alert alert-warning mt-3">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <i class="bi bi-exclamation-triangle me-2"></i>
                     <strong>Note:</strong> The system will automatically detect and handle different column names and formats.
                 </div>
             </div>

@@ -1,17 +1,17 @@
 <?php
 /**
  * Webhooks Documentation Page
- * Best Jobs in TA - Webhooks documentation
+ * Sanctum CRM - Webhooks documentation
  */
 ?>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h4><i class="fas fa-link me-2"></i>Webhooks Documentation</h4>
+    <h4><i class="bi bi-link-45deg me-2"></i>Webhooks Documentation</h4>
     <span class="badge bg-success">Real-time Integration</span>
 </div>
 
 <div class="alert alert-info">
-    <i class="fas fa-info-circle me-2"></i>
+    <i class="bi bi-info-circle me-2"></i>
     <strong>Webhooks</strong> allow you to receive real-time notifications when events occur in your CRM. Perfect for integrations with external systems.
 </div>
 
@@ -19,7 +19,7 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Available Events</h5>
+                <h5 class="mb-0"><i class="bi bi-lightning-fill me-2"></i>Available Events</h5>
             </div>
             <div class="card-body">
                 <div class="list-group list-group-flush">
@@ -80,7 +80,7 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-header bg-success text-white">
-                <h5 class="mb-0"><i class="fas fa-cog me-2"></i>Webhook Configuration</h5>
+                <h5 class="mb-0"><i class="bi bi-gear me-2"></i>Webhook Configuration</h5>
             </div>
             <div class="card-body">
                 <h6>Required Fields:</h6>
@@ -98,7 +98,7 @@
                 </ul>
                 
                 <div class="alert alert-warning mt-3">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <i class="bi bi-exclamation-triangle me-2"></i>
                     <strong>Important:</strong> Your endpoint must respond with HTTP 200 within 30 seconds.
                 </div>
             </div>
@@ -110,7 +110,7 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0"><i class="fas fa-code me-2"></i>Webhook Payload Format</h5>
+                <h5 class="mb-0"><i class="bi bi-code-slash me-2"></i>Webhook Payload Format</h5>
             </div>
             <div class="card-body">
                 <p>All webhook payloads follow this structure:</p>
@@ -135,7 +135,7 @@
                 <pre class="bg-light p-2"><code>X-Webhook-Signature: sha256=abc123...</code></pre>
                 
                 <div class="alert alert-info mt-3">
-                    <i class="fas fa-lightbulb me-2"></i>
+                    <i class="bi bi-lightbulb me-2"></i>
                     <strong>Tip:</strong> Always verify the signature to ensure the webhook came from your CRM.
                 </div>
             </div>
@@ -147,7 +147,7 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-header bg-info text-white">
-                <h5 class="mb-0"><i class="fas fa-tools me-2"></i>Testing Webhooks</h5>
+                <h5 class="mb-0"><i class="bi bi-tools me-2"></i>Testing Webhooks</h5>
             </div>
             <div class="card-body">
                 <h6>Test Endpoint</h6>
@@ -169,16 +169,16 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-header bg-warning text-dark">
-                <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Best Practices</h5>
+                <h5 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Best Practices</h5>
             </div>
             <div class="card-body">
                 <ul class="list-unstyled">
-                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Use HTTPS endpoints</li>
-                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Verify signatures</li>
-                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Respond quickly (under 30s)</li>
-                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Handle duplicate events</li>
-                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Log webhook activity</li>
-                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Use idempotent operations</li>
+                    <li class="mb-2"><i class="bi bi-check text-success me-2"></i>Use HTTPS endpoints</li>
+                    <li class="mb-2"><i class="bi bi-check text-success me-2"></i>Verify signatures</li>
+                    <li class="mb-2"><i class="bi bi-check text-success me-2"></i>Respond quickly (under 30s)</li>
+                    <li class="mb-2"><i class="bi bi-check text-success me-2"></i>Handle duplicate events</li>
+                    <li class="mb-2"><i class="bi bi-check text-success me-2"></i>Log webhook activity</li>
+                    <li class="mb-2"><i class="bi bi-check text-success me-2"></i>Use idempotent operations</li>
                 </ul>
             </div>
         </div>
@@ -189,7 +189,7 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header bg-secondary text-white">
-                <h5 class="mb-0"><i class="fas fa-question-circle me-2"></i>Common Issues</h5>
+                <h5 class="mb-0"><i class="bi bi-question-circle me-2"></i>Common Issues</h5>
             </div>
             <div class="card-body">
                 <div class="row">
