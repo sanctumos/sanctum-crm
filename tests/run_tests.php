@@ -52,7 +52,17 @@ class TestRunner {
             'UserManagementTest.php' => 'UserManagementTest',
             'ReportsTest.php' => 'ReportsTest',
             'ImportTest.php' => 'ImportTest',
-            'EnrichmentTest.php' => 'EnrichmentTest'
+            'EnrichmentTest.php' => 'EnrichmentTest',
+            'EnrichmentCronTest.php' => 'EnrichmentCronTest',
+            'ContactMergeServiceTest.php' => 'ContactMergeServiceTest',
+            'WebhookDispatcherTest.php' => 'WebhookDispatcherTest',
+            'WebhookQueueTest.php' => 'WebhookQueueTest',
+            'MigrationRunnerTest.php' => 'MigrationRunnerTest',
+            'LayoutTest.php' => 'LayoutTest',
+            'LeadEnrichmentOutcomeTest.php' => 'LeadEnrichmentOutcomeTest',
+            'ConfigManagerTest.php' => 'ConfigManagerTest',
+            'InstallationManagerTest.php' => 'InstallationManagerTest',
+            'EnvironmentDetectorTest.php' => 'EnvironmentDetectorTest',
         ];
         
         foreach ($unitTests as $file => $class) {
