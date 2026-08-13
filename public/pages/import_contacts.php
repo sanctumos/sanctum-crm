@@ -1,26 +1,5 @@
 <?php
 /**
- * Sanctum CRM
- * 
- * This file is part of Sanctum CRM.
- * 
- * Copyright (C) 2025 Sanctum OS
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published
- * by the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
-
-/**
  * CSV Import Page
  * Sanctum CRM - Contact Import Interface
  */
@@ -42,7 +21,7 @@ renderHeader('Import Contacts');
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h1 class="h3 mb-0">Import Contacts</h1>
                 <a href="/?page=contacts" class="btn btn-outline-secondary">
-                    <i class="fas fa-arrow-left"></i> Back to Contacts
+                    <i class="bi bi-arrow-left"></i> Back to Contacts
                 </a>
             </div>
 
@@ -91,7 +70,7 @@ renderHeader('Import Contacts');
                             <div class="form-text">Maximum file size: 10MB. First row should contain column headers.</div>
                         </div>
                         <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-upload"></i> Upload CSV
+                            <i class="bi bi-upload"></i> Upload CSV
                         </button>
                     </form>
                 </div>
@@ -104,16 +83,10 @@ renderHeader('Import Contacts');
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        <div class="col-md-6">
-                            <h6>CSV Columns</h6>
-                            <div id="csvColumns" class="list-group">
-                                <!-- CSV columns will be populated here -->
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <h6>Contact Fields</h6>
-                            <div id="contactFields" class="list-group">
-                                <!-- Contact fields will be populated here -->
+                        <div class="col-md-12">
+                            <h6>Map CSV Columns to Contact Fields</h6>
+                            <div id="fieldMappingForm">
+                                <!-- Field mapping dropdowns will be populated here -->
                             </div>
                         </div>
                     </div>
@@ -123,7 +96,7 @@ renderHeader('Import Contacts');
                         <div class="card border-info">
                             <div class="card-header bg-info text-white">
                                 <h6 class="mb-0">
-                                    <i class="fas fa-cut me-2"></i>Split Full Name
+                                    <i class="bi bi-scissors me-2"></i>Split Full Name
                                 </h6>
                             </div>
                             <div class="card-body">
@@ -152,10 +125,10 @@ renderHeader('Import Contacts');
                                 </div>
                                 <div class="mt-3">
                                     <button type="button" class="btn btn-outline-info" id="applyNameSplit">
-                                        <i class="fas fa-cut me-1"></i> Apply Name Split
+                                        <i class="bi bi-scissors me-1"></i> Apply Name Split
                                     </button>
                                     <button type="button" class="btn btn-outline-secondary" id="clearNameSplit">
-                                        <i class="fas fa-times me-1"></i> Clear Split
+                                        <i class="bi bi-x-lg me-1"></i> Clear Split
                                     </button>
                                 </div>
                             </div>
@@ -164,7 +137,7 @@ renderHeader('Import Contacts');
                     
                     <div class="mt-3">
                         <button type="button" class="btn btn-success" id="nextToStep3">
-                            <i class="fas fa-arrow-right"></i> Next: Set Source
+                            <i class="bi bi-arrow-right"></i> Next: Set Source
                         </button>
                     </div>
                 </div>
@@ -189,7 +162,7 @@ renderHeader('Import Contacts');
                     </div>
                     <div class="mt-3">
                         <button type="button" class="btn btn-success" id="nextToStep4">
-                            <i class="fas fa-arrow-right"></i> Next: Review & Import
+                            <i class="bi bi-arrow-right"></i> Next: Review & Import
                         </button>
                     </div>
                 </div>
@@ -217,10 +190,10 @@ renderHeader('Import Contacts');
                     </div>
                     <div class="mt-3">
                         <button type="button" class="btn btn-primary" id="startImport">
-                            <i class="fas fa-download"></i> Import Contacts
+                            <i class="bi bi-download"></i> Import Contacts
                         </button>
                         <button type="button" class="btn btn-outline-secondary" id="backToStep1">
-                            <i class="fas fa-arrow-left"></i> Start Over
+                            <i class="bi bi-arrow-left"></i> Start Over
                         </button>
                     </div>
                 </div>
@@ -328,19 +301,19 @@ document.getElementById('csvUploadForm').addEventListener('submit', function(e) 
     const formData = new FormData();
     formData.append('csvFile', file);
     
-    fetch('/api/v1/contacts/import', {
+    fetch(crmApiUrl('import'), {
         method: 'POST',
         credentials: 'include',
         body: formData
     })
     .then(response => {
-        if (response.ok) {
-            return response.json();
-        } else {
-            return response.json().then(error => {
-                throw new Error(error.error || 'Failed to upload CSV');
-            });
-        }
+        return response.json().then(data => {
+            if (response.ok) {
+                return data;
+            } else {
+                throw new Error(data.error || 'Failed to upload CSV');
+            }
+        });
     })
     .then(data => {
         if (data.success) {
@@ -353,30 +326,79 @@ document.getElementById('csvUploadForm').addEventListener('submit', function(e) 
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Network error: ' + error.message);
+        if (error.message.includes('JSON')) {
+            alert('Server returned invalid response. Please try again or contact support.');
+        } else {
+            alert('Network error: ' + error.message);
+        }
     });
 });
 
 function populateCSVColumns() {
-    const csvColumnsDiv = document.getElementById('csvColumns');
-    csvColumnsDiv.innerHTML = '';
+    const fieldMappingForm = document.getElementById('fieldMappingForm');
+    fieldMappingForm.innerHTML = '';
     
     if (csvData.length > 0) {
         const headers = Object.keys(csvData[0]);
-        headers.forEach(header => {
-            const div = document.createElement('div');
-            div.className = 'list-group-item draggable';
-            div.draggable = true;
-            div.dataset.column = header;
-            div.innerHTML = `<strong>${header}</strong><br><small class="text-muted">Sample: ${csvData[0][header] || 'N/A'}</small>`;
-            csvColumnsDiv.appendChild(div);
+        
+        // Define contact fields to map
+        const contactFields = [
+            { name: 'first_name', label: 'First Name', required: true },
+            { name: 'last_name', label: 'Last Name', required: true },
+            { name: 'email', label: 'Email', required: false },
+            { name: 'phone', label: 'Phone', required: false },
+            { name: 'company', label: 'Company', required: false },
+            { name: 'position', label: 'Job Title', required: false },  // Database has 'position' column
+            { name: 'address', label: 'Address', required: false },
+            { name: 'city', label: 'City', required: false },
+            { name: 'state', label: 'State', required: false },
+            { name: 'zip_code', label: 'ZIP Code', required: false },  // Database has 'zip_code' column
+            { name: 'country', label: 'Country', required: false },
+            { name: 'notes', label: 'Notes', required: false }
+        ];
+        
+        // Create dropdown for each contact field
+        contactFields.forEach(field => {
+            const row = document.createElement('div');
+            row.className = 'row mb-3';
+            
+            const labelCol = document.createElement('div');
+            labelCol.className = 'col-md-3';
+            const label = document.createElement('label');
+            label.className = 'form-label';
+            label.textContent = field.label;
+            if (field.required) {
+                label.innerHTML += ' <span class="text-danger">*</span>';
+            }
+            labelCol.appendChild(label);
+            
+            const selectCol = document.createElement('div');
+            selectCol.className = 'col-md-9';
+            const select = document.createElement('select');
+            select.className = 'form-select field-mapping-select';
+            select.dataset.field = field.name;
+            select.innerHTML = '<option value="">Select CSV column...</option>';
+            
+            // Add CSV columns as options
+            headers.forEach(header => {
+                const option = document.createElement('option');
+                option.value = header;
+                option.textContent = header;
+                select.appendChild(option);
+            });
+            
+            selectCol.appendChild(select);
+            row.appendChild(labelCol);
+            row.appendChild(selectCol);
+            fieldMappingForm.appendChild(row);
         });
         
         // Populate name split dropdown
         populateNameSplitDropdown(headers);
+        
+        // Setup field mapping handlers
+        setupFieldMappingHandlers();
     }
-    
-    populateContactFields();
 }
 
 function populateNameSplitDropdown(headers) {
@@ -396,34 +418,21 @@ function populateNameSplitDropdown(headers) {
     }
 }
 
-function populateContactFields() {
-    const contactFieldsDiv = document.getElementById('contactFields');
-    contactFieldsDiv.innerHTML = '';
-    
-    const fields = [
-        { name: 'first_name', label: 'First Name', required: true },
-        { name: 'last_name', label: 'Last Name', required: true },
-        { name: 'email', label: 'Email', required: false },
-        { name: 'phone', label: 'Phone' },
-        { name: 'company', label: 'Company' },
-        { name: 'job_title', label: 'Job Title' },
-        { name: 'address', label: 'Address' },
-        { name: 'city', label: 'City' },
-        { name: 'state', label: 'State' },
-        { name: 'zip', label: 'ZIP Code' },
-        { name: 'country', label: 'Country' },
-        { name: 'notes', label: 'Notes' }
-    ];
-    
-    fields.forEach(field => {
-        const div = document.createElement('div');
-        div.className = 'list-group-item droppable';
-        div.dataset.field = field.name;
-        div.innerHTML = `<strong>${field.label}</strong> ${field.required ? '<span class="text-danger">*</span>' : ''}<br><small class="text-muted">Drop CSV column here</small>`;
-        contactFieldsDiv.appendChild(div);
+function setupFieldMappingHandlers() {
+    // Add event listeners to all field mapping dropdowns
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('field-mapping-select')) {
+            const field = e.target.dataset.field;
+            const column = e.target.value;
+            
+            if (column) {
+                fieldMapping[field] = column;
+            } else {
+                delete fieldMapping[field];
+            }
+        }
     });
     
-    setupDragAndDrop();
     setupNameSplitHandlers();
 }
 
@@ -557,46 +566,6 @@ function updateFieldMappingDisplay() {
     });
 }
 
-function setupDragAndDrop() {
-    const draggables = document.querySelectorAll('.draggable');
-    const droppables = document.querySelectorAll('.droppable');
-    
-    draggables.forEach(draggable => {
-        draggable.addEventListener('dragstart', function(e) {
-            e.dataTransfer.setData('text/plain', this.dataset.column);
-            this.style.opacity = '0.5';
-        });
-        
-        draggable.addEventListener('dragend', function(e) {
-            this.style.opacity = '1';
-        });
-    });
-    
-    droppables.forEach(droppable => {
-        droppable.addEventListener('dragover', function(e) {
-            e.preventDefault();
-            this.classList.add('drag-over');
-        });
-        
-        droppable.addEventListener('dragleave', function(e) {
-            this.classList.remove('drag-over');
-        });
-        
-        droppable.addEventListener('drop', function(e) {
-            e.preventDefault();
-            this.classList.remove('drag-over');
-            
-            const column = e.dataTransfer.getData('text/plain');
-            const field = this.dataset.field;
-            
-            // Update field mapping
-            fieldMapping[field] = column;
-            
-            // Update UI
-            updateFieldMappingDisplay();
-        });
-    });
-}
 
 // Step 2 to Step 3
 document.getElementById('nextToStep3').addEventListener('click', function() {
@@ -653,7 +622,7 @@ document.getElementById('startImport').addEventListener('click', function() {
         nameSplitConfig: nameSplitConfig
     };
     
-    fetch('/api/v1/contacts/import', {
+    fetch(crmApiUrl('import'), {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -662,13 +631,13 @@ document.getElementById('startImport').addEventListener('click', function() {
         body: JSON.stringify(importData)
     })
     .then(response => {
-        if (response.ok) {
-            return response.json();
-        } else {
-            return response.json().then(error => {
-                throw new Error(error.error || 'Failed to process import');
-            });
-        }
+        return response.json().then(data => {
+            if (response.ok) {
+                return data;
+            } else {
+                throw new Error(data.error || 'Failed to process import');
+            }
+        });
     })
     .then(data => {
         if (data.success) {
@@ -679,7 +648,11 @@ document.getElementById('startImport').addEventListener('click', function() {
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Network error: ' + error.message);
+        if (error.message.includes('JSON')) {
+            alert('Server returned invalid response. Please try again or contact support.');
+        } else {
+            alert('Network error: ' + error.message);
+        }
     });
 });
 

@@ -1,7 +1,7 @@
 <?php
 /**
  * Test Runner
- * Best Jobs in TA - Comprehensive Test Suite
+ * Sanctum CRM - Comprehensive Test Suite
  */
 
 require_once __DIR__ . '/bootstrap.php';
@@ -19,7 +19,7 @@ class TestRunner {
     
     public function runAllTests() {
         echo "==========================================\n";
-        echo "Best Jobs in TA - Comprehensive Test Suite\n";
+        echo "Sanctum CRM - Comprehensive Test Suite\n";
         echo "==========================================\n\n";
         
         // Run unit tests
@@ -52,7 +52,16 @@ class TestRunner {
             'UserManagementTest.php' => 'UserManagementTest',
             'ReportsTest.php' => 'ReportsTest',
             'ImportTest.php' => 'ImportTest',
-            'EnrichmentTest.php' => 'EnrichmentTest'
+            'EnrichmentTest.php' => 'EnrichmentTest',
+            'EnrichmentCronTest.php' => 'EnrichmentCronTest',
+            'ContactMergeServiceTest.php' => 'ContactMergeServiceTest',
+            'WebhookDispatcherTest.php' => 'WebhookDispatcherTest',
+            'WebhookQueueTest.php' => 'WebhookQueueTest',
+            'MigrationRunnerTest.php' => 'MigrationRunnerTest',
+            'LayoutTest.php' => 'LayoutTest',
+            'LeadEnrichmentOutcomeTest.php' => 'LeadEnrichmentOutcomeTest',
+            'ConfigManagerTest.php' => 'ConfigManagerTest',
+            // InstallationManagerTest / EnvironmentDetectorTest are PHPUnit-style (no runAllTests)
         ];
         
         foreach ($unitTests as $file => $class) {
@@ -363,7 +372,7 @@ class TestRunner {
         $html = '<!DOCTYPE html>
 <html>
 <head>
-    <title>Best Jobs in TA - Test Results</title>
+    <title>Sanctum CRM - Test Results</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
         .header { background: #f0f0f0; padding: 20px; border-radius: 5px; }
@@ -376,7 +385,7 @@ class TestRunner {
 </head>
 <body>
     <div class="header">
-        <h1>Best Jobs in TA - Test Results</h1>
+        <h1>Sanctum CRM - Test Results</h1>
         <p>Generated on: ' . date('Y-m-d H:i:s') . '</p>
     </div>
     

@@ -1,26 +1,5 @@
 <?php
 /**
- * Sanctum CRM
- * 
- * This file is part of Sanctum CRM.
- * 
- * Copyright (C) 2025 Sanctum OS
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published
- * by the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
-
-/**
  * Reports & Analytics Page
  * Sanctum CRM
  */
@@ -32,6 +11,12 @@ $auth->requireAuth();
 
 // Render the page using the template system
 renderHeader('Reports');
+ob_start();
+?>
+<button class="btn btn-outline-success" type="button" onclick="exportData('csv')"><i class="bi bi-download me-1"></i>Export CSV</button>
+<button class="btn btn-outline-primary" type="button" onclick="exportData('json')"><i class="bi bi-code-slash me-1"></i>Export JSON</button>
+<?php
+renderPageHeader('Reports & Analytics', 'Pipeline metrics and charts', ob_get_clean());
 ?>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -46,49 +31,28 @@ renderHeader('Reports');
 </style>
 
 <div class="reports-card">
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="fas fa-chart-bar"></i> Reports & Analytics</h2>
-        <div class="export-buttons">
-            <button class="btn btn-outline-success" onclick="exportData('csv')">
-                <i class="fas fa-download"></i> Export CSV
-            </button>
-            <button class="btn btn-outline-primary" onclick="exportData('json')">
-                <i class="fas fa-code"></i> Export JSON
-            </button>
-        </div>
-    </div>
-
     <!-- Date Range Filter -->
-    <div class="filter-section shadow-sm">
-        <div class="row">
-            <div class="col-md-3">
-                <label for="startDate" class="form-label">Start Date</label>
-                <input type="date" class="form-control" id="startDate">
-            </div>
-            <div class="col-md-3">
-                <label for="endDate" class="form-label">End Date</label>
-                <input type="date" class="form-control" id="endDate">
-            </div>
-            <div class="col-md-3">
-                <label for="reportType" class="form-label">Report Type</label>
-                <select class="form-select" id="reportType">
-                    <option value="all">All Data</option>
-                    <option value="deals">Deals Only</option>
-                    <option value="contacts">Contacts Only</option>
-                    <option value="users">User Activity</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">&nbsp;</label>
-                <div class="d-grid">
-                    <button class="btn btn-primary" onclick="generateReport()">
-                        <i class="fas fa-sync-alt"></i> Generate Report
-                    </button>
-                </div>
-            </div>
+    <form class="filter-bar" role="search" onsubmit="event.preventDefault(); generateReport();">
+        <div class="filter-bar__field">
+            <input type="date" class="form-control" id="startDate" aria-label="Start date">
         </div>
-    </div>
+        <div class="filter-bar__field">
+            <input type="date" class="form-control" id="endDate" aria-label="End date">
+        </div>
+        <div class="filter-bar__field">
+            <select class="form-select" id="reportType" aria-label="Report type">
+                <option value="all">All Data</option>
+                <option value="deals">Deals Only</option>
+                <option value="contacts">Contacts Only</option>
+                <option value="users">User Activity</option>
+            </select>
+        </div>
+        <div class="filter-bar__actions">
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-arrow-clockwise me-1"></i>Generate Report
+            </button>
+        </div>
+    </form>
 
     <!-- Alerts -->
     <div id="reportsAlert" class="alert d-none" role="alert"></div>
@@ -125,7 +89,7 @@ renderHeader('Reports');
     <div class="row mb-4">
         <div class="col-md-6">
             <div class="metric-card">
-                <h5><i class="fas fa-chart-pie"></i> Deals by Stage</h5>
+                <h5><i class="bi bi-pie-chart"></i> Deals by Stage</h5>
                 <div class="chart-container">
                     <canvas id="dealsByStageChart"></canvas>
                 </div>
@@ -133,7 +97,7 @@ renderHeader('Reports');
         </div>
         <div class="col-md-6">
             <div class="metric-card">
-                <h5><i class="fas fa-chart-line"></i> Pipeline Value by Stage</h5>
+                <h5><i class="bi bi-graph-up"></i> Pipeline Value by Stage</h5>
                 <div class="chart-container">
                     <canvas id="pipelineValueChart"></canvas>
                 </div>
@@ -145,7 +109,7 @@ renderHeader('Reports');
     <div class="row mb-4">
         <div class="col-md-6">
             <div class="metric-card">
-                <h5><i class="fas fa-users"></i> Contact Sources</h5>
+                <h5><i class="bi bi-people"></i> Contact Sources</h5>
                 <div class="chart-container">
                     <canvas id="contactSourcesChart"></canvas>
                 </div>
@@ -153,7 +117,7 @@ renderHeader('Reports');
         </div>
         <div class="col-md-6">
             <div class="metric-card">
-                <h5><i class="fas fa-calendar"></i> Deals Over Time</h5>
+                <h5><i class="bi bi-calendar3"></i> Deals Over Time</h5>
                 <div class="chart-container">
                     <canvas id="dealsOverTimeChart"></canvas>
                 </div>
@@ -163,7 +127,7 @@ renderHeader('Reports');
 
     <!-- User Activity Table -->
     <div class="metric-card">
-        <h5><i class="fas fa-user-clock"></i> Recent User Activity</h5>
+        <h5><i class="bi bi-person-workspace"></i> Recent User Activity</h5>
         <div class="table-responsive">
             <table class="table table-striped" id="activityTable">
                 <thead>
@@ -183,19 +147,33 @@ renderHeader('Reports');
 </div>
 
 <script>
-let reportData = {};
+let reportData = null;
 let charts = {};
+const STAGE_COLORS = ['#6c757d', '#17a2b8', '#ffc107', '#007bff', '#28a745', '#dc3545'];
+const SOURCE_COLORS = ['#007bff', '#28a745', '#ffc107', '#dc3545', '#6c757d', '#17a2b8', '#fd7e14'];
 
-// Initialize page
+async function fetchJsonOrThrow(url) {
+    const response = await fetch(url, { credentials: 'include' });
+    const payload = await response.json();
+    if (!response.ok) {
+        throw new Error(payload.error || `HTTP ${response.status}`);
+    }
+    return payload;
+}
+
+function destroyChart(key) {
+    if (charts[key]) {
+        charts[key].destroy();
+        charts[key] = null;
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
-    // Set default date range (last 30 days)
     const endDate = new Date();
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - 30);
-    
     document.getElementById('endDate').value = endDate.toISOString().split('T')[0];
     document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
-    
     generateReport();
 });
 
@@ -203,121 +181,69 @@ async function generateReport() {
     const startDate = document.getElementById('startDate').value;
     const endDate = document.getElementById('endDate').value;
     const reportType = document.getElementById('reportType').value;
-    
+
     if (!startDate || !endDate) {
         showAlert('Please select both start and end dates', 'warning');
         return;
     }
-    
+
     try {
         showAlert('Generating report...', 'info');
-        
-        // Load all data
-        const [dealsResponse, contactsResponse, usersResponse] = await Promise.all([
-            fetch('/api/v1/deals', { credentials: 'include' }),
-            fetch('/api/v1/contacts', { credentials: 'include' }),
-            fetch('/api/v1/users', { credentials: 'include' })
-        ]);
-        
-        const dealsData = await dealsResponse.json();
-        const contactsData = await contactsResponse.json();
-        const usersData = await usersResponse.json();
-        
-        if (dealsResponse.ok && contactsResponse.ok && usersResponse.ok) {
-            reportData = {
-                deals: dealsData.deals || [],
-                contacts: contactsData.contacts || [],
-                users: usersData.users || [],
-                startDate: startDate,
-                endDate: endDate
-            };
-            
-            // Filter data by date range
-            filterDataByDateRange();
-            
-            // Generate metrics and charts
-            generateMetrics();
-            generateCharts();
-            generateActivityTable();
-            
-            showAlert('Report generated successfully!', 'success');
+        const qs = new URLSearchParams({
+            start_date: startDate,
+            end_date: endDate,
+            report_type: reportType
+        });
+        reportData = await fetchJsonOrThrow(crmApiUrl('reports/analytics?' + qs.toString()));
+        renderMetrics(reportData.metrics || {});
+        renderCharts(reportData.charts || {});
+        renderActivity(reportData.activity || []);
+        if (reportData.empty) {
+            showAlert('Report generated — no deals/contacts in this date range.', 'success');
         } else {
-            showAlert('Failed to load data for report', 'danger');
+            showAlert('Report generated successfully!', 'success');
         }
     } catch (err) {
+        console.error('Failed to generate report:', err);
         showAlert('Network error while generating report', 'danger');
     }
 }
 
-function filterDataByDateRange() {
-    const startDate = new Date(reportData.startDate);
-    const endDate = new Date(reportData.endDate);
-    endDate.setHours(23, 59, 59); // End of day
-    
-    // Filter deals by date range
-    reportData.deals = reportData.deals.filter(deal => {
-        const dealDate = new Date(deal.created_at);
-        return dealDate >= startDate && dealDate <= endDate;
-    });
-    
-    // Filter contacts by date range
-    reportData.contacts = reportData.contacts.filter(contact => {
-        const contactDate = new Date(contact.created_at);
-        return contactDate >= startDate && contactDate <= endDate;
-    });
-}
-
-function generateMetrics() {
-    const deals = reportData.deals;
-    const contacts = reportData.contacts;
-    
-    // Total deals
-    document.getElementById('totalDeals').textContent = deals.length;
-    
-    // Total pipeline value
-    const totalValue = deals.reduce((sum, deal) => sum + (parseFloat(deal.amount) || 0), 0);
+function renderMetrics(metrics) {
+    document.getElementById('totalDeals').textContent = metrics.total_deals ?? 0;
+    const totalValue = Number(metrics.total_pipeline_value || 0);
     document.getElementById('totalValue').textContent = '$' + totalValue.toLocaleString();
-    
-    // Win rate
-    const wonDeals = deals.filter(deal => deal.stage === 'closed_won').length;
-    const closedDeals = deals.filter(deal => deal.stage === 'closed_won' || deal.stage === 'closed_lost').length;
-    const winRate = closedDeals > 0 ? (wonDeals / closedDeals * 100).toFixed(1) : 0;
-    document.getElementById('winRate').textContent = winRate + '%';
-    
-    // Average deal size
-    const avgDealSize = deals.length > 0 ? totalValue / deals.length : 0;
-    document.getElementById('avgDealSize').textContent = '$' + avgDealSize.toLocaleString(undefined, {maximumFractionDigits: 0});
+    document.getElementById('winRate').textContent = (metrics.win_rate ?? 0) + '%';
+    const avg = Number(metrics.avg_deal_size || 0);
+    document.getElementById('avgDealSize').textContent = '$' + avg.toLocaleString(undefined, { maximumFractionDigits: 0 });
 }
 
-function generateCharts() {
-    generateDealsByStageChart();
-    generatePipelineValueChart();
-    generateContactSourcesChart();
-    generateDealsOverTimeChart();
+function renderCharts(chartData) {
+    renderDoughnut('dealsByStage', 'dealsByStageChart', chartData.deals_by_stage, STAGE_COLORS);
+    renderBar('pipelineValue', 'pipelineValueChart', chartData.pipeline_value_by_stage, STAGE_COLORS);
+    renderSources('contactSources', 'contactSourcesChart', chartData.contact_sources);
+    renderLine('dealsOverTime', 'dealsOverTimeChart', chartData.deals_over_time);
 }
 
-function generateDealsByStageChart() {
-    const ctx = document.getElementById('dealsByStageChart').getContext('2d');
-    
-    // Destroy existing chart
-    if (charts.dealsByStage) {
-        charts.dealsByStage.destroy();
-    }
-    
-    const stages = ['prospecting', 'qualification', 'proposal', 'negotiation', 'closed_won', 'closed_lost'];
-    const stageCounts = stages.map(stage => 
-        reportData.deals.filter(deal => deal.stage === stage).length
-    );
-    
-    const colors = ['#6c757d', '#17a2b8', '#ffc107', '#007bff', '#28a745', '#dc3545'];
-    
-    charts.dealsByStage = new Chart(ctx, {
+function chartSeries(raw) {
+    return {
+        labels: (raw && raw.labels) ? raw.labels : [],
+        values: (raw && raw.values) ? raw.values : []
+    };
+}
+
+function renderDoughnut(key, canvasId, raw, colors) {
+    destroyChart(key);
+    const series = chartSeries(raw);
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    const hasData = series.values.some(v => Number(v) > 0);
+    charts[key] = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: stages.map(s => s.replace('_', ' ').toUpperCase()),
+            labels: hasData ? series.labels : ['No deals in selected range'],
             datasets: [{
-                data: stageCounts,
-                backgroundColor: colors,
+                data: hasData ? series.values : [1],
+                backgroundColor: hasData ? colors : ['#e9ecef'],
                 borderWidth: 2,
                 borderColor: '#fff'
             }]
@@ -326,36 +252,24 @@ function generateDealsByStageChart() {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: {
-                    position: 'bottom'
-                }
+                legend: { position: 'bottom' },
+                tooltip: { enabled: hasData }
             }
         }
     });
 }
 
-function generatePipelineValueChart() {
-    const ctx = document.getElementById('pipelineValueChart').getContext('2d');
-    
-    if (charts.pipelineValue) {
-        charts.pipelineValue.destroy();
-    }
-    
-    const stages = ['prospecting', 'qualification', 'proposal', 'negotiation', 'closed_won', 'closed_lost'];
-    const stageValues = stages.map(stage => {
-        const stageDeals = reportData.deals.filter(deal => deal.stage === stage);
-        return stageDeals.reduce((sum, deal) => sum + (parseFloat(deal.amount) || 0), 0);
-    });
-    
-    const colors = ['#6c757d', '#17a2b8', '#ffc107', '#007bff', '#28a745', '#dc3545'];
-    
-    charts.pipelineValue = new Chart(ctx, {
+function renderBar(key, canvasId, raw, colors) {
+    destroyChart(key);
+    const series = chartSeries(raw);
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    charts[key] = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: stages.map(s => s.replace('_', ' ').toUpperCase()),
+            labels: series.labels,
             datasets: [{
                 label: 'Pipeline Value ($)',
-                data: stageValues,
+                data: series.values,
                 backgroundColor: colors,
                 borderColor: colors,
                 borderWidth: 1
@@ -374,39 +288,45 @@ function generatePipelineValueChart() {
                     }
                 }
             },
-            plugins: {
-                legend: {
-                    display: false
-                }
-            }
+            plugins: { legend: { display: false } }
         }
     });
 }
 
-function generateContactSourcesChart() {
-    const ctx = document.getElementById('contactSourcesChart').getContext('2d');
-    
-    if (charts.contactSources) {
-        charts.contactSources.destroy();
+function renderSources(key, canvasId, raw) {
+    destroyChart(key);
+    const series = chartSeries(raw);
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    if (series.labels.length === 0) {
+        charts[key] = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['No contact data in selected range'],
+                datasets: [{
+                    data: [1],
+                    backgroundColor: ['#e9ecef'],
+                    borderWidth: 1,
+                    borderColor: '#dee2e6'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: { enabled: false }
+                }
+            }
+        });
+        return;
     }
-    
-    const sources = {};
-    reportData.contacts.forEach(contact => {
-        const source = contact.source || 'Unknown';
-        sources[source] = (sources[source] || 0) + 1;
-    });
-    
-    const labels = Object.keys(sources);
-    const data = Object.values(sources);
-    const colors = ['#007bff', '#28a745', '#ffc107', '#dc3545', '#6c757d', '#17a2b8', '#fd7e14'];
-    
-    charts.contactSources = new Chart(ctx, {
+    charts[key] = new Chart(ctx, {
         type: 'pie',
         data: {
-            labels: labels,
+            labels: series.labels,
             datasets: [{
-                data: data,
-                backgroundColor: colors.slice(0, labels.length),
+                data: series.values,
+                backgroundColor: SOURCE_COLORS.slice(0, series.labels.length),
                 borderWidth: 2,
                 borderColor: '#fff'
             }]
@@ -414,40 +334,22 @@ function generateContactSourcesChart() {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                }
-            }
+            plugins: { legend: { position: 'bottom' } }
         }
     });
 }
 
-function generateDealsOverTimeChart() {
-    const ctx = document.getElementById('dealsOverTimeChart').getContext('2d');
-    
-    if (charts.dealsOverTime) {
-        charts.dealsOverTime.destroy();
-    }
-    
-    // Group deals by month
-    const monthlyData = {};
-    reportData.deals.forEach(deal => {
-        const date = new Date(deal.created_at);
-        const monthKey = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
-        monthlyData[monthKey] = (monthlyData[monthKey] || 0) + 1;
-    });
-    
-    const labels = Object.keys(monthlyData).sort();
-    const data = labels.map(label => monthlyData[label]);
-    
-    charts.dealsOverTime = new Chart(ctx, {
+function renderLine(key, canvasId, raw) {
+    destroyChart(key);
+    const series = chartSeries(raw);
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    charts[key] = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: labels,
+            labels: series.labels.length ? series.labels : ['No data'],
             datasets: [{
                 label: 'Deals Created',
-                data: data,
+                data: series.labels.length ? series.values : [0],
                 borderColor: '#007bff',
                 backgroundColor: 'rgba(0, 123, 255, 0.1)',
                 borderWidth: 2,
@@ -461,78 +363,62 @@ function generateDealsOverTimeChart() {
             scales: {
                 y: {
                     beginAtZero: true,
-                    ticks: {
-                        stepSize: 1
-                    }
+                    ticks: { stepSize: 1 }
                 }
             },
-            plugins: {
-                legend: {
-                    display: false
-                }
-            }
+            plugins: { legend: { display: false } }
         }
     });
 }
 
-function generateActivityTable() {
+function renderActivity(rows) {
     const tbody = document.querySelector('#activityTable tbody');
     tbody.innerHTML = '';
-    
-    // For now, we'll show recent deals as activity
-    // In a real implementation, you'd have an activity log table
-    const recentDeals = reportData.deals
-        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-        .slice(0, 10);
-    
-    recentDeals.forEach(deal => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>System</td>
-            <td>Deal Created</td>
-            <td>${escapeHtml(deal.title)}</td>
-            <td>${new Date(deal.created_at).toLocaleDateString()}</td>
+    rows.forEach(row => {
+        const tr = document.createElement('tr');
+        const dateRaw = row.date || '';
+        const dateLabel = dateRaw ? new Date(String(dateRaw).replace(' ', 'T')).toLocaleDateString() : '';
+        tr.innerHTML = `
+            <td>${escapeHtml(row.user || 'System')}</td>
+            <td>${escapeHtml(row.action || '')}</td>
+            <td>${escapeHtml(row.details || '')}</td>
+            <td>${escapeHtml(dateLabel)}</td>
         `;
-        tbody.appendChild(row);
+        tbody.appendChild(tr);
     });
 }
 
 function exportData(format) {
-    if (!reportData.deals || reportData.deals.length === 0) {
+    if (!reportData) {
         showAlert('No data to export. Please generate a report first.', 'warning');
         return;
     }
-    
+
     let data, filename, mimeType;
-    
     if (format === 'csv') {
-        // Convert deals to CSV
-        const headers = ['ID', 'Title', 'Contact ID', 'Amount', 'Stage', 'Probability', 'Expected Close Date', 'Created At'];
-        const csvContent = [
-            headers.join(','),
-            ...reportData.deals.map(deal => [
-                deal.id,
-                `"${deal.title}"`,
-                deal.contact_id,
-                deal.amount || '',
-                deal.stage,
-                deal.probability,
-                deal.expected_close_date || '',
-                deal.created_at
-            ].join(','))
-        ].join('\n');
-        
-        data = csvContent;
-        filename = `deals_report_${new Date().toISOString().split('T')[0]}.csv`;
+        const metrics = reportData.metrics || {};
+        const lines = [
+            'Metric,Value',
+            `total_deals,${metrics.total_deals ?? 0}`,
+            `total_pipeline_value,${metrics.total_pipeline_value ?? 0}`,
+            `win_rate,${metrics.win_rate ?? 0}`,
+            `avg_deal_size,${metrics.avg_deal_size ?? 0}`
+        ];
+        const stage = (reportData.charts && reportData.charts.deals_by_stage) || { labels: [], values: [] };
+        lines.push('');
+        lines.push('Stage,Deal Count');
+        (stage.labels || []).forEach((label, i) => {
+            lines.push(`"${label}",${stage.values[i] ?? 0}`);
+        });
+        data = lines.join('\n');
+        filename = `analytics_report_${new Date().toISOString().split('T')[0]}.csv`;
         mimeType = 'text/csv';
     } else {
-        // JSON export
         data = JSON.stringify(reportData, null, 2);
-        filename = `deals_report_${new Date().toISOString().split('T')[0]}.json`;
+        filename = `analytics_report_${new Date().toISOString().split('T')[0]}.json`;
         mimeType = 'application/json';
     }
-    
-    // Create download link
+
     const blob = new Blob([data], { type: mimeType });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -542,7 +428,6 @@ function exportData(format) {
     a.click();
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
-    
     showAlert(`Data exported as ${format.toUpperCase()} successfully!`, 'success');
 }
 
@@ -551,7 +436,6 @@ function showAlert(message, type) {
     alertBox.textContent = message;
     alertBox.className = `alert alert-${type}`;
     alertBox.classList.remove('d-none');
-    
     setTimeout(() => {
         alertBox.classList.add('d-none');
     }, 5000);
@@ -559,7 +443,7 @@ function showAlert(message, type) {
 
 function escapeHtml(text) {
     const div = document.createElement('div');
-    div.textContent = text;
+    div.textContent = text == null ? '' : String(text);
     return div.innerHTML;
 }
 </script>

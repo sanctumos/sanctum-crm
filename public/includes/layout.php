@@ -1,26 +1,5 @@
 <?php
 /**
- * Sanctum CRM
- * 
- * This file is part of Sanctum CRM.
- * 
- * Copyright (C) 2025 Sanctum OS
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published
- * by the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
-
-/**
  * Layout Template System
  * Sanctum CRM - Consistent page layout
  */
@@ -30,10 +9,7 @@ if (!defined('CRM_LOADED')) {
     die('Direct access not permitted');
 }
 
-// Get configuration for dynamic content
-$config = ConfigManager::getInstance();
-$companyInfo = $config->getCompanyInfo();
-$appConfig = $config->getCategory('application');
+require_once __DIR__ . '/skin-lab-env.php';
 
 // Get current user (if auth is available)
 $user = null;
@@ -64,259 +40,265 @@ $stats['total_deals'] = $result['count'];
 $result = $db->fetchOne("SELECT SUM(amount) as total FROM deals WHERE amount IS NOT NULL");
 $stats['total_deal_value'] = $result['total'] ?? 0;
 
+// Enrichment statistics
+$result = $db->fetchOne("SELECT COUNT(*) as count FROM contacts WHERE enrichment_status = 'enriched'");
+$stats['enriched_contacts'] = $result['count'];
+
+$result = $db->fetchOne("SELECT COUNT(*) as count FROM contacts WHERE enrichment_status = 'failed'");
+$stats['failed_enrichments'] = $result['count'];
+
+$result = $db->fetchOne("SELECT COUNT(*) as count FROM contacts WHERE enrichment_status = 'pending'");
+$stats['pending_enrichments'] = $result['count'];
+
+// Calculate enrichment rate
+$stats['enrichment_rate'] = $stats['total_contacts'] > 0 ? 
+    round(($stats['enriched_contacts'] / $stats['total_contacts']) * 100, 2) : 0;
+
 // Recent contacts
 $recent_contacts = $db->fetchAll("SELECT * FROM contacts ORDER BY created_at DESC LIMIT 5");
 
 // Recent deals
 $recent_deals = $db->fetchAll("SELECT * FROM deals ORDER BY created_at DESC LIMIT 5");
 
+/**
+ * Map a contact_type ('lead', 'customer', 'prospect', ...) to a status-pill modifier.
+ * Customers feel like a finished state; prospects are mid-flight; cold/disqualified are blocked.
+ */
+function crm_pill_for_contact_type(?string $type): string {
+    return match (strtolower((string)$type)) {
+        'lead'         => 'todo',
+        'prospect'     => 'doing',
+        'customer'     => 'done',
+        'cold'         => 'blocked',
+        'disqualified' => 'blocked',
+        default        => 'default',
+    };
+}
+
+/**
+ * Map a contact lifecycle status (the `contact_status` column — new/qualified/contacted/etc.)
+ * to a status-pill modifier. We try not to over-color this; most lifecycle stops sit at
+ * `info` (intermediate) until they reach a terminal state.
+ */
+function crm_pill_for_contact_status(?string $status): string {
+    return match (strtolower((string)$status)) {
+        'new'         => 'info',
+        'qualified'   => 'info',
+        'contacted'   => 'doing',
+        'engaged'     => 'doing',
+        'converted'   => 'done',
+        'won'         => 'done',
+        'lost'        => 'blocked',
+        'disqualified'=> 'blocked',
+        default       => 'default',
+    };
+}
+
+/**
+ * Map an enrichment_status to a status-pill modifier.
+ * `pending` (the most common) is doing; `enriched` is done; `failed` is blocked; empty/unknown is default.
+ */
+function crm_pill_for_enrichment(?string $status): string {
+    return match (strtolower((string)$status)) {
+        'enriched' => 'done',
+        'pending'  => 'doing',
+        'failed'   => 'blocked',
+        'empty'    => 'default',
+        ''         => 'default',
+        default    => 'default',
+    };
+}
+
+/**
+ * Map a deal stage to a status-pill modifier.
+ * Pipeline reads left to right: prospecting/qualification -> proposal/negotiation -> closed.
+ */
+function crm_pill_for_deal_stage(?string $stage): string {
+    return match (strtolower((string)$stage)) {
+        'prospecting'   => 'info',
+        'qualification' => 'info',
+        'proposal'      => 'doing',
+        'negotiation'   => 'doing',
+        'closed_won'    => 'done',
+        'closed_lost'   => 'blocked',
+        default         => 'default',
+    };
+}
+
+/**
+ * Render a status-pill <span>. Pass a label and a pre-mapped variant ('todo' | 'doing' |
+ * 'done' | 'blocked' | 'info' | 'default'). $icon is an optional Bootstrap Icon name.
+ */
+function crm_status_pill(string $label, string $variant = 'default', ?string $icon = null): string {
+    $variant = htmlspecialchars($variant, ENT_QUOTES, 'UTF-8');
+    $iconHtml = $icon ? '<i class="bi bi-' . htmlspecialchars($icon, ENT_QUOTES, 'UTF-8') . '"></i>' : '';
+    return '<span class="status-pill status-pill--' . $variant . '">'
+        . $iconHtml
+        . htmlspecialchars($label, ENT_QUOTES, 'UTF-8')
+        . '</span>';
+}
+
+/** Human label for a normalized tag slug (dfw-metro → Dfw Metro). */
+function crm_format_tag_label(string $tag): string {
+    $label = str_replace(['-', '_'], ' ', strtolower(trim($tag)));
+    return $label === '' ? '' : ucwords($label);
+}
+
+/** Contacts list URL filtered to a single tag. */
+function crm_contacts_tag_url(string $tag): string {
+    return '/index.php?' . http_build_query(['page' => 'contacts', 'tag' => $tag]);
+}
+
+/**
+ * Render clickable tag chips. When $activeTag matches a chip, it gets the active style
+ * so the user can see which filter is applied.
+ */
+function crm_render_tag_chips(array $tags, ?string $activeTag = null): string {
+    if ($tags === []) {
+        return '';
+    }
+    $html = '<div class="chip-row">';
+    foreach ($tags as $tag) {
+        $tag = (string) $tag;
+        if ($tag === '') {
+            continue;
+        }
+        $isActive = $activeTag !== null && $activeTag === $tag;
+        $class = 'tag-chip text-decoration-none' . ($isActive ? ' tag-chip--active' : '');
+        $html .= '<a href="' . htmlspecialchars(crm_contacts_tag_url($tag), ENT_QUOTES, 'UTF-8') . '" class="' . $class . '">'
+            . '<i class="bi bi-tag"></i>'
+            . htmlspecialchars(crm_format_tag_label($tag), ENT_QUOTES, 'UTF-8')
+            . '</a>';
+    }
+    $html .= '</div>';
+    return $html;
+}
+
+function renderPageHeader(string $title, string $subtitle = '', string $actionsHtml = ''): void
+{
+    ?>
+            <div class="page-header">
+                <div class="page-header__title">
+                    <h1><?php echo htmlspecialchars($title); ?></h1>
+                    <?php if ($subtitle !== ''): ?>
+                        <div class="subtitle"><?php echo htmlspecialchars($subtitle); ?></div>
+                    <?php endif; ?>
+                </div>
+                <?php if ($actionsHtml !== ''): ?>
+                    <div class="page-header__actions"><?php echo $actionsHtml; ?></div>
+                <?php endif; ?>
+            </div>
+    <?php
+}
+
 function renderHeader($title = null) {
     global $user, $auth, $currentPage;
-    $pageTitle = $title ? $title . ' - ' . getAppName() : getAppName();
+    $pageTitle = $title ? $title . ' - ' . APP_NAME : APP_NAME;
+    $userName = $user ? trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '')) : '';
+    if ($userName === '' && $user) {
+        $userName = $user['username'] ?? '';
+    }
+    $isAdmin = isset($auth) && $auth instanceof Auth ? $auth->isAdmin() : false;
+    $skin = crmSkinEffectiveSlug(is_array($user) ? $user : null);
+    $navLight = crmSkinUsesLightNav($skin);
+    $navThemeClass = $navLight ? 'navbar-light' : 'navbar-dark';
+    // First-class nav stays short so desktop chrome stays one line.
+    $mergeBadge = 0;
+    try {
+        require_once __DIR__ . '/ContactMergeService.php';
+        $mergeBadge = (new ContactMergeService())->pendingHighCount();
+    } catch (Throwable $e) {
+        $mergeBadge = 0;
+    }
+    $navItems = [
+        ['key' => 'dashboard', 'href' => '/index.php',                'icon' => 'bi-speedometer2', 'label' => 'Dashboard'],
+        ['key' => 'contacts',  'href' => '/index.php?page=contacts',  'icon' => 'bi-people',       'label' => 'Contacts'],
+        ['key' => 'merges',    'href' => '/index.php?page=merges',    'icon' => 'bi-intersect',    'label' => 'Merge', 'badge' => $mergeBadge],
+        ['key' => 'deals',     'href' => '/index.php?page=deals',     'icon' => 'bi-cash-coin',    'label' => 'Deals'],
+        ['key' => 'reports',   'href' => '/index.php?page=reports',   'icon' => 'bi-bar-chart',    'label' => 'Reports'],
+    ];
+    $settingsActive = in_array($currentPage, ['settings', 'webhooks', 'users', 'help'], true);
     ?>
     <!DOCTYPE html>
-    <html lang="en">
+    <html lang="en" data-skin-comp="<?php echo htmlspecialchars($skin); ?>">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title><?php echo $pageTitle; ?></title>
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-        <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
-        <style>
-            .sidebar {
-                min-height: 100vh;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                transition: transform 0.3s ease;
-            }
-            .sidebar .nav-link {
-                color: rgba(255, 255, 255, 0.8);
-                border-radius: 10px;
-                margin: 2px 0;
-                transition: all 0.3s ease;
-            }
-            .sidebar .nav-link:hover,
-            .sidebar .nav-link.active {
-                color: white;
-                background: rgba(255, 255, 255, 0.1);
-                transform: translateX(5px);
-            }
-            .main-content {
-                background: #f8f9fa;
-                min-height: 100vh;
-            }
-            .stat-card {
-                background: white;
-                border-radius: 15px;
-                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-                transition: transform 0.3s ease;
-            }
-            .stat-card:hover {
-                transform: translateY(-5px);
-            }
-            .stat-icon {
-                width: 60px;
-                height: 60px;
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 24px;
-                color: white;
-            }
-            .navbar-brand {
-                font-weight: 700;
-                font-size: 1.5rem;
-            }
-            .table {
-                border-radius: 10px;
-                overflow: hidden;
-                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-            }
-            .btn-action {
-                border-radius: 20px;
-                padding: 8px 16px;
-                font-size: 0.875rem;
-            }
-            
-            /* Mobile hamburger menu styles */
-            .hamburger-btn {
-                display: none;
-                background: none;
-                border: none;
-                color: #333;
-                font-size: 1.5rem;
-                padding: 0.5rem;
-                cursor: pointer;
-            }
-            
-            .sidebar-overlay {
-                display: none;
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0, 0, 0, 0.5);
-                z-index: 1040;
-            }
-            
-            @media (max-width: 767.98px) {
-                .hamburger-btn {
-                    display: block;
-                }
-                
-                .sidebar {
-                    position: fixed;
-                    top: 0;
-                    left: -100%;
-                    width: 280px;
-                    height: 100vh;
-                    z-index: 1050;
-                    transform: translateX(0);
-                }
-                
-                .sidebar.show {
-                    left: 0;
-                }
-                
-                .sidebar-overlay.show {
-                    display: block;
-                }
-                
-                .main-content {
-                    margin-left: 0;
-                    width: 100%;
-                }
-                
-                .col-md-9, .col-lg-10 {
-                    flex: 0 0 100%;
-                    max-width: 100%;
-                }
-            }
-        </style>
+        <title><?php echo htmlspecialchars($pageTitle); ?></title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+        <link href="/assets/css/crm.css?v=14" rel="stylesheet">
+        <link href="<?php echo htmlspecialchars(crmSkinStylesheetHref($skin)); ?>" rel="stylesheet">
+        <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
     </head>
-    <body>
-        <!-- Sidebar Overlay for Mobile -->
-        <div class="sidebar-overlay" id="sidebarOverlay"></div>
-        
-        <div class="container-fluid">
-            <div class="row">
-                <!-- Sidebar -->
-                <div class="col-md-3 col-lg-2 px-0">
-                    <div class="sidebar p-3" id="sidebar">
-                        <div class="text-center mb-4">
-                            <h4 class="text-white mb-0">
-                                <i class="fas fa-users"></i> <?php echo htmlspecialchars(getAppName()); ?>
-                            </h4>
+    <body class="bg-light">
+        <nav class="navbar navbar-expand-lg <?php echo htmlspecialchars($navThemeClass); ?> admin-nav py-0<?php echo $navLight ? '' : ' bg-dark'; ?>">
+            <div class="container-fluid px-3 px-lg-4">
+                <a class="navbar-brand fw-semibold d-inline-flex align-items-center gap-2" href="/index.php" title="<?php echo htmlspecialchars(APP_NAME); ?>">
+                    <i class="bi bi-people"></i>
+                    <span class="crm-brand-short d-none d-xxl-inline"><?php echo htmlspecialchars(APP_NAME); ?></span>
+                    <span class="crm-brand-compact d-inline d-xxl-none">DSC CRM</span>
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#crmNavbar" aria-controls="crmNavbar" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="crmNavbar">
+                    <?php if ($user): ?>
+                    <div class="crm-nav-cluster d-flex flex-column flex-lg-row flex-lg-nowrap ms-lg-auto align-items-stretch align-items-lg-center">
+                        <?php foreach ($navItems as $item): ?>
+                            <a class="btn btn-outline-light text-center text-lg-start <?php echo $currentPage === $item['key'] ? 'active' : ''; ?>" href="<?php echo $item['href']; ?>">
+                                <i class="bi <?php echo $item['icon']; ?> me-1"></i><?php echo htmlspecialchars($item['label']); ?>
+                                <?php if (!empty($item['badge'])): ?>
+                                <span class="badge text-bg-warning ms-1"><?php echo (int) $item['badge']; ?></span>
+                                <?php endif; ?>
+                            </a>
+                        <?php endforeach; ?>
+                        <div class="dropdown crm-nav-end-dropdown w-100 w-lg-auto flex-lg-grow-0">
+                            <button class="btn btn-outline-light text-center text-lg-start dropdown-toggle w-100 w-lg-auto <?php echo $settingsActive ? 'active' : ''; ?>" type="button" data-bs-toggle="dropdown" data-bs-display="static" aria-expanded="false" aria-haspopup="true">
+                                <i class="bi bi-gear me-1"></i>Settings
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item <?php echo $currentPage === 'webhooks' ? 'active' : ''; ?>" href="/index.php?page=webhooks"><i class="bi bi-link-45deg me-2"></i>Webhooks</a></li>
+                                <?php if ($isAdmin): ?>
+                                <li><a class="dropdown-item <?php echo $currentPage === 'users' ? 'active' : ''; ?>" href="/index.php?page=users"><i class="bi bi-people-fill me-2"></i>Users</a></li>
+                                <li><a class="dropdown-item <?php echo $currentPage === 'settings' ? 'active' : ''; ?>" href="/index.php?page=settings"><i class="bi bi-sliders me-2"></i>System settings</a></li>
+                                <?php endif; ?>
+                                <li><a class="dropdown-item <?php echo $currentPage === 'help' ? 'active' : ''; ?>" href="/index.php?page=help"><i class="bi bi-question-circle me-2"></i>Help</a></li>
+                            </ul>
                         </div>
-                        
-                        <nav class="nav flex-column">
-                            <a class="nav-link <?php echo $currentPage === 'dashboard' ? 'active' : ''; ?>" href="/index.php">
-                                <i class="fas fa-tachometer-alt me-2"></i> Dashboard
-                            </a>
-                            <a class="nav-link <?php echo $currentPage === 'contacts' ? 'active' : ''; ?>" href="/index.php?page=contacts">
-                                <i class="fas fa-address-book me-2"></i> Contacts
-                            </a>
-                            <a class="nav-link <?php echo $currentPage === 'deals' ? 'active' : ''; ?>" href="/index.php?page=deals">
-                                <i class="fas fa-handshake me-2"></i> Deals
-                            </a>
-                            <?php if ($auth->isAdmin()): ?>
-                            <a class="nav-link <?php echo $currentPage === 'users' ? 'active' : ''; ?>" href="/index.php?page=users">
-                                <i class="fas fa-users-cog me-2"></i> Users
-                            </a>
-                            <a class="nav-link <?php echo $currentPage === 'settings' ? 'active' : ''; ?>" href="/index.php?page=settings">
-                                <i class="fas fa-cog me-2"></i> Settings
-                            </a>
-                            <?php endif; ?>
-                            <a class="nav-link <?php echo $currentPage === 'reports' ? 'active' : ''; ?>" href="/index.php?page=reports">
-                                <i class="fas fa-chart-bar me-2"></i> Reports
-                            </a>
-                            <a class="nav-link <?php echo $currentPage === 'webhooks' ? 'active' : ''; ?>" href="/index.php?page=webhooks">
-                                <i class="fas fa-link me-2"></i> Webhooks
-                            </a>
-                        </nav>
+                        <hr class="d-lg-none border-secondary opacity-50 my-1 mx-0 w-100">
+                        <div class="dropdown crm-nav-end-dropdown w-100 w-lg-auto flex-lg-grow-0">
+                            <button class="btn btn-outline-light text-center text-lg-start dropdown-toggle d-inline-flex align-items-center gap-2 w-100 w-lg-auto" type="button" data-bs-toggle="dropdown" data-bs-display="static" aria-expanded="false" aria-haspopup="true">
+                                <i class="bi bi-person-circle"></i>
+                                <span class="crm-nav-user"><?php echo htmlspecialchars($userName !== '' ? $userName : 'Account'); ?></span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="/index.php?page=profile"><i class="bi bi-key me-2"></i>Change password</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="/logout.php"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+                            </ul>
+                        </div>
                     </div>
+                    <?php else: ?>
+                    <div class="ms-lg-auto py-2 py-lg-0">
+                        <a class="btn btn-outline-light px-3" href="/login.php">Login</a>
+                    </div>
+                    <?php endif; ?>
                 </div>
-                
-                <!-- Main Content -->
-                <div class="col-md-9 col-lg-10 px-0">
-                    <div class="main-content p-4">
-                        <!-- Top Navigation -->
-                        <nav class="navbar navbar-expand-lg navbar-light bg-white rounded-3 mb-4 shadow-sm">
-                            <div class="container-fluid">
-                                <button class="hamburger-btn" id="hamburgerBtn">
-                                    <i class="fas fa-bars"></i>
-                                </button>
-                                <span class="navbar-brand mb-0 h1"><?php echo $title ?? 'Dashboard'; ?></span>
-                                <div class="navbar-nav ms-auto">
-                                    <div class="nav-item dropdown">
-                                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                                            <i class="fas fa-user-circle"></i> 
-                                            <?php echo htmlspecialchars($user['first_name'] . ' ' . $user['last_name']); ?>
-                                        </a>
-                                        <ul class="dropdown-menu">
-                                            <li><a class="dropdown-item" href="/index.php?page=settings"><i class="fas fa-cog me-2"></i>Settings</a></li>
-                                            <li><hr class="dropdown-divider"></li>
-                                            <li><a class="dropdown-item" href="/logout.php"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                        </nav>
+            </div>
+        </nav>
+        <main class="crm-shell">
     <?php
 }
 
 function renderFooter() {
     ?>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-        <script>
-            // Mobile hamburger menu functionality
-            document.addEventListener('DOMContentLoaded', function() {
-                const hamburgerBtn = document.getElementById('hamburgerBtn');
-                const sidebar = document.getElementById('sidebar');
-                const sidebarOverlay = document.getElementById('sidebarOverlay');
-                
-                function toggleSidebar() {
-                    sidebar.classList.toggle('show');
-                    sidebarOverlay.classList.toggle('show');
-                }
-                
-                function closeSidebar() {
-                    sidebar.classList.remove('show');
-                    sidebarOverlay.classList.remove('show');
-                }
-                
-                // Hamburger button click
-                hamburgerBtn.addEventListener('click', toggleSidebar);
-                
-                // Overlay click to close
-                sidebarOverlay.addEventListener('click', closeSidebar);
-                
-                // Close sidebar when clicking on nav links (mobile)
-                const navLinks = sidebar.querySelectorAll('.nav-link');
-                navLinks.forEach(link => {
-                    link.addEventListener('click', function() {
-                        if (window.innerWidth <= 767.98) {
-                            closeSidebar();
-                        }
-                    });
-                });
-                
-                // Close sidebar on window resize if screen becomes larger
-                window.addEventListener('resize', function() {
-                    if (window.innerWidth > 767.98) {
-                        closeSidebar();
-                    }
-                });
-            });
-        </script>
+        </main>
+        <script src="/assets/js/crm-api.js"></script>
+        <script src="/assets/js/crm-toast.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+        <div class="crm-toast-host" id="crmToastHost" aria-live="polite" aria-relevant="additions"></div>
     </body>
     </html>
     <?php
@@ -324,77 +306,45 @@ function renderFooter() {
 
 function renderDashboardStats() {
     global $stats;
+    $primary = [
+        ['icon' => 'people',      'tone' => 'accent',  'value' => number_format($stats['total_contacts']),            'label' => 'Contacts'],
+        ['icon' => 'person-plus', 'tone' => 'accent',  'value' => number_format($stats['total_leads']),               'label' => 'Leads'],
+        ['icon' => 'person-check','tone' => 'success', 'value' => number_format($stats['total_customers']),           'label' => 'Customers'],
+        ['icon' => 'cash-coin',   'tone' => 'success', 'value' => '$' . number_format($stats['total_deal_value'], 2), 'label' => 'Deal Value'],
+    ];
+    $kpis = [
+        ['value' => number_format($stats['enriched_contacts']),   'label' => 'Enriched'],
+        ['value' => $stats['enrichment_rate'] . '%',              'label' => 'Enrichment rate'],
+        ['value' => number_format($stats['pending_enrichments']), 'label' => 'Pending'],
+        ['value' => number_format($stats['failed_enrichments']),  'label' => 'Failed'],
+    ];
     ?>
-    <!-- Statistics Cards -->
-    <div class="row mb-4">
-        <div class="col-md-3 mb-3">
-            <div class="stat-card p-4">
-                <div class="d-flex align-items-center">
-                    <div class="stat-icon me-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <div>
-                        <h3 class="mb-0"><?php echo number_format($stats['total_contacts']); ?></h3>
-                        <p class="text-muted mb-0">Total Contacts</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-3 mb-3">
-            <div class="stat-card p-4">
-                <div class="d-flex align-items-center">
-                    <div class="stat-icon me-3" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
-                        <i class="fas fa-user-plus"></i>
-                    </div>
-                    <div>
-                        <h3 class="mb-0"><?php echo number_format($stats['total_leads']); ?></h3>
-                        <p class="text-muted mb-0">Leads</p>
+    <div class="row g-3 mb-3">
+        <?php foreach ($primary as $t): ?>
+        <div class="col-6 col-lg-3">
+            <div class="surface surface-pad h-100">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="crm-glyph-tile crm-glyph-tile--circle crm-glyph-tile--<?php echo $t['tone']; ?>">
+                        <i class="bi bi-<?php echo $t['icon']; ?>"></i>
+                    </span>
+                    <div class="min-w-0">
+                        <div class="h4 mb-0 fw-semibold text-truncate"><?php echo $t['value']; ?></div>
+                        <div class="fine-print text-truncate"><?php echo $t['label']; ?></div>
                     </div>
                 </div>
             </div>
         </div>
-        
-        <div class="col-md-3 mb-3">
-            <div class="stat-card p-4">
-                <div class="d-flex align-items-center">
-                    <div class="stat-icon me-3" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
-                        <i class="fas fa-user-check"></i>
-                    </div>
-                    <div>
-                        <h3 class="mb-0"><?php echo number_format($stats['total_customers']); ?></h3>
-                        <p class="text-muted mb-0">Customers</p>
-                    </div>
-                </div>
+        <?php endforeach; ?>
+    </div>
+    <div class="section">
+        <div class="section-title">Enrichment KPIs <span class="section-title__count">pipeline health</span></div>
+        <div class="crm-kpi-row">
+            <?php foreach ($kpis as $k): ?>
+            <div class="crm-kpi">
+                <div class="crm-kpi__value"><?php echo $k['value']; ?></div>
+                <div class="crm-kpi__label"><?php echo $k['label']; ?></div>
             </div>
-        </div>
-        
-        <div class="col-md-3 mb-3">
-            <div class="stat-card p-4">
-                <div class="d-flex align-items-center">
-                    <div class="stat-icon me-3" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
-                        <i class="fas fa-handshake"></i>
-                    </div>
-                    <div>
-                        <h3 class="mb-0">$<?php echo number_format($stats['total_deal_value'], 2); ?></h3>
-                        <p class="text-muted mb-0">Deal Value</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-3 mb-3">
-            <div class="stat-card p-4">
-                <div class="d-flex align-items-center">
-                    <div class="stat-icon me-3" style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);">
-                        <i class="fas fa-magic"></i>
-                    </div>
-                    <div>
-                        <h3 class="mb-0"><?php echo number_format($stats['enriched_contacts'] ?? 0); ?></h3>
-                        <p class="text-muted mb-0">Enriched Contacts</p>
-                    </div>
-                </div>
-            </div>
+            <?php endforeach; ?>
         </div>
     </div>
     <?php
@@ -403,105 +353,72 @@ function renderDashboardStats() {
 function renderRecentActivity() {
     global $recent_contacts, $recent_deals;
     ?>
-    <!-- Recent Activity -->
-    <div class="row">
-        <div class="col-md-6 mb-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Recent Contacts</h5>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Type</th>
-                                    <th>Status</th>
-                                    <th>Date</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($recent_contacts as $contact): ?>
-                                <tr>
-                                    <td>
-                                        <strong><?php echo htmlspecialchars($contact['first_name'] . ' ' . $contact['last_name']); ?></strong>
-                                        <br><small class="text-muted"><?php echo htmlspecialchars($contact['email']); ?></small>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-<?php echo $contact['contact_type'] === 'lead' ? 'warning' : 'success'; ?>">
-                                            <?php echo ucfirst($contact['contact_type']); ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-secondary"><?php echo ucfirst($contact['contact_status']); ?></span>
-                                    </td>
-                                    <td>
-                                        <small class="text-muted">
-                                            <?php echo date('M j, Y', strtotime($contact['created_at'])); ?>
-                                        </small>
-                                    </td>
-                                </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
+    <div class="row g-3">
+        <div class="col-lg-6">
+            <div class="surface h-100">
+                <div class="surface__header">
+                    <h5><i class="bi bi-clock me-2 text-muted"></i>Recent Contacts</h5>
+                    <div class="surface__actions">
+                        <a href="/index.php?page=contacts" class="btn btn-sm btn-outline-secondary">View all</a>
                     </div>
                 </div>
-                <div class="card-footer">
-                    <a href="/index.php?page=contacts" class="btn btn-sm btn-outline-primary">View All Contacts</a>
+                <div class="surface__body">
+                    <?php if (empty($recent_contacts)): ?>
+                        <div class="empty-hint">No recent contacts</div>
+                    <?php else: ?>
+                    <ul class="activity-feed">
+                        <?php foreach ($recent_contacts as $contact): ?>
+                        <li class="activity-feed__item">
+                            <div class="min-w-0 flex-grow-1">
+                                <strong><?php echo crm_h($contact['first_name'] . ' ' . $contact['last_name']); ?></strong>
+                                <div class="fine-print"><?php echo !empty($contact['email']) ? crm_h($contact['email']) : 'No email'; ?></div>
+                                <div class="chip-row mt-1">
+                                    <?php echo crm_status_pill(ucfirst((string)$contact['contact_type']), crm_pill_for_contact_type($contact['contact_type'])); ?>
+                                    <?php echo crm_status_pill(ucfirst((string)$contact['contact_status']), crm_pill_for_contact_status($contact['contact_status'])); ?>
+                                </div>
+                            </div>
+                            <small class="text-muted text-nowrap"><?php echo date('M j', strtotime($contact['created_at'])); ?></small>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
-        
-        <div class="col-md-6 mb-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Recent Deals</h5>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Deal</th>
-                                    <th>Amount</th>
-                                    <th>Stage</th>
-                                    <th>Date</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($recent_deals as $deal): ?>
-                                <tr>
-                                    <td>
-                                        <strong><?php echo htmlspecialchars($deal['title']); ?></strong>
-                                    </td>
-                                    <td>
-                                        <?php if ($deal['amount']): ?>
-                                            <strong>$<?php echo number_format($deal['amount'], 2); ?></strong>
-                                        <?php else: ?>
-                                            <span class="text-muted">Not set</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-secondary"><?php echo ucfirst(str_replace('_', ' ', $deal['stage'])); ?></span>
-                                    </td>
-                                    <td>
-                                        <small class="text-muted">
-                                            <?php echo date('M j, Y', strtotime($deal['created_at'])); ?>
-                                        </small>
-                                    </td>
-                                </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
+
+        <div class="col-lg-6">
+            <div class="surface h-100">
+                <div class="surface__header">
+                    <h5><i class="bi bi-graph-up me-2 text-muted"></i>Recent Deals</h5>
+                    <div class="surface__actions">
+                        <a href="/index.php?page=deals" class="btn btn-sm btn-outline-secondary">View all</a>
                     </div>
                 </div>
-                <div class="card-footer">
-                    <a href="/index.php?page=deals" class="btn btn-sm btn-outline-primary">View All Deals</a>
+                <div class="surface__body">
+                    <?php if (empty($recent_deals)): ?>
+                        <div class="empty-hint">No recent deals</div>
+                    <?php else: ?>
+                    <ul class="activity-feed">
+                        <?php foreach ($recent_deals as $deal): ?>
+                        <li class="activity-feed__item">
+                            <div class="min-w-0 flex-grow-1">
+                                <strong><?php echo crm_h($deal['title']); ?></strong>
+                                <div class="fine-print">
+                                    <?php echo !empty($deal['amount']) ? '$' . number_format((float)$deal['amount'], 2) : 'No amount'; ?>
+                                </div>
+                                <div class="chip-row mt-1">
+                                    <?php echo crm_status_pill(ucwords(str_replace('_', ' ', (string)$deal['stage'])), crm_pill_for_deal_stage($deal['stage'] ?? '')); ?>
+                                </div>
+                            </div>
+                            <small class="text-muted text-nowrap"><?php echo date('M j', strtotime($deal['created_at'])); ?></small>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
     </div>
     <?php
 }
-?> 
+?>

@@ -1,26 +1,5 @@
 <?php
 /**
- * Sanctum CRM
- * 
- * This file is part of Sanctum CRM.
- * 
- * Copyright (C) 2025 Sanctum OS
- * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published
- * by the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
-
-/**
  * User Management Page
  * Sanctum CRM
  */
@@ -42,8 +21,8 @@ renderHeader('Users');
 <div class="users-card">
     <div class="card shadow-sm">
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-            <h4 class="mb-0"><i class="fas fa-users"></i> User Management</h4>
-            <button class="btn btn-success" id="addUserBtn"><i class="fas fa-user-plus"></i> Add User</button>
+            <h4 class="mb-0"><i class="bi bi-people"></i> User Management</h4>
+            <button class="btn btn-success" id="addUserBtn"><i class="bi bi-person-plus"></i> Add User</button>
         </div>
         <div class="card-body">
             <div id="usersAlert" class="alert d-none" role="alert"></div>
@@ -151,7 +130,7 @@ function setupEventListeners() {
 
 async function loadUsers() {
     try {
-        const response = await fetch('/api/v1/users', {
+        const response = await fetch(crmApiUrl('users'), {
             credentials: 'include'
         });
         const result = await response.json();
@@ -185,26 +164,26 @@ function renderUsersTable() {
                     <code class="small" id="api-key-${user.id}">${user.api_key ? user.api_key.substring(0, 8) + '...' : 'None'}</code>
                     ${user.api_key ? `
                         <button class="btn btn-sm btn-outline-secondary ms-1" onclick="toggleApiKey(${user.id})" title="Show/Hide API Key" id="toggle-btn-${user.id}">
-                            <i class="fas fa-eye"></i>
+                            <i class="bi bi-eye"></i>
                         </button>
                         <button class="btn btn-sm btn-outline-info ms-1" onclick="copyApiKey(${user.id})" title="Copy API Key" id="copy-btn-${user.id}">
-                            <i class="fas fa-copy"></i>
+                            <i class="bi bi-clipboard"></i>
                         </button>
                     ` : ''}
                     <button class="btn btn-sm btn-outline-primary ms-1" onclick="regenerateApiKey(${user.id})" title="Regenerate API Key">
-                        <i class="fas fa-sync-alt"></i>
+                        <i class="bi bi-arrow-clockwise"></i>
                     </button>
                 </div>
             </td>
             <td>
                 <button class="btn btn-sm btn-outline-primary" onclick="editUser(${user.id})" title="Edit">
-                    <i class="fas fa-edit"></i>
+                    <i class="bi bi-pencil-square"></i>
                 </button>
                 <button class="btn btn-sm btn-outline-${user.is_active ? 'warning' : 'success'}" onclick="toggleUserStatus(${user.id})" title="${user.is_active ? 'Deactivate' : 'Activate'}">
-                    <i class="fas fa-${user.is_active ? 'pause' : 'play'}"></i>
+                    <i class="bi bi-${user.is_active ? 'pause-fill' : 'play-fill'}"></i>
                 </button>
                 <button class="btn btn-sm btn-outline-danger" onclick="deleteUser(${user.id})" title="Delete">
-                    <i class="fas fa-trash"></i>
+                    <i class="bi bi-trash"></i>
                 </button>
             </td>
         `;
@@ -222,7 +201,7 @@ async function saveUser() {
     }
     
     try {
-        const url = currentUserId ? `/api/v1/users/${currentUserId}` : '/api/v1/users';
+        const url = currentUserId ? crmApiUrl(`users/${currentUserId}`) : crmApiUrl('users');
         const method = currentUserId ? 'PUT' : 'POST';
         
         const response = await fetch(url, {
@@ -273,7 +252,7 @@ async function toggleUserStatus(userId) {
     if (!user) return;
     
     try {
-        const response = await fetch(`/api/v1/users/${userId}`, {
+        const response = await fetch(crmApiUrl(`users/${userId}`), {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
@@ -297,7 +276,7 @@ async function regenerateApiKey(userId) {
     if (!confirm('Are you sure you want to regenerate the API key? This will invalidate the current key.')) return;
     
     try {
-        const response = await fetch(`/api/v1/users/${userId}`, {
+        const response = await fetch(crmApiUrl(`users/${userId}`), {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
@@ -321,23 +300,13 @@ async function deleteUser(userId) {
     if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) return;
     
     try {
-        const response = await fetch(`/api/v1/users/${userId}`, {
+        const response = await fetch(crmApiUrl(`users/${userId}`), {
             method: 'DELETE',
             credentials: 'include'
         });
         
         if (response.ok) {
-            // DELETE operations return 204 No Content
-            if (response.status === 204) {
-                showAlert('User deleted successfully!', 'success');
-            } else {
-                const result = await response.json();
-                if (result.success) {
-                    showAlert('User deleted successfully!', 'success');
-                } else {
-                    showAlert('Error: ' + (result.error || 'Failed to delete user'), 'danger');
-                }
-            }
+            showAlert('User deleted successfully!', 'success');
             loadUsers();
         } else {
             const result = await response.json();
@@ -359,14 +328,14 @@ function toggleApiKey(userId) {
     if (apiKeyElement.textContent.includes('...')) {
         // Show full API key
         apiKeyElement.textContent = user.api_key;
-        icon.className = 'fas fa-eye-slash';
+        icon.className = 'bi bi-eye-slash';
         toggleBtn.title = 'Hide API Key';
         toggleBtn.classList.remove('btn-outline-secondary');
         toggleBtn.classList.add('btn-outline-warning');
     } else {
         // Hide API key
         apiKeyElement.textContent = user.api_key.substring(0, 8) + '...';
-        icon.className = 'fas fa-eye';
+        icon.className = 'bi bi-eye';
         toggleBtn.title = 'Show API Key';
         toggleBtn.classList.remove('btn-outline-warning');
         toggleBtn.classList.add('btn-outline-secondary');
@@ -384,7 +353,7 @@ function copyApiKey(userId) {
         const originalTitle = copyBtn.title;
         
         // Visual feedback
-        icon.className = 'fas fa-check';
+        icon.className = 'bi bi-check';
         copyBtn.title = 'Copied!';
         copyBtn.classList.remove('btn-outline-info');
         copyBtn.classList.add('btn-outline-success');

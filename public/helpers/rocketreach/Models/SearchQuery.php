@@ -17,6 +17,8 @@ class SearchQuery
     private array $currentEmployerDomain = [];
     private array $location = [];
     private array $linkedinUrl = [];
+    /** @var list<string> Social-media handles (Twitter/X, etc.) — RR `query.handle` */
+    private array $handle = [];
     private array $contactMethod = [];
     private array $industry = [];
     private array $companySize = [];
@@ -62,6 +64,12 @@ class SearchQuery
     public function setLinkedinUrl(array $linkedinUrl): self
     {
         $this->linkedinUrl = $linkedinUrl;
+        return $this;
+    }
+
+    public function setHandle(array $handle): self
+    {
+        $this->handle = $handle;
         return $this;
     }
 
@@ -157,6 +165,9 @@ class SearchQuery
         }
         if (!empty($this->linkedinUrl)) {
             $data['linkedin_url'] = $this->linkedinUrl;
+        }
+        if (!empty($this->handle)) {
+            $data['handle'] = $this->handle;
         }
         if (!empty($this->contactMethod)) {
             $data['contact_method'] = $this->contactMethod;

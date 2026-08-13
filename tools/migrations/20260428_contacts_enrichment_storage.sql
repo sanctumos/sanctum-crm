@@ -1,0 +1,8 @@
+-- Enrichment storage expansion (April 2026)
+-- Primary migration: public/includes/database.php ensureEnrichmentColumns()
+-- adds enrichment_raw (full RocketReach JSON) and rocketreach_profile_id.
+-- SQLite has no "ADD COLUMN IF NOT EXISTS"; opening the CRM with current code
+-- runs the PHP migration. Manual equivalent:
+--
+-- ALTER TABLE contacts ADD COLUMN enrichment_raw TEXT;
+-- ALTER TABLE contacts ADD COLUMN rocketreach_profile_id INTEGER;

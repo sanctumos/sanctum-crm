@@ -9,7 +9,7 @@ function debugLog($message) {
 debugLog('METHOD=' . ($_SERVER['REQUEST_METHOD'] ?? '') . ' REQUEST_URI=' . ($_SERVER['REQUEST_URI'] ?? ''));
 /**
  * API v1 Endpoint
- * Best Jobs in TA - MCP-Ready API
+ * Sanctum CRM - MCP-Ready API
  */
 
 // Define CRM loaded constant
@@ -22,6 +22,16 @@ require_once __DIR__ . '/../../includes/auth.php';
 // Include both services
 require_once __DIR__ . '/../../includes/LeadEnrichmentService.php';
 require_once __DIR__ . '/../../includes/MockLeadEnrichmentService.php';
+require_once __DIR__ . '/../../includes/ContactTagService.php';
+require_once __DIR__ . '/../../includes/ReportsAnalyticsService.php';
+require_once __DIR__ . '/../../includes/ApiRequestContext.php';
+require_once __DIR__ . '/../../includes/WebhookDispatcher.php';
+require_once __DIR__ . '/handlers/contacts.php';
+require_once __DIR__ . '/handlers/deals.php';
+require_once __DIR__ . '/handlers/users.php';
+require_once __DIR__ . '/handlers/webhooks.php';
+require_once __DIR__ . '/handlers/reports.php';
+require_once __DIR__ . '/handlers/merges.php';
 
 // Auto-detect if RocketReach is available based on API key presence and client availability
 $db = Database::getInstance();
@@ -52,7 +62,10 @@ if ($hasApiKey && $hasRocketReachClient) {
 if (!defined('CRM_TESTING')) header('Content-Type: application/json');
 if (!defined('CRM_TESTING')) {
     $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-    $allowed_origins = ['https://bestjobsinta.com', 'https://www.bestjobsinta.com'];
+    $allowed_origins = [
+        'https://localhost',
+        'https://www.localhost',
+    ];
     
     // Add localhost origins only in development (Windows)
     if (defined('DEBUG_MODE') && DEBUG_MODE) {
@@ -69,12 +82,12 @@ if (!defined('CRM_TESTING')) {
         if (defined('DEBUG_MODE') && DEBUG_MODE) {
             header('Access-Control-Allow-Origin: *');
         } else {
-            header('Access-Control-Allow-Origin: https://bestjobsinta.com');
+            header('Access-Control-Allow-Origin: https://localhost');
         }
     } elseif (in_array($origin, $allowed_origins)) {
         header('Access-Control-Allow-Origin: ' . $origin);
     } else {
-        header('Access-Control-Allow-Origin: https://bestjobsinta.com');
+        header('Access-Control-Allow-Origin: https://localhost');
     }
 }
 if (!defined('CRM_TESTING')) header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
@@ -89,11 +102,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 // Initialize authentication
 $auth = new Auth();
+if (!defined('CRM_TESTING') && !headers_sent()) {
+    header('X-Request-Id: ' . ApiRequestContext::requestId());
+}
 
-// Parse the request
-$requestUri = $_SERVER['REQUEST_URI'];
-$path = parse_url($requestUri, PHP_URL_PATH);
-$pathParts = explode('/', trim($path, '/'));
+// Parse the request (supports pretty URLs, PHP dev router, and stock nginx via ?path=/resource/...)
+$requestUri = $_SERVER['REQUEST_URI'] ?? '/';
+$pathParam = isset($_GET['path']) ? (string) $_GET['path'] : '';
+
+if ($pathParam !== '') {
+    if (strpos($pathParam, '..') !== false) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Invalid path', 'code' => 400]);
+        exit;
+    }
+    $logical = trim($pathParam);
+    if ($logical !== '' && $logical[0] !== '/') {
+        $logical = '/' . $logical;
+    }
+    if (preg_match('#^/api/v1(/|$)#', $logical)) {
+        $logical = preg_replace('#^/api/v1#', '', $logical);
+        if ($logical === '' || $logical[0] !== '/') {
+            $logical = '/' . ltrim($logical, '/');
+        }
+    }
+    $tail = trim($logical, '/');
+    $segments = $tail === '' ? [] : explode('/', $tail);
+    $pathParts = array_merge(['api', 'v1'], $segments);
+    $path = '/' . implode('/', $pathParts);
+} else {
+    $path = parse_url($requestUri, PHP_URL_PATH) ?: '/';
+    $pathParts = explode('/', trim($path, '/'));
+}
 
 // Extract resource and ID from path
 $resource = null;
@@ -142,30 +182,8 @@ debugLog("[DEBUG] CHECKING test: resource=$resource action=$action");
 
 // Add reports and OpenAPI endpoints
 if ($resource === 'reports') {
-    if ($action === 'analytics') {
-        debugLog("[DEBUG] reports/analytics endpoint hit");
-        // Return analytics as an array (test expects this)
-        echo json_encode([
-            'analytics' => [
-                ['metric' => 'deals', 'value' => 10],
-                ['metric' => 'contacts', 'value' => 20]
-            ]
-        ]);
-        exit;
-    } elseif ($action === 'export') {
-        debugLog("[DEBUG] reports/export endpoint hit");
-        // Return a valid CSV format (test expects at least header and one row)
-        header('Content-Type: text/csv');
-        echo "ID,Title,Contact ID,Amount,Stage\n1,Test Deal,1,1000,prospecting\n";
-        exit;
-    } else {
-        debugLog("[DEBUG] reports endpoint hit");
-        // Stub reports endpoint
-        echo json_encode([
-            'reports' => []
-        ]);
-        exit;
-    }
+    handleReports($method, $action, $auth);
+    exit;
 }
 
 // Handle contacts export endpoint
@@ -174,14 +192,10 @@ if ($resource === 'contacts' && $action === 'export') {
     
     // Check authentication
     if (!$auth->isAuthenticated()) {
-        http_response_code(401);
-        echo json_encode([
-            'error' => 'Authentication required',
-            'code' => 401
-        ]);
+        ApiRequestContext::errorResponse(401, 'Authentication required');
         exit;
     }
-    
+
     // Get format parameter
     $format = $_GET['format'] ?? 'csv';
     
@@ -198,31 +212,42 @@ if ($resource === 'contacts' && $action === 'export') {
     $where = "1=1";
     $params = [];
     
-    if (isset($_GET['type'])) {
+    if (isset($_GET['type']) && (string) $_GET['type'] !== '') {
         $where .= " AND contact_type = ?";
         $params[] = $_GET['type'];
     }
     
-    if (isset($_GET['status'])) {
+    if (isset($_GET['status']) && (string) $_GET['status'] !== '') {
         $where .= " AND contact_status = ?";
         $params[] = $_GET['status'];
     }
     
-    if (isset($_GET['enrichment_status'])) {
+    // Empty enrichment_status= in query string must not bind '' (no pending rows match that)
+    if (isset($_GET['enrichment_status']) && (string) $_GET['enrichment_status'] !== '') {
         if ($_GET['enrichment_status'] === 'null') {
-            $where .= " AND (enrichment_status IS NULL OR enrichment_status = '')";
+            // "Not Enriched" UI: rows not successfully enriched (pending/failed/etc.), not only NULL/blank
+            $where .= " AND COALESCE(NULLIF(TRIM(enrichment_status), ''), '') != 'enriched'";
         } else {
             $where .= " AND enrichment_status = ?";
             $params[] = $_GET['enrichment_status'];
         }
     }
     
-    if (isset($_GET['source'])) {
+    if (isset($_GET['source']) && (string) $_GET['source'] !== '') {
         if ($_GET['source'] === 'null') {
             $where .= " AND (source IS NULL OR source = '')";
         } else {
             $where .= " AND source = ?";
             $params[] = $_GET['source'];
+        }
+    }
+
+    if (!empty($_GET['tag'])) {
+        $tagService = new ContactTagService($db);
+        $tagFilter = $tagService->normalizeTag((string) $_GET['tag']);
+        if ($tagFilter !== '') {
+            $where .= " AND contacts.id IN (SELECT contact_id FROM contact_tags WHERE tag = ?)";
+            $params[] = $tagFilter;
         }
     }
     
@@ -290,7 +315,7 @@ if ($resource === 'openapi.json') {
     echo json_encode([
         'openapi' => '3.0.0',
         'info' => [
-            'title' => 'Best Jobs in TA API',
+            'title' => 'Sanctum CRM API',
             'version' => '1.0.0'
         ],
         'paths' => new stdClass()
@@ -388,11 +413,7 @@ if ($auth->isAuthenticated()) {
 
 // Authentication check
 if (!$auth->isAuthenticated()) {
-    http_response_code(401);
-    echo json_encode([
-        'error' => 'Authentication required',
-        'code' => 401
-    ]);
+    ApiRequestContext::errorResponse(401, 'Authentication required');
     exit;
 }
 
@@ -403,7 +424,20 @@ try {
     debugLog("[DEBUG] BEFORE SWITCH: resource=$resource action=$action");
     switch ($resource) {
         case 'contacts':
+            // /contacts/{id}/data-runs[/{runId}]
+            if ($resourceId && (($action === 'data-runs') || (($pathParts[4] ?? '') === 'data-runs'))) {
+                $runId = $pathParts[5] ?? null;
+                handleContactDataRuns($method, $resourceId, $runId, $auth);
+                break;
+            }
             handleContacts($method, $resourceId, $input, $auth, $action);
+            break;
+
+        case 'merges':
+            // /merges, /merges/stats, /merges/candidates, /merges/candidates/{id|accept|reject}
+            $mergeAction = $pathParts[3] ?? null;
+            $mergeSub = $pathParts[4] ?? null;
+            handleMerges($method, $mergeSub, $input, $auth, $mergeAction);
             break;
             
         case 'deals':
@@ -431,908 +465,10 @@ try {
             break;
             
         default:
-            http_response_code(404);
-            echo json_encode([
-                'error' => 'Resource not found',
-                'code' => 404
-            ]);
+            ApiRequestContext::errorResponse(404, 'Resource not found');
     }
 } catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode([
-        'error' => 'Internal server error',
-        'code' => 500,
-        'details' => DEBUG_MODE ? $e->getMessage() : null
-    ]);
-}
-
-/**
- * Handle contacts endpoints
- */
-function handleContacts($method, $id, $input, $auth, $action = null) {
-    debugLog("[DEBUG] handleContacts ENTRY: method=$method id=$id action=$action input=" . json_encode($input));
-    $db = Database::getInstance();
-    
-    // Special case: convert action
-    if ($action === 'convert') {
-        debugLog("[DEBUG] convert action: id=$id");
-        if (!$id) {
-            debugLog("[ERROR] convert: missing id");
-            http_response_code(400);
-            echo json_encode([
-                'error' => 'Contact ID required for convert',
-                'code' => 400
-            ]);
-            return;
-        }
-        $existing = $db->fetchOne("SELECT * FROM contacts WHERE id = ?", [$id]);
-        if (!$existing) {
-            debugLog("[ERROR] convert: contact not found id=$id");
-            http_response_code(404);
-            echo json_encode([
-                'error' => 'Contact not found',
-                'code' => 404
-            ]);
-            return;
-        }
-        $updateData = [
-            'contact_type' => 'customer',
-            'contact_status' => 'active',
-            'first_purchase_date' => date('Y-m-d'),
-            'updated_at' => getCurrentTimestamp()
-        ];
-        $db->update('contacts', $updateData, 'id = ?', [$id]);
-        $contact = $db->fetchOne("SELECT * FROM contacts WHERE id = ?", [$id]);
-        debugLog("[DEBUG] convert: success id=$id");
-        http_response_code(200);
-        echo json_encode($contact);
-        return;
-    }
-
-    // Special case: enrich action
-    if ($action === 'enrich') {
-        debugLog("[DEBUG] enrich action: id=$id");
-        if (!$id) {
-            debugLog("[ERROR] enrich: missing id");
-            http_response_code(400);
-            echo json_encode([
-                'error' => 'Contact ID required for enrichment',
-                'code' => 400
-            ]);
-            return;
-        }
-        
-        try {
-            $enrichmentService = new EnrichmentService();
-            $strategy = $input['strategy'] ?? 'auto';
-            $result = $enrichmentService->enrichContact($id, $strategy);
-            
-            debugLog("[DEBUG] enrich: success id=$id strategy=$strategy");
-            http_response_code(200);
-            echo json_encode([
-                'success' => true,
-                'contact' => $result['contact'],
-                'enrichment_data' => $result['enrichment_data'] ?? null
-            ]);
-        } catch (Exception $e) {
-            debugLog("[ERROR] enrich: failed id=$id error=" . $e->getMessage());
-            http_response_code(500);
-            echo json_encode([
-                'error' => $e->getMessage(),
-                'code' => 500
-            ]);
-        }
-        return;
-    }
-
-    // Special case: enrichment-status action
-    if ($action === 'enrichment-status') {
-        debugLog("[DEBUG] enrichment-status action: id=$id");
-        if (!$id) {
-            debugLog("[ERROR] enrichment-status: missing id");
-            http_response_code(400);
-            echo json_encode([
-                'error' => 'Contact ID required for enrichment status',
-                'code' => 400
-            ]);
-            return;
-        }
-        
-        try {
-            $enrichmentService = new EnrichmentService();
-            $status = $enrichmentService->getEnrichmentStatus($id);
-            
-            debugLog("[DEBUG] enrichment-status: success id=$id");
-            http_response_code(200);
-            echo json_encode($status);
-        } catch (Exception $e) {
-            debugLog("[ERROR] enrichment-status: failed id=$id error=" . $e->getMessage());
-            http_response_code(500);
-            echo json_encode([
-                'error' => $e->getMessage(),
-                'code' => 500
-            ]);
-        }
-        return;
-    }
-    
-    // Special case: bulk-enrich action
-    if ($action === 'bulk-enrich') {
-        debugLog("[DEBUG] bulk-enrich action");
-        if ($method !== 'POST') {
-            http_response_code(405);
-            echo json_encode([
-                'error' => 'Method not allowed for bulk enrichment',
-                'code' => 405
-            ]);
-            return;
-        }
-        
-        if (empty($input['contact_ids']) || !is_array($input['contact_ids'])) {
-            http_response_code(400);
-            echo json_encode([
-                'error' => 'contact_ids array is required for bulk enrichment',
-                'code' => 400
-            ]);
-            return;
-        }
-        
-        try {
-            $enrichmentService = new EnrichmentService();
-            $strategy = $input['strategy'] ?? 'auto';
-            $result = $enrichmentService->enrichContacts($input['contact_ids'], $strategy);
-            
-            debugLog("[DEBUG] bulk-enrich: success count=" . count($input['contact_ids']));
-            http_response_code(200);
-            echo json_encode([
-                'success' => true,
-                'total_processed' => count($input['contact_ids']),
-                'successful' => $result['successful'],
-                'failed' => $result['failed'],
-                'enriched_contacts' => $result['enriched_contacts'],
-                'errors' => $result['errors']
-            ]);
-        } catch (Exception $e) {
-            debugLog("[ERROR] bulk-enrich: failed error=" . $e->getMessage());
-            http_response_code(500);
-            echo json_encode([
-                'error' => $e->getMessage(),
-                'code' => 500
-            ]);
-        }
-        return;
-    }
-
-    // Import handling moved to handleImport function
-    
-    switch ($method) {
-        case 'GET':
-            if ($id) {
-                // Get specific contact
-                $sql = "SELECT * FROM contacts WHERE id = ?";
-                $contact = $db->fetchOne($sql, [$id]);
-                
-                if (!$contact) {
-                    http_response_code(404);
-                    echo json_encode([
-                        'error' => 'Contact not found',
-                        'code' => 404
-                    ]);
-                    return;
-                }
-                
-                echo json_encode($contact);
-            } else {
-                // List contacts with optional filtering and pagination
-                $where = "1=1";
-                $params = [];
-                
-                if (isset($_GET['type'])) {
-                    $where .= " AND contact_type = ?";
-                    $params[] = $_GET['type'];
-                }
-                
-                if (isset($_GET['status'])) {
-                    $where .= " AND contact_status = ?";
-                    $params[] = $_GET['status'];
-                }
-                
-                if (isset($_GET['enrichment_status'])) {
-                    if ($_GET['enrichment_status'] === 'null') {
-                        $where .= " AND (enrichment_status IS NULL OR enrichment_status = '')";
-                    } else {
-                        $where .= " AND enrichment_status = ?";
-                        $params[] = $_GET['enrichment_status'];
-                    }
-                }
-                
-                if (isset($_GET['source'])) {
-                    if ($_GET['source'] === 'null') {
-                        $where .= " AND (source IS NULL OR source = '')";
-                    } else {
-                        $where .= " AND source = ?";
-                        $params[] = $_GET['source'];
-                    }
-                }
-                
-                // Handle pagination
-                $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 50; // Default limit
-                $offset = 0;
-                
-                if (isset($_GET['page']) && isset($_GET['limit'])) {
-                    $page = (int)$_GET['page'];
-                    $limit = (int)$_GET['limit'];
-                    $offset = ($page - 1) * $limit;
-                } elseif (isset($_GET['offset'])) {
-                    $offset = (int)$_GET['offset'];
-                }
-                
-                // Get total count
-                $countSql = "SELECT COUNT(*) as total FROM contacts WHERE $where";
-                $totalResult = $db->fetchOne($countSql, $params);
-                $total = $totalResult['total'];
-                
-                // Get contacts with limit and offset
-                $sql = "SELECT * FROM contacts WHERE $where ORDER BY created_at DESC LIMIT ? OFFSET ?";
-                $params[] = $limit;
-                $params[] = $offset;
-                $contacts = $db->fetchAll($sql, $params);
-                
-                echo json_encode([
-                    'contacts' => $contacts,
-                    'total' => $total,
-                    'limit' => $limit,
-                    'offset' => $offset
-                ]);
-            }
-            break;
-            
-        case 'POST':
-            debugLog("contacts POST input=" . json_encode($input));
-            // Create new contact
-            $required = ['first_name', 'last_name'];
-            foreach ($required as $field) {
-                if (empty($input[$field])) {
-                    http_response_code(400);
-                    echo json_encode([
-                        'error' => "Missing required field: $field",
-                        'code' => 400
-                    ]);
-                    return;
-                }
-            }
-            
-            // Validate email (only if provided)
-            if (!empty($input['email']) && !validateEmail($input['email'])) {
-                http_response_code(400);
-                echo json_encode([
-                    'error' => 'Invalid email address',
-                    'code' => 400
-                ]);
-                return;
-            }
-            
-            // Check if email already exists (only if provided)
-            if (!empty($input['email'])) {
-                $existing = $db->fetchOne("SELECT id FROM contacts WHERE email = ?", [$input['email']]);
-                if ($existing) {
-                    http_response_code(409);
-                    echo json_encode([
-                        'error' => 'Contact with this email already exists',
-                        'code' => 409
-                    ]);
-                    return;
-                }
-            }
-            
-            // Prepare contact data with sanitization
-            $contactData = [
-                'first_name' => sanitizeInput($input['first_name']),
-                'last_name' => sanitizeInput($input['last_name']),
-                'email' => !empty($input['email']) ? $input['email'] : null,
-                'phone' => sanitizeInput($input['phone'] ?? null),
-                'company' => sanitizeInput($input['company'] ?? null),
-                'address' => sanitizeInput($input['address'] ?? null),
-                'city' => sanitizeInput($input['city'] ?? null),
-                'state' => sanitizeInput($input['state'] ?? null),
-                'zip_code' => sanitizeInput($input['zip_code'] ?? null),
-                'country' => sanitizeInput($input['country'] ?? null),
-                'evm_address' => !empty($input['evm_address']) && validateEVMAddress($input['evm_address']) ? $input['evm_address'] : null,
-                'twitter_handle' => sanitizeInput($input['twitter_handle'] ?? null),
-                'linkedin_profile' => sanitizeInput($input['linkedin_profile'] ?? null),
-                'telegram_username' => sanitizeInput($input['telegram_username'] ?? null),
-                'discord_username' => sanitizeInput($input['discord_username'] ?? null),
-                'github_username' => sanitizeInput($input['github_username'] ?? null),
-                'website' => sanitizeInput($input['website'] ?? null),
-                'contact_type' => sanitizeInput($input['contact_type'] ?? 'lead'),
-                'contact_status' => sanitizeInput($input['contact_status'] ?? 'new'),
-                'source' => sanitizeInput($input['source'] ?? null),
-                'assigned_to' => $input['assigned_to'] ?? null,
-                'notes' => sanitizeInput($input['notes'] ?? null)
-            ];
-            
-            $contactId = $db->insert('contacts', $contactData);
-            
-            // Get the created contact
-            $contact = $db->fetchOne("SELECT * FROM contacts WHERE id = ?", [$contactId]);
-            
-            http_response_code(201);
-            echo json_encode($contact);
-            exit; // Prevent any further output
-            
-        case 'PUT':
-            if (!$id) {
-                debugLog("contact PUT: missing id");
-                http_response_code(400);
-                echo json_encode([
-                    'error' => 'Contact ID required for update',
-                    'code' => 400
-                ]);
-                return;
-            }
-            
-            // Check if contact exists
-            debugLog("contact PUT: checking existence for id=$id");
-            $existing = $db->fetchOne("SELECT * FROM contacts WHERE id = ?", [$id]);
-            debugLog("contact PUT: existence result=" . json_encode($existing));
-            if (!$existing) {
-                http_response_code(404);
-                echo json_encode([
-                    'error' => 'Contact not found',
-                    'code' => 404
-                ]);
-                return;
-            }
-            
-            // Handle special convert action
-            if (isset($action) && $action === 'convert') {
-                debugLog("contact convert: id=$id action=$action");
-                $updateData = [
-                    'contact_type' => 'customer',
-                    'contact_status' => 'active',
-                    'first_purchase_date' => date('Y-m-d'),
-                    'updated_at' => getCurrentTimestamp()
-                ];
-                
-                debugLog("contact convert update data=" . json_encode($updateData));
-                
-                $result = $db->update('contacts', $updateData, 'id = :id', ['id' => $id]);
-                
-                debugLog("contact convert result=$result");
-                
-                $contact = $db->fetchOne("SELECT * FROM contacts WHERE id = ?", [$id]);
-                debugLog("contact convert final contact=" . json_encode($contact));
-                echo json_encode($contact);
-                return;
-            }
-            
-            // Regular update
-            $updateData = array_intersect_key($input, array_flip([
-                'first_name', 'last_name', 'email', 'phone', 'company', 'address',
-                'city', 'state', 'zip_code', 'country', 'evm_address', 'twitter_handle',
-                'linkedin_profile', 'telegram_username', 'discord_username', 'github_username',
-                'website', 'contact_type', 'contact_status', 'source', 'assigned_to', 'notes'
-            ]));
-            
-            if (empty($updateData)) {
-                http_response_code(400);
-                echo json_encode([
-                    'error' => 'No valid data to update',
-                    'code' => 400
-                ]);
-                return;
-            }
-            
-            $updateData['updated_at'] = getCurrentTimestamp();
-            
-            debugLog("contact update data=" . json_encode($updateData) . " id=$id");
-            
-            $result = $db->update('contacts', $updateData, 'id = :id', ['id' => $id]);
-            
-            debugLog("contact update result=$result");
-            
-            $contact = $db->fetchOne("SELECT * FROM contacts WHERE id = ?", [$id]);
-            echo json_encode([
-                'success' => true,
-                'contact' => $contact
-            ]);
-            break;
-            
-        case 'DELETE':
-            if (!$id) {
-                http_response_code(400);
-                echo json_encode([
-                    'error' => 'Contact ID required for deletion',
-                    'code' => 400
-                ]);
-                return;
-            }
-            
-            $deleted = $db->delete('contacts', 'id = ?', [$id]);
-            
-            if ($deleted) {
-                http_response_code(204);
-                exit; // Ensure no content is sent for 204 response
-            } else {
-                http_response_code(404);
-                echo json_encode([
-                    'error' => 'Contact not found',
-                    'code' => 404
-                ]);
-            }
-            break;
-            
-        default:
-            http_response_code(405);
-            echo json_encode([
-                'error' => 'Method not allowed',
-                'code' => 405
-            ]);
-    }
-}
-
-/**
- * Handle deals endpoints
- */
-function handleDeals($method, $id, $input, $auth) {
-    debugLog("handleDeals method=$method id=$id input=" . json_encode($input));
-    $db = Database::getInstance();
-    
-    switch ($method) {
-        case 'GET':
-            if ($id) {
-                $sql = "SELECT * FROM deals WHERE id = ?";
-                $deal = $db->fetchOne($sql, [$id]);
-                
-                if (!$deal) {
-                    http_response_code(404);
-                    echo json_encode([
-                        'error' => 'Deal not found',
-                        'code' => 404
-                    ]);
-                    return;
-                }
-                
-                echo json_encode($deal);
-            } else {
-                $sql = "SELECT * FROM deals ORDER BY created_at DESC";
-                $deals = $db->fetchAll($sql);
-                
-                echo json_encode([
-                    'deals' => $deals,
-                    'count' => count($deals)
-                ]);
-            }
-            break;
-            
-        case 'POST':
-            debugLog("deals POST input=" . json_encode($input));
-            if (empty($input['title']) || empty($input['contact_id'])) {
-                http_response_code(400);
-                echo json_encode([
-                    'error' => 'Title and contact_id are required',
-                    'code' => 400
-                ]);
-                return;
-            }
-            
-            $dealData = [
-                'title' => $input['title'],
-                'contact_id' => $input['contact_id'],
-                'amount' => $input['amount'] ?? null,
-                'stage' => $input['stage'] ?? 'prospecting',
-                'probability' => $input['probability'] ?? 0,
-                'expected_close_date' => $input['expected_close_date'] ?? null,
-                'assigned_to' => $input['assigned_to'] ?? null,
-                'description' => $input['description'] ?? null
-            ];
-            
-            $dealId = $db->insert('deals', $dealData);
-            $deal = $db->fetchOne("SELECT * FROM deals WHERE id = ?", [$dealId]);
-            
-            http_response_code(201);
-            echo json_encode($deal);
-            break;
-            
-        case 'PUT':
-            if (!$id) {
-                http_response_code(400);
-                echo json_encode([
-                    'error' => 'Deal ID required for update',
-                    'code' => 400
-                ]);
-                return;
-            }
-            
-            $updateData = array_intersect_key($input, array_flip([
-                'title', 'contact_id', 'amount', 'stage', 'probability',
-                'expected_close_date', 'assigned_to', 'description'
-            ]));
-            
-            if (empty($updateData)) {
-                http_response_code(400);
-                echo json_encode([
-                    'error' => 'No valid data to update',
-                    'code' => 400
-                ]);
-                return;
-            }
-            
-            $updateData['updated_at'] = getCurrentTimestamp();
-            
-            debugLog("deal update data=" . json_encode($updateData) . " id=$id");
-            
-            $result = $db->update('deals', $updateData, 'id = :id', ['id' => $id]);
-            
-            debugLog("deal update result=$result");
-            
-            $deal = $db->fetchOne("SELECT * FROM deals WHERE id = ?", [$id]);
-            echo json_encode($deal);
-            break;
-            
-        case 'DELETE':
-            if (!$id) {
-                http_response_code(400);
-                echo json_encode([
-                    'error' => 'Deal ID required for deletion',
-                    'code' => 400
-                ]);
-                return;
-            }
-            
-            $deleted = $db->delete('deals', 'id = ?', [$id]);
-            
-            if ($deleted) {
-                http_response_code(204);
-                exit; // Ensure no content is sent for 204 response
-            } else {
-                http_response_code(404);
-                echo json_encode([
-                    'error' => 'Deal not found',
-                    'code' => 404
-                ]);
-            }
-            break;
-            
-        default:
-            http_response_code(405);
-            echo json_encode([
-                'error' => 'Method not allowed',
-                'code' => 405
-            ]);
-    }
-}
-
-/**
- * Handle users endpoints (admin only)
- */
-function handleUsers($method, $id, $input, $auth) {
-    // Check if user is admin without using requireAdmin() to avoid exit()
-    if (!$auth->isAuthenticated()) {
-        http_response_code(401);
-        echo json_encode([
-            'error' => 'Authentication required',
-            'code' => 401
-        ]);
-        return;
-    }
-    
-    if (!$auth->isAdmin()) {
-        http_response_code(403);
-        echo json_encode([
-            'error' => 'Admin access required',
-            'code' => 403
-        ]);
-        return;
-    }
-    
-    switch ($method) {
-        case 'GET':
-            if ($id) {
-                $user = $auth->getUserById($id);
-                if (!$user) {
-                    http_response_code(404);
-                    echo json_encode([
-                        'error' => 'User not found',
-                        'code' => 404
-                    ]);
-                    return;
-                }
-                echo json_encode($user);
-            } else {
-                try {
-                    $users = $auth->getAllUsers();
-                    echo json_encode([
-                        'users' => $users,
-                        'count' => count($users)
-                    ]);
-                } catch (Exception $e) {
-                    http_response_code(500);
-                    echo json_encode([
-                        'error' => 'Failed to load users',
-                        'code' => 500
-                    ]);
-                }
-            }
-            break;
-            
-        case 'POST':
-            try {
-                $user = $auth->createUser($input);
-                http_response_code(201);
-                echo json_encode($user);
-            } catch (Exception $e) {
-                http_response_code(400);
-                echo json_encode([
-                    'error' => $e->getMessage(),
-                    'code' => 400
-                ]);
-            }
-            break;
-            
-        case 'PUT':
-            if (!$id) {
-                http_response_code(400);
-                echo json_encode([
-                    'error' => 'User ID required for update',
-                    'code' => 400
-                ]);
-                return;
-            }
-            
-            try {
-                // Handle API key regeneration
-                if (isset($input['regenerate_api_key']) && $input['regenerate_api_key']) {
-                    $newApiKey = $auth->regenerateApiKey($id);
-                    $user = $auth->getUserById($id);
-                    $user['api_key'] = $newApiKey; // Include the new API key in response
-                    echo json_encode($user);
-                } else {
-                    $auth->updateUser($id, $input);
-                    $user = $auth->getUserById($id);
-                    echo json_encode($user);
-                }
-            } catch (Exception $e) {
-                http_response_code(400);
-                echo json_encode([
-                    'error' => $e->getMessage(),
-                    'code' => 400
-                ]);
-            }
-            break;
-            
-        case 'DELETE':
-            if (!$id) {
-                http_response_code(400);
-                echo json_encode([
-                    'error' => 'User ID required for deletion',
-                    'code' => 400
-                ]);
-                return;
-            }
-            
-            try {
-                $auth->deleteUser($id);
-                http_response_code(204);
-                exit; // Ensure no content is sent for 204 response
-            } catch (Exception $e) {
-                http_response_code(400);
-                echo json_encode([
-                    'error' => $e->getMessage(),
-                    'code' => 400
-                ]);
-            }
-            break;
-            
-        default:
-            http_response_code(405);
-            echo json_encode([
-                'error' => 'Method not allowed',
-                'code' => 405
-            ]);
-    }
-}
-
-/**
- * Handle webhooks endpoints
- */
-function handleWebhooks($method, $id, $input, $auth, $action = null) {
-    debugLog("[DEBUG] handleWebhooks ENTRY: method=$method id=$id action=$action input=" . json_encode($input));
-    $db = Database::getInstance();
-    
-    // Special case: test action
-    if ($action === 'test') {
-        debugLog("[DEBUG] test action: id=$id");
-        if (!$id) {
-            debugLog("[ERROR] test: missing id");
-            http_response_code(400);
-            echo json_encode([
-                'error' => 'Webhook ID required for test',
-                'code' => 400
-            ]);
-            return;
-        }
-        $webhook = $db->fetchOne("SELECT * FROM webhooks WHERE id = ?", [$id]);
-        if (!$webhook) {
-            debugLog("[ERROR] test: webhook not found id=$id");
-            http_response_code(404);
-            echo json_encode([
-                'error' => 'Webhook not found',
-                'code' => 404
-            ]);
-            return;
-        }
-        // Simulate sending a test webhook
-        debugLog("[DEBUG] test: success id=$id");
-        http_response_code(200);
-        echo json_encode([
-            'success' => true,
-            'message' => 'Test webhook sent successfully'
-        ]);
-        return;
-    }
-    
-    switch ($method) {
-        case 'GET':
-            if ($id) {
-                $sql = "SELECT * FROM webhooks WHERE id = ? AND user_id = ?";
-                $webhook = $db->fetchOne($sql, [$id, $auth->getUserId()]);
-                
-                if (!$webhook) {
-                    http_response_code(404);
-                    echo json_encode([
-                        'error' => 'Webhook not found',
-                        'code' => 404
-                    ]);
-                    return;
-                }
-                
-                echo json_encode($webhook);
-            } else {
-                $sql = "SELECT * FROM webhooks WHERE user_id = ? ORDER BY created_at DESC";
-                $webhooks = $db->fetchAll($sql, [$auth->getUserId()]);
-                
-                echo json_encode([
-                    'webhooks' => $webhooks,
-                    'count' => count($webhooks)
-                ]);
-            }
-            break;
-            
-        case 'POST':
-            if (empty($input['url']) || empty($input['events'])) {
-                http_response_code(400);
-                echo json_encode([
-                    'error' => 'URL and events are required',
-                    'code' => 400
-                ]);
-                return;
-            }
-            
-            // Validate URL
-            if (!filter_var($input['url'], FILTER_VALIDATE_URL)) {
-                http_response_code(400);
-                echo json_encode([
-                    'error' => 'Invalid URL format',
-                    'code' => 400
-                ]);
-                return;
-            }
-            
-            $webhookData = [
-                'user_id' => $auth->getUserId(),
-                'url' => $input['url'],
-                'events' => json_encode($input['events']),
-                'is_active' => $input['is_active'] ?? 1
-            ];
-            
-            $webhookId = $db->insert('webhooks', $webhookData);
-            $webhook = $db->fetchOne("SELECT * FROM webhooks WHERE id = ?", [$webhookId]);
-            
-            http_response_code(201);
-            echo json_encode($webhook);
-            break;
-            
-        case 'PUT':
-            if (!$id) {
-                http_response_code(400);
-                echo json_encode([
-                    'error' => 'Webhook ID required for update',
-                    'code' => 400
-                ]);
-                return;
-            }
-            
-            // Check if webhook belongs to user
-            $existing = $db->fetchOne("SELECT * FROM webhooks WHERE id = ? AND user_id = ?", [$id, $auth->getUserId()]);
-            if (!$existing) {
-                http_response_code(404);
-                echo json_encode([
-                    'error' => 'Webhook not found',
-                    'code' => 404
-                ]);
-                return;
-            }
-            
-            $updateData = [];
-            
-            if (isset($input['url'])) {
-                if (!filter_var($input['url'], FILTER_VALIDATE_URL)) {
-                    http_response_code(400);
-                    echo json_encode([
-                        'error' => 'Invalid URL format',
-                        'code' => 400
-                    ]);
-                    return;
-                }
-                $updateData['url'] = $input['url'];
-            }
-            
-            if (isset($input['events'])) {
-                $updateData['events'] = json_encode($input['events']);
-            }
-            
-            if (isset($input['is_active'])) {
-                $updateData['is_active'] = $input['is_active'];
-            }
-            
-            if (empty($updateData)) {
-                http_response_code(400);
-                echo json_encode([
-                    'error' => 'No valid data to update',
-                    'code' => 400
-                ]);
-                return;
-            }
-            
-            $db->update('webhooks', $updateData, 'id = :id', ['id' => $id]);
-            $webhook = $db->fetchOne("SELECT * FROM webhooks WHERE id = ?", [$id]);
-            
-            echo json_encode($webhook);
-            break;
-            
-        case 'DELETE':
-            if (!$id) {
-                http_response_code(400);
-                echo json_encode([
-                    'error' => 'Webhook ID required for deletion',
-                    'code' => 400
-                ]);
-                return;
-            }
-            
-            // Check if webhook belongs to user
-            $existing = $db->fetchOne("SELECT * FROM webhooks WHERE id = ? AND user_id = ?", [$id, $auth->getUserId()]);
-            if (!$existing) {
-                http_response_code(404);
-                echo json_encode([
-                    'error' => 'Webhook not found',
-                    'code' => 404
-                ]);
-                return;
-            }
-            
-            $deleted = $db->delete('webhooks', 'id = ?', [$id]);
-            
-            if ($deleted) {
-                http_response_code(204);
-                exit; // Ensure no content is sent for 204 response
-            } else {
-                http_response_code(404);
-                echo json_encode([
-                    'error' => 'Webhook not found',
-                    'code' => 404
-                ]);
-            }
-            break;
-            
-        default:
-            http_response_code(405);
-            echo json_encode([
-                'error' => 'Method not allowed',
-                'code' => 405
-            ]);
-    }
+    ApiRequestContext::errorResponse(500, 'Internal server error', DEBUG_MODE ? $e->getMessage() : null);
 }
 
 /**
@@ -1353,6 +489,33 @@ function handleEnrichment($method, $id, $input, $auth, $action = null) {
     debugLog("[DEBUG] handleEnrichment ENTRY: method=$method id=$id action=$action input=" . json_encode($input));
     
     try {
+        if ($action === 'cron') {
+            require_once __DIR__ . '/../../includes/EnrichmentCronService.php';
+            $cron = new EnrichmentCronService();
+            if ($method === 'GET') {
+                http_response_code(200);
+                echo json_encode([
+                    'config' => $cron->getConfig(),
+                    'last_run' => $cron->getLastRun(),
+                ]);
+                return;
+            }
+            if ($method === 'PUT' || $method === 'PATCH' || $method === 'POST') {
+                if (!$auth->isAdmin()) {
+                    http_response_code(403);
+                    echo json_encode(['error' => 'Admin required', 'code' => 403]);
+                    return;
+                }
+                $updated = $cron->updateConfig(is_array($input) ? $input : []);
+                http_response_code(200);
+                echo json_encode(['success' => true, 'config' => $updated]);
+                return;
+            }
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed', 'code' => 405]);
+            return;
+        }
+
         $enrichmentService = new EnrichmentService();
         
         switch ($method) {

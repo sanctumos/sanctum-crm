@@ -1,17 +1,17 @@
 <?php
 /**
  * System Info Help Page
- * Best Jobs in TA - System information
+ * Sanctum CRM - System information
  */
 ?>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h4><i class="fas fa-info-circle me-2"></i>System Information</h4>
+    <h4><i class="bi bi-info-circle me-2"></i>System Information</h4>
     <span class="badge bg-secondary">Technical Details</span>
 </div>
 
 <div class="alert alert-info">
-    <i class="fas fa-info-circle me-2"></i>
+    <i class="bi bi-info-circle me-2"></i>
     <strong>System Information</strong> provides technical details about your CRM installation and configuration.
 </div>
 
@@ -19,7 +19,7 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="fas fa-server me-2"></i>Server Information</h5>
+                <h5 class="mb-0"><i class="bi bi-hdd-network me-2"></i>Server Information</h5>
             </div>
             <div class="card-body">
                 <table class="table table-sm">
@@ -55,7 +55,7 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-header bg-success text-white">
-                <h5 class="mb-0"><i class="fas fa-database me-2"></i>Database Information</h5>
+                <h5 class="mb-0"><i class="bi bi-hdd-stack me-2"></i>Database Information</h5>
             </div>
             <div class="card-body">
                 <?php
@@ -117,7 +117,7 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-header bg-info text-white">
-                <h5 class="mb-0"><i class="fas fa-cog me-2"></i>PHP Configuration</h5>
+                <h5 class="mb-0"><i class="bi bi-gear me-2"></i>PHP Configuration</h5>
             </div>
             <div class="card-body">
                 <table class="table table-sm">
@@ -153,7 +153,7 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-header bg-warning text-dark">
-                <h5 class="mb-0"><i class="fas fa-puzzle-piece me-2"></i>PHP Extensions</h5>
+                <h5 class="mb-0"><i class="bi bi-puzzle me-2"></i>PHP Extensions</h5>
             </div>
             <div class="card-body">
                 <?php
@@ -189,7 +189,7 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-header bg-secondary text-white">
-                <h5 class="mb-0"><i class="fas fa-link me-2"></i>Integration Status</h5>
+                <h5 class="mb-0"><i class="bi bi-link-45deg me-2"></i>Integration Status</h5>
             </div>
             <div class="card-body">
                 <?php
@@ -251,7 +251,7 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-header bg-dark text-white">
-                <h5 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Security Status</h5>
+                <h5 class="mb-0"><i class="bi bi-shield-check me-2"></i>Security Status</h5>
             </div>
             <div class="card-body">
                 <table class="table table-sm">
@@ -295,7 +295,7 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="fas fa-download me-2"></i>System Requirements</h5>
+                <h5 class="mb-0"><i class="bi bi-download me-2"></i>System Requirements</h5>
             </div>
             <div class="card-body">
                 <div class="row">

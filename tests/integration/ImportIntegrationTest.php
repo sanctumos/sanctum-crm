@@ -31,7 +31,7 @@ class ImportIntegrationTest {
         echo "Running Import Integration Tests...\n";
         
         if (!$this->apiKey) {
-            echo "FAIL - No API key available for testing\n";
+            echo "SKIP - No API key available for testing\n";
             return;
         }
         

@@ -1,7 +1,7 @@
 <?php
 /**
  * Database Management Class
- * Best Jobs in TA - SQLite Database Handler (sqlite3 extension)
+ * Sanctum CRM - SQLite Database Handler (sqlite3 extension)
  */
 
 // Prevent direct access
@@ -12,15 +12,51 @@ if (!defined('CRM_LOADED')) {
 class Database {
     private $db;
     private static $instance = null;
+    /** When true, constructor skips MigrationRunner (used by migrate CLI). */
+    private static $skipAutoMigrate = false;
+    private static $skinLabEnsured = false;
+    private static $contactDataSidecarEnsured = false;
     
     private function __construct() {
         $this->connect();
         $this->initializeTables();
+        $this->ensureSkinLabColumns();
+        $this->ensureContactDataSidecar();
+        if (!self::$skipAutoMigrate && self::autoMigrateEnabled()) {
+            require_once __DIR__ . '/MigrationRunner.php';
+            (new MigrationRunner($this))->migrate(false);
+        }
+    }
+
+    public static function autoMigrateEnabled(): bool
+    {
+        if (defined('CRM_TESTING') && CRM_TESTING) {
+            return true;
+        }
+        $env = getenv('CRM_AUTO_MIGRATE');
+        if ($env === false || $env === '') {
+            $env = $_ENV['CRM_AUTO_MIGRATE'] ?? '';
+        }
+        return $env === '1' || strtolower((string) $env) === 'true';
     }
     
     public static function getInstance() {
         if (self::$instance === null) {
             self::$instance = new self();
+        }
+        return self::$instance;
+    }
+
+    public static function getInstanceWithoutAutoMigrate(): Database
+    {
+        if (self::$instance !== null) {
+            return self::$instance;
+        }
+        self::$skipAutoMigrate = true;
+        try {
+            self::$instance = new self();
+        } finally {
+            self::$skipAutoMigrate = false;
         }
         return self::$instance;
     }
@@ -42,6 +78,100 @@ class Database {
         $this->ensureEnrichmentColumns();
         $this->ensureSettingsColumns();
         $this->ensureConfigTables();
+        $this->ensureEnrichmentCronTables();
+        $this->ensureContactTagsTable();
+        // First-boot wizard owns admin creation — do not seed default admin.
+        $this->createDefaultSettings();
+    }
+
+    public function applyBaselineSchema(): void
+    {
+        $this->createTables();
+        $this->migrateContactsEmailNullable();
+        $this->ensureEnrichmentColumns();
+        $this->ensureSettingsColumns();
+        $this->ensureConfigTables();
+        $this->ensureSkinLabColumns();
+        $this->ensureContactDataSidecar();
+        $this->ensureEnrichmentCronTables();
+        $this->ensureContactTagsTable();
+        $this->createDefaultSettings();
+    }
+
+    public function ensureContactDataSidecar(): void
+    {
+        if (self::$contactDataSidecarEnsured) {
+            return;
+        }
+        self::$contactDataSidecarEnsured = true;
+        try {
+            require_once __DIR__ . '/ContactDataStore.php';
+            (new ContactDataStore($this))->ensureSchema();
+        } catch (Exception $e) {
+            self::$contactDataSidecarEnsured = false;
+            if (defined('DEBUG_MODE') && DEBUG_MODE) {
+                error_log('ensureContactDataSidecar: ' . $e->getMessage());
+            }
+        }
+    }
+
+    public function ensureSkinLabColumns(): void
+    {
+        if (self::$skinLabEnsured) {
+            return;
+        }
+        self::$skinLabEnsured = true;
+        try {
+            $userNames = array_column($this->getTableInfo('users'), 'name');
+            if (!in_array('skin_slug', $userNames, true)) {
+                $this->db->exec('ALTER TABLE users ADD COLUMN skin_slug TEXT DEFAULT NULL');
+            }
+            $settingsNames = array_column($this->getTableInfo('settings'), 'name');
+            if (!in_array('default_skin_slug', $settingsNames, true)) {
+                $this->db->exec("ALTER TABLE settings ADD COLUMN default_skin_slug TEXT DEFAULT 'hey'");
+            }
+            $this->db->exec(
+                "UPDATE settings SET default_skin_slug = 'hey'
+                 WHERE id = 1 AND (default_skin_slug IS NULL OR default_skin_slug = '')"
+            );
+        } catch (Exception $e) {
+            if (defined('DEBUG_MODE') && DEBUG_MODE) {
+                error_log('ensureSkinLabColumns: ' . $e->getMessage());
+            }
+            self::$skinLabEnsured = false;
+        }
+    }
+
+    private function ensureContactTagsTable(): void
+    {
+        try {
+            require_once __DIR__ . '/ContactTagService.php';
+            (new ContactTagService($this))->ensureSchema();
+        } catch (Exception $e) {
+            if (defined('DEBUG_MODE') && DEBUG_MODE) {
+                error_log('contact_tags schema: ' . $e->getMessage());
+            }
+        }
+    }
+
+    private function ensureEnrichmentCronTables() {
+        $this->db->exec("
+            CREATE TABLE IF NOT EXISTS enrichment_cron_runs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                completed_at DATETIME,
+                status VARCHAR(20) NOT NULL DEFAULT 'running',
+                selected_count INTEGER DEFAULT 0,
+                processed_count INTEGER DEFAULT 0,
+                enriched_count INTEGER DEFAULT 0,
+                failed_count INTEGER DEFAULT 0,
+                skipped_count INTEGER DEFAULT 0,
+                skipped_reason VARCHAR(255),
+                error_summary TEXT,
+                config_snapshot TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ");
     }
     
     private function createTables() {
@@ -199,29 +329,6 @@ class Database {
         
         // MIGRATION: Make email nullable in contacts table
         $this->migrateContactsEmailNullable();
-        
-        $this->createDefaultAdmin();
-        $this->createDefaultSettings();
-    }
-    private function createDefaultAdmin() {
-        $result = $this->db->querySingle("SELECT COUNT(*) as count FROM users");
-        if ($result == 0) {
-            $adminPassword = password_hash('admin123', PASSWORD_DEFAULT);
-            $apiKey = generateApiKey();
-            $sql = "INSERT INTO users (username, email, password_hash, first_name, last_name, role, api_key) VALUES (?, ?, ?, ?, ?, ?, ?)";
-            $stmt = $this->db->prepare($sql);
-            $stmt->bindValue(1, 'admin', SQLITE3_TEXT);
-            $stmt->bindValue(2, 'admin@bestjobsinta.com', SQLITE3_TEXT);
-            $stmt->bindValue(3, $adminPassword, SQLITE3_TEXT);
-            $stmt->bindValue(4, 'Admin', SQLITE3_TEXT);
-            $stmt->bindValue(5, 'User', SQLITE3_TEXT);
-            $stmt->bindValue(6, 'admin', SQLITE3_TEXT);
-            $stmt->bindValue(7, $apiKey, SQLITE3_TEXT);
-            $stmt->execute();
-            if (DEBUG_MODE) {
-                error_log("Default admin user created with API key: $apiKey");
-            }
-        }
     }
     
     private function createDefaultSettings() {
@@ -242,7 +349,21 @@ class Database {
         $existingColumns = array_column($columns, 'name');
 
         $settingsColumns = [
-            'rocketreach_api_key' => 'VARCHAR(255)'
+            'rocketreach_api_key' => 'VARCHAR(255)',
+            'default_skin_slug' => "TEXT DEFAULT 'hey'",
+            'enrichment_cron_enabled' => 'INTEGER DEFAULT 0',
+            'enrichment_cron_interval_minutes' => 'INTEGER DEFAULT 60',
+            'enrichment_cron_strategy' => 'VARCHAR(50) DEFAULT "auto"',
+            'enrichment_cron_max_per_run' => 'INTEGER DEFAULT 10',
+            'enrichment_cron_max_per_day' => 'INTEGER DEFAULT 400',
+            'enrichment_cron_max_attempts_per_contact' => 'INTEGER DEFAULT 3',
+            'enrichment_cron_retry_failed' => 'INTEGER DEFAULT 0',
+            'enrichment_cron_statuses' => 'TEXT DEFAULT \'["pending","empty"]\'',
+            'enrichment_cron_contact_types' => 'TEXT DEFAULT \'["lead"]\'',
+            'enrichment_cron_contact_statuses' => 'TEXT DEFAULT \'["new","qualified"]\'',
+            'enrichment_cron_sources' => 'TEXT DEFAULT \'[]\'',
+            'enrichment_cron_assigned_to' => 'VARCHAR(50) DEFAULT ""',
+            'enrichment_cron_min_contact_age_days' => 'INTEGER DEFAULT 0'
         ];
 
         foreach ($settingsColumns as $columnName => $columnDef) {
@@ -420,11 +541,20 @@ class Database {
         }
         $i = 1;
         foreach ($cleanData as $value) {
-            $type = is_int($value) ? SQLITE3_INTEGER : SQLITE3_TEXT;
-            $stmt->bindValue($i, $value, $type);
+            if ($value === null) {
+                $stmt->bindValue($i, null, SQLITE3_NULL);
+            } else {
+                $type = is_int($value) ? SQLITE3_INTEGER : SQLITE3_TEXT;
+                $stmt->bindValue($i, $value, $type);
+            }
             $i++;
         }
         foreach ($whereParams as $value) {
+            if ($value === null) {
+                $stmt->bindValue($i, null, SQLITE3_NULL);
+                $i++;
+                continue;
+            }
             $type = is_int($value) ? SQLITE3_INTEGER : SQLITE3_TEXT;
             $stmt->bindValue($i, $value, $type);
             $i++;
@@ -486,6 +616,8 @@ class Database {
             'enriched_at' => 'DATETIME',
             'enrichment_source' => 'VARCHAR(50)',
             'enrichment_data' => 'TEXT',
+            'enrichment_raw' => 'TEXT',
+            'rocketreach_profile_id' => 'INTEGER',
             'enrichment_status' => 'VARCHAR(20) DEFAULT "pending"',
             'enrichment_attempts' => 'INTEGER DEFAULT 0',
             'enrichment_error' => 'TEXT'

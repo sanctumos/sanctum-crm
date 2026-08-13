@@ -124,9 +124,40 @@ class TestUtils {
         return $db->insert('deals', $dealData);
     }
     
+    public static function ensureAdminUser(): int
+    {
+        $db = self::getTestDatabase();
+        $admin = $db->fetchOne("SELECT id FROM users WHERE username = 'admin'");
+        if ($admin && !empty($admin['id'])) {
+            return (int)$admin['id'];
+        }
+
+        $auth = new Auth();
+        $result = $auth->createUser([
+            'username' => 'admin',
+            'email' => 'admin@example.com',
+            'password' => 'admin123',
+            'first_name' => 'Admin',
+            'last_name' => 'User',
+            'role' => 'admin',
+            'is_active' => 1,
+        ]);
+        $id = is_array($result) ? ($result['id'] ?? null) : $result;
+        if (!$id) {
+            // createUser may reject duplicate email; fetch again
+            $admin = $db->fetchOne("SELECT id FROM users WHERE username = 'admin'");
+            $id = $admin['id'] ?? null;
+        }
+        if (!$id) {
+            throw new Exception('Failed to ensure admin user for tests');
+        }
+        return (int)$id;
+    }
+
     public static function createTestWebhook($data = []) {
+        $adminId = self::ensureAdminUser();
         $defaultData = [
-            'user_id' => 1, // Use admin user as default
+            'user_id' => $adminId,
             'url' => 'https://webhook.site/test-' . uniqid(),
             'events' => json_encode(['contact.created', 'deal.created']),
             'is_active' => 1,
@@ -193,6 +224,10 @@ class TestUtils {
     
     public static function setupTestDatabase() {
         $db = self::getTestDatabase();
+
+        // Sanctum does not seed a default admin (first-boot wizard owns that).
+        // Tests still need a stable admin row for FK-backed fixtures.
+        self::ensureAdminUser();
         
         // Clean up first
         self::cleanupTestDatabase();
@@ -351,5 +386,23 @@ ob_start();
 // Set up test database
 TestUtils::setupTestDatabase();
 
+// Keep legacy hard-coded paths (db/crm.db) in sync with the test DB so API/E2E
+// fixtures that open SQLite3('…/db/crm.db') see the same admin + schema.
+$legacyCrmDb = __DIR__ . '/../db/crm.db';
+$testCrmDb = __DIR__ . '/../db/test_crm.db';
+if (is_file($testCrmDb) && filesize($testCrmDb) > 0) {
+    @copy($testCrmDb, $legacyCrmDb);
+}
+
 // Clear any output
-ob_end_clean(); 
+ob_end_clean();
+
+require_once __DIR__ . '/../public/includes/EnrichmentCronService.php';
+require_once __DIR__ . '/../public/includes/ContactMergeService.php';
+require_once __DIR__ . '/../public/includes/ContactDataStore.php';
+require_once __DIR__ . '/../public/includes/ContactTagService.php';
+require_once __DIR__ . '/../public/includes/MigrationRunner.php';
+require_once __DIR__ . '/../public/includes/WebhookQueue.php';
+require_once __DIR__ . '/../public/includes/WebhookDispatcher.php';
+require_once __DIR__ . '/../public/includes/ApiRequestContext.php';
+require_once __DIR__ . '/../public/includes/skin-lab-env.php';

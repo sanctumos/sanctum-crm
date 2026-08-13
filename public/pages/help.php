@@ -1,7 +1,7 @@
 <?php
 /**
  * Help Page
- * Best Jobs in TA - Help and documentation
+ * Sanctum CRM - Help and documentation
  */
 
 // Prevent direct access
@@ -17,9 +17,10 @@ if (!$auth->isAdmin()) {
 
 // Render the page using the template system
 renderHeader('Help & Documentation');
+renderPageHeader('Help & Documentation', 'Guides and configuration notes');
 ?>
 
-<div class="container mt-4">
+<div class="crm-shell-help">
     <?php
     // Include the help navigation module
     include __DIR__ . '/../includes/help_nav.php';
