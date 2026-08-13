@@ -1,0 +1,365 @@
+/* CRM Skin Lab — obsidian (ported from Docket / Tasks). */
+/* Obsidian Focus — OLED dark, warm cream type, gold accent + card glow */
+@import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@600;700&family=Source+Sans+3:wght@400;600&display=swap');
+
+html[data-skin-comp="obsidian"] {
+    --crm-bg-app: #0a0b0f;
+    --crm-bg-surface: #14161c;
+    --crm-bg-soft: #101218;
+    --crm-bg-elevated: #1a1d24;
+    --crm-border-subtle: rgba(242, 235, 227, 0.1);
+    --crm-border-strong: rgba(242, 235, 227, 0.2);
+    --crm-text-primary: #f2ebe3;
+    --crm-text-secondary: #cfc5b8;
+    --crm-text-muted: #8f877c;
+    --crm-accent: #e8a838;
+    --crm-accent-soft: rgba(232, 168, 56, 0.12);
+    --crm-accent-hover: #f0b84a;
+    --crm-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.55), 0 7px 18px rgba(0, 0, 0, 0.28);
+    --crm-shadow-md: 0 12px 32px rgba(0, 0, 0, 0.55);
+    --crm-radius: 10px;
+    --crm-radius-sm: 8px;
+    --crm-status-todo-soft: rgba(242, 235, 227, 0.06);
+    --crm-status-doing-soft: rgba(232, 168, 56, 0.12);
+    --crm-status-done-soft: rgba(120, 180, 130, 0.12);
+    --crm-status-blocked-soft: rgba(200, 80, 80, 0.12);
+    --crm-pri-normal-soft: rgba(232, 168, 56, 0.1);
+}
+
+html[data-skin-comp="obsidian"] body {
+    font-family: "Source Sans 3", system-ui, sans-serif;
+    background: var(--crm-bg-app) !important;
+    color: var(--crm-text-primary);
+}
+
+html[data-skin-comp="obsidian"] h1,
+html[data-skin-comp="obsidian"] .page-header__title h1,
+html[data-skin-comp="obsidian"] .page-header__title h1,
+html[data-skin-comp="obsidian"] .crm-card__title,
+html[data-skin-comp="obsidian"] .admin-nav .navbar-brand span {
+    font-family: "Crimson Pro", Georgia, serif;
+    color: var(--crm-text-primary);
+}
+
+html[data-skin-comp="obsidian"] .page-header__title h1 {
+    font-family: "Crimson Pro", Georgia, serif;
+    font-size: clamp(1.65rem, 3.5vw, 2.1rem);
+    color: var(--crm-text-primary);
+}
+
+html[data-skin-comp="obsidian"] table.table {
+    --bs-table-bg: var(--crm-bg-surface);
+    --bs-table-color: var(--crm-text-primary);
+    --bs-table-border-color: var(--crm-border-subtle);
+    --bs-table-striped-bg: var(--crm-bg-soft);
+    --bs-table-hover-bg: var(--crm-bg-elevated);
+}
+
+html[data-skin-comp="obsidian"] table.table thead th {
+    color: var(--crm-text-muted);
+}
+
+html[data-skin-comp="obsidian"] .page-header__title h1 {
+    font-size: clamp(1.65rem, 3.5vw, 2.1rem);
+}
+
+html[data-skin-comp="obsidian"] .section-title {
+    color: var(--crm-text-muted);
+    letter-spacing: 0.12em;
+}
+
+html[data-skin-comp="obsidian"] .surface,
+html[data-skin-comp="obsidian"] .crm-card,
+html[data-skin-comp="obsidian"] .swimlane,
+html[data-skin-comp="obsidian"] .filter-bar,
+html[data-skin-comp="obsidian"] .metadata-rail,
+html[data-skin-comp="obsidian"] .activity-feed,
+html[data-skin-comp="obsidian"] .surface,
+html[data-skin-comp="obsidian"] .admin-breadcrumb,
+html[data-skin-comp="obsidian"] .crm-card,
+html[data-skin-comp="obsidian"] .activity-list li,
+html[data-skin-comp="obsidian"] .activity-feed li {
+    background: var(--crm-bg-surface) !important;
+    border-color: var(--crm-border-subtle) !important;
+    color: var(--crm-text-primary);
+    box-shadow: var(--crm-shadow-sm);
+}
+
+html[data-skin-comp="obsidian"] .crm-card--interactive:hover,
+html[data-skin-comp="obsidian"] .crm-card:hover {
+    border-color: var(--crm-accent) !important;
+    box-shadow:
+        0 0 0 1px var(--crm-accent),
+        0 0 24px rgba(232, 168, 56, 0.22),
+        var(--crm-shadow-md);
+    color: inherit;
+}
+
+html[data-skin-comp="obsidian"] .swimlane {
+    background: var(--crm-bg-soft) !important;
+}
+
+html[data-skin-comp="obsidian"] .swimlane__header {
+    border-bottom-color: var(--crm-border-subtle);
+}
+
+html[data-skin-comp="obsidian"] .swimlane__count {
+    color: var(--crm-text-muted);
+    background: var(--crm-bg-elevated);
+    border: 1px solid var(--crm-border-subtle);
+    border-radius: 999px;
+    padding: 0.05rem 0.45rem;
+}
+
+html[data-skin-comp="obsidian"] .admin-nav {
+    background: #06070a !important;
+    border-bottom: 1px solid var(--crm-border-subtle);
+    box-shadow: none;
+}
+
+html[data-skin-comp="obsidian"] .admin-nav .btn-outline-light {
+    border-color: var(--crm-border-strong);
+    color: var(--crm-text-secondary) !important;
+}
+
+html[data-skin-comp="obsidian"] .admin-nav .btn-outline-light:hover {
+    background: var(--crm-accent-soft) !important;
+    border-color: var(--crm-accent);
+    color: var(--crm-text-primary) !important;
+}
+
+html[data-skin-comp="obsidian"] .admin-nav .navbar-text {
+    color: var(--crm-text-muted) !important;
+}
+
+html[data-skin-comp="obsidian"] .text-muted,
+html[data-skin-comp="obsidian"] .subtitle,
+html[data-skin-comp="obsidian"] .fine-print,
+html[data-skin-comp="obsidian"] .swimlane__empty,
+html[data-skin-comp="obsidian"] .crm-card__meta,
+html[data-skin-comp="obsidian"] .activity-feed__item__meta {
+    color: var(--crm-text-muted) !important;
+}
+
+html[data-skin-comp="obsidian"] .crm-card__meta a,
+html[data-skin-comp="obsidian"] .admin-breadcrumb .breadcrumb-item a,
+html[data-skin-comp="obsidian"] .tabbar a.active,
+html[data-skin-comp="obsidian"] .activity-feed__item__title:hover {
+    color: var(--crm-accent) !important;
+}
+
+html[data-skin-comp="obsidian"] .btn-primary {
+    background: var(--crm-accent);
+    border-color: var(--crm-accent);
+    color: #0a0b0f;
+    font-weight: 700;
+}
+
+html[data-skin-comp="obsidian"] .btn-primary:hover {
+    background: var(--crm-accent-hover);
+    border-color: var(--crm-accent-hover);
+    color: #0a0b0f;
+}
+
+html[data-skin-comp="obsidian"] .btn-outline-primary,
+html[data-skin-comp="obsidian"] .btn-outline-secondary {
+    border-color: var(--crm-border-strong);
+    color: var(--crm-text-secondary);
+}
+
+html[data-skin-comp="obsidian"] .btn-outline-primary:hover {
+    background: var(--crm-accent-soft);
+    border-color: var(--crm-accent);
+    color: var(--crm-accent);
+}
+
+html[data-skin-comp="obsidian"] .form-control,
+html[data-skin-comp="obsidian"] .form-select,
+html[data-skin-comp="obsidian"] .filter-bar .form-control,
+html[data-skin-comp="obsidian"] .filter-bar .form-select,
+html[data-skin-comp="obsidian"] .metadata-rail__row .form-control,
+html[data-skin-comp="obsidian"] .metadata-rail__row .form-select,
+html[data-skin-comp="obsidian"] .comment-composer textarea.form-control {
+    background: var(--crm-bg-soft);
+    border-color: var(--crm-border-subtle);
+    color: var(--crm-text-primary);
+}
+
+html[data-skin-comp="obsidian"] .form-control:focus,
+html[data-skin-comp="obsidian"] .form-select:focus,
+html[data-skin-comp="obsidian"] .comment-composer textarea.form-control:focus {
+    background: var(--crm-bg-elevated);
+    border-color: var(--crm-accent);
+    box-shadow: 0 0 0 3px var(--crm-accent-soft);
+    color: var(--crm-text-primary);
+}
+
+html[data-skin-comp="obsidian"] .form-control::placeholder {
+    color: var(--crm-text-muted);
+}
+
+html[data-skin-comp="obsidian"] .tabbar {
+    border-bottom-color: var(--crm-border-subtle);
+}
+
+html[data-skin-comp="obsidian"] .tabbar a {
+    color: var(--crm-text-muted);
+}
+
+html[data-skin-comp="obsidian"] .tabbar a:hover {
+    color: var(--crm-text-primary);
+}
+
+html[data-skin-comp="obsidian"] .tabbar a.active {
+    color: var(--crm-accent);
+    border-bottom-color: var(--crm-accent);
+    font-family: "Crimson Pro", Georgia, serif;
+    font-weight: 600;
+}
+
+html[data-skin-comp="obsidian"] .status-pill::before {
+    box-shadow: 0 0 6px currentColor;
+}
+
+html[data-skin-comp="obsidian"] .status-pill--doing,
+html[data-skin-comp="obsidian"] .status-pill--in_progress {
+    color: var(--crm-accent);
+}
+
+html[data-skin-comp="obsidian"] .priority-chip {
+    background: var(--crm-bg-elevated);
+    border-color: var(--crm-border-subtle);
+}
+
+html[data-skin-comp="obsidian"] .priority-chip--normal {
+    color: var(--crm-accent);
+}
+
+html[data-skin-comp="obsidian"] .activity-feed__item:hover {
+    background: var(--crm-bg-elevated);
+}
+
+html[data-skin-comp="obsidian"] .activity-feed__item + .activity-feed__item {
+    border-top-color: var(--crm-border-subtle);
+}
+
+html[data-skin-comp="obsidian"] .todo-checkbox {
+    border-color: var(--crm-border-strong);
+    background: var(--crm-bg-soft);
+}
+
+html[data-skin-comp="obsidian"] .todo-checkbox--done {
+    background: var(--crm-accent);
+    border-color: var(--crm-accent);
+    color: #0a0b0f;
+}
+
+html[data-skin-comp="obsidian"] .task-table thead th {
+    background: var(--crm-bg-soft);
+    color: var(--crm-text-muted);
+    border-bottom-color: var(--crm-border-subtle);
+}
+
+html[data-skin-comp="obsidian"] .task-table tbody td {
+    background: var(--crm-bg-surface);
+    border-bottom-color: var(--crm-border-subtle);
+    color: var(--crm-text-primary);
+}
+
+html[data-skin-comp="obsidian"] .task-table tbody tr:hover td {
+    background: var(--crm-bg-elevated);
+}
+
+html[data-skin-comp="obsidian"] .task-table .page-header__title h1-cell a {
+    color: var(--crm-text-primary);
+}
+
+html[data-skin-comp="obsidian"] .comment-item--mine .surface {
+    background: var(--crm-accent-soft) !important;
+    border-color: rgba(232, 168, 56, 0.35) !important;
+}
+
+html[data-skin-comp="obsidian"] .comment-body a,
+html[data-skin-comp="obsidian"] .markdown-body a {
+    color: var(--crm-accent);
+}
+
+html[data-skin-comp="obsidian"] .markdown-body code {
+    background: var(--crm-bg-soft);
+    border-color: var(--crm-border-subtle);
+    color: var(--crm-text-secondary);
+}
+
+html[data-skin-comp="obsidian"] .markdown-body blockquote {
+    background: var(--crm-bg-soft);
+    border-left-color: var(--crm-accent);
+    color: var(--crm-text-secondary);
+}
+
+html[data-skin-comp="obsidian"] .meta-chip {
+    background: var(--crm-bg-soft);
+    border-color: var(--crm-border-subtle);
+    color: var(--crm-text-secondary);
+}
+
+html[data-skin-comp="obsidian"] .meta-chip--link {
+    color: var(--crm-accent);
+}
+
+html[data-skin-comp="obsidian"] .admin-breadcrumb {
+    background: var(--crm-bg-surface);
+}
+
+html[data-skin-comp="obsidian"] .admin-breadcrumb .breadcrumb-item.active {
+    color: var(--crm-text-secondary);
+}
+
+html[data-skin-comp="obsidian"] .list-group-item {
+    background: var(--crm-bg-surface);
+    border-color: var(--crm-border-subtle);
+    color: var(--crm-text-primary);
+}
+
+html[data-skin-comp="obsidian"] .list-group-item.st-notif-unread {
+    background: var(--crm-accent-soft);
+    border-left-color: var(--crm-accent);
+}
+
+html[data-skin-comp="obsidian"] .dropdown-menu {
+    background: var(--crm-bg-elevated);
+    border-color: var(--crm-border-subtle);
+}
+
+html[data-skin-comp="obsidian"] .dropdown-item {
+    color: var(--crm-text-primary);
+}
+
+html[data-skin-comp="obsidian"] .dropdown-item:hover {
+    background: var(--crm-accent-soft);
+    color: var(--crm-text-primary);
+}
+
+html[data-skin-comp="obsidian"] .dropdown-divider {
+    border-color: var(--crm-border-subtle);
+}
+
+html[data-skin-comp="obsidian"] .activity-feed__icon {
+    background: var(--crm-bg-elevated);
+    border-color: var(--crm-border-subtle);
+    color: var(--crm-accent);
+}
+
+/* CRM login shell */
+html[data-skin-comp="obsidian"] .crm-login-card {
+    background: var(--crm-bg-surface) !important;
+    border-color: var(--crm-border-subtle) !important;
+    box-shadow: var(--crm-shadow-md);
+    color: var(--crm-text-primary);
+}
+html[data-skin-comp="obsidian"] .crm-login-brand__title {
+    color: var(--crm-text-primary);
+}
+html[data-skin-comp="obsidian"] .crm-login-brand__subtitle,
+html[data-skin-comp="obsidian"] .crm-login-fineprint {
+    color: var(--crm-text-muted);
+}

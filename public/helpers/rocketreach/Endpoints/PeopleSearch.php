@@ -98,6 +98,18 @@ class PeopleSearch
     }
 
     /**
+     * Set social-media handle filter (Twitter/X, etc.)
+     *
+     * @param array $handles Handles without leading @
+     * @return self
+     */
+    public function handle(array $handles): self
+    {
+        $this->query->setHandle($handles);
+        return $this;
+    }
+
+    /**
      * Set contact method filter
      *
      * @param array $methods

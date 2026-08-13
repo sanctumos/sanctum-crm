@@ -1,7 +1,7 @@
 <?php
 /**
  * Mock LeadEnrichmentService for Production Testing
- * Best Jobs in TA - Production Mock Service
+ * Sanctum CRM - Production Mock Service
  */
 
 // Define CRM loaded constant if not already defined
@@ -20,12 +20,38 @@ class MockLeadEnrichmentService {
     }
     
     public function canEnrich($contact) {
-        // Check if contact has sufficient data for enrichment
         $hasEmail = !empty($contact['email']);
         $hasLinkedIn = !empty($contact['linkedin_profile']);
         $hasNameCompany = !empty($contact['first_name']) && !empty($contact['last_name']) && !empty($contact['company']);
-        
-        return $hasEmail || $hasLinkedIn || $hasNameCompany;
+        if ($hasEmail || $hasLinkedIn || $hasNameCompany) {
+            return true;
+        }
+        // Sidecar alts (accepted-merge emails) count when primary card is thin
+        $id = (int) ($contact['id'] ?? 0);
+        if ($id <= 0) {
+            return false;
+        }
+        try {
+            require_once __DIR__ . '/ContactDataStore.php';
+            $store = new ContactDataStore($this->db);
+            $store->ensureSchema();
+            foreach ($store->listFacts($id, 'email') as $fact) {
+                $v = trim((string) ($fact['value'] ?? ''));
+                if ($v !== '' && str_contains($v, '@')) {
+                    return true;
+                }
+            }
+            foreach ($store->listFacts($id, 'social') as $fact) {
+                $label = strtolower((string) ($fact['label'] ?? ''));
+                $v = (string) ($fact['value'] ?? '');
+                if ($label === 'linkedin' || stripos($v, 'linkedin.com') !== false) {
+                    return true;
+                }
+            }
+        } catch (Exception $e) {
+            return false;
+        }
+        return false;
     }
     
     public function getEnrichmentStatus($contactId) {

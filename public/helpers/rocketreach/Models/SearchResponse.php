@@ -16,8 +16,12 @@ class SearchResponse
 
     public function __construct(array $data)
     {
-        $this->profiles = $data['profiles'] ?? [];
-        $this->pagination = $data['pagination'] ?? [];
+        // RR docs/SDKs have used both `profiles` and `people`
+        $this->profiles = $data['profiles'] ?? $data['people'] ?? [];
+        if (!is_array($this->profiles)) {
+            $this->profiles = [];
+        }
+        $this->pagination = is_array($data['pagination'] ?? null) ? $data['pagination'] : [];
     }
 
     /**

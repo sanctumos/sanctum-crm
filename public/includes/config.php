@@ -127,7 +127,25 @@ function sanitizeInput($input) {
     if ($input === null) {
         return null;
     }
-    return htmlspecialchars(trim($input), ENT_QUOTES, 'UTF-8');
+    // Strip tags only — HTML-escape at render time via crm_h() / htmlspecialchars.
+    return trim(strip_tags((string) $input));
+}
+
+/**
+ * Escape for HTML output. Decodes legacy stored entities once so historical
+ * sanitizeInput(htmlspecialchars) rows still render a single ampersand.
+ */
+function crm_h($value): string {
+    if ($value === null || $value === '') {
+        return '';
+    }
+    $raw = html_entity_decode((string) $value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    return htmlspecialchars($raw, ENT_QUOTES, 'UTF-8');
+}
+
+// Helper function to validate EVM address
+function validateEVMAddress($address) {
+    return preg_match('/^0x[a-fA-F0-9]{40}$/', $address);
 }
 
 // File Upload Configuration
@@ -188,8 +206,18 @@ function logActivity($user_id, $action, $details = null) {
 
 // Helper function to send webhook
 function sendWebhook($url, $payload) {
+    $result = sendWebhookDetailed($url, $payload);
+    return $result['success'];
+}
+
+/**
+ * POST JSON to a webhook URL; returns delivery details for logging/tests.
+ *
+ * @return array{success:bool,http_code:int,error:?string}
+ */
+function sendWebhookDetailed($url, $payload) {
     $ch = curl_init();
-    
+
     curl_setopt_array($ch, [
         CURLOPT_URL => $url,
         CURLOPT_POST => true,
@@ -204,21 +232,29 @@ function sendWebhook($url, $payload) {
         CURLOPT_SSL_VERIFYPEER => true,
         CURLOPT_SSL_VERIFYHOST => 2
     ]);
-    
+
     $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $error = curl_error($ch);
-    
+
     curl_close($ch);
-    
-    if ($error) {
+
+    if ($error !== '') {
         error_log("Webhook error: $error");
-        return false;
+        return [
+            'success' => false,
+            'http_code' => $httpCode,
+            'error' => $error,
+        ];
     }
-    
-    // Consider 2xx status codes as success
-    return $httpCode >= 200 && $httpCode < 300;
-} 
+
+    $ok = $httpCode >= 200 && $httpCode < 300;
+    return [
+        'success' => $ok,
+        'http_code' => $httpCode,
+        'error' => $ok ? null : ('HTTP ' . $httpCode),
+    ];
+}
 
 // Helper function to validate URL
 function validateUrl($url) {

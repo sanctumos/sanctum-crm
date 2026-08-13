@@ -1,0 +1,419 @@
+/* CRM Skin Lab — hey (ported from Docket / Tasks). */
+/* HEY Bold — high contrast, stamp frames, electric blue accent */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,800&family=IBM+Plex+Sans:wght@400;600;700&display=swap');
+
+html[data-skin-comp="hey"] {
+    --crm-bg-app: #e9edf3;
+    --crm-bg-surface: #ffffff;
+    --crm-bg-soft: #ffffff;
+    --crm-bg-elevated: #ffffff;
+    --crm-border-subtle: #000000;
+    --crm-border-strong: #000000;
+    --crm-text-primary: #000000;
+    --crm-text-secondary: #111111;
+    --crm-text-muted: #444444;
+    --crm-accent: #0047ff;
+    --crm-accent-soft: #e8f0ff;
+    --crm-accent-hover: #0036cc;
+    --crm-shadow-sm: 2px 2px 0 rgba(0, 0, 0, 0.12);
+    --crm-shadow-md: 3px 3px 0 rgba(0, 0, 0, 0.14);
+    --crm-radius: 12px;
+    --crm-radius-sm: 8px;
+    --crm-status-todo-soft: #ffffff;
+    --crm-status-doing-soft: #fff8e6;
+    --crm-status-done-soft: #eaffea;
+    --crm-status-blocked-soft: #ffeaea;
+    --crm-board-card-title-lines: 3;
+}
+
+html[data-skin-comp="hey"] body {
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    background: var(--crm-bg-app) !important;
+}
+
+html[data-skin-comp="hey"] h1,
+html[data-skin-comp="hey"] .page-header__title h1,
+html[data-skin-comp="hey"] .page-header__title h1,
+html[data-skin-comp="hey"] .crm-card__title,
+html[data-skin-comp="hey"] .activity-feed__item__title {
+    font-family: "Fraunces", Georgia, serif;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+html[data-skin-comp="hey"] .crm-card__title {
+    font-size: clamp(1.12rem, 1.8vw, 1.38rem);
+    line-height: 1.05;
+    margin-bottom: 0.45rem;
+    text-wrap: balance;
+}
+
+/* CRM: keep stamp frames on padded panels, not on plain filter bars */
+html[data-skin-comp="hey"] .filter-bar.surface-pad,
+html[data-skin-comp="hey"] .filter-bar {
+    border: 2px solid #000 !important;
+    box-shadow: var(--crm-shadow-sm) !important;
+    border-radius: var(--crm-radius-sm) !important;
+    background: #fff !important;
+}
+html[data-skin-comp="hey"] .filter-bar::before,
+html[data-skin-comp="hey"] .filter-bar::after {
+    content: none !important;
+    display: none !important;
+}
+
+html[data-skin-comp="hey"] .page-header__title h1 {
+    font-family: "Fraunces", Georgia, serif;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    font-size: clamp(2rem, 5vw, 3rem);
+    line-height: 1.05;
+}
+
+html[data-skin-comp="hey"] .chip-pair .btn-sm {
+    border: 2px solid #000 !important;
+    border-radius: 999px !important;
+}
+
+
+html[data-skin-comp="hey"] .section-title {
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    color: #000;
+    text-transform: uppercase;
+}
+
+/* Surfaces — clean thick border (panels keep a box; columns do not) */
+html[data-skin-comp="hey"] .surface,
+html[data-skin-comp="hey"] .metadata-rail,
+html[data-skin-comp="hey"] .filter-bar,
+html[data-skin-comp="hey"] .activity-feed {
+    border: 2px solid #000 !important;
+    box-shadow: var(--crm-shadow-sm) !important;
+    border-radius: var(--crm-radius-sm) !important;
+    background: #fff !important;
+}
+
+/* Stamp cards — continuous, small-amplitude scalloped stamp outline. */
+html[data-skin-comp="hey"] .crm-card,
+html[data-skin-comp="hey"] .crm-card,
+html[data-skin-comp="hey"] .surface-pad {
+    position: relative;
+    isolation: isolate;
+    background: transparent !important;
+    border: 13px solid transparent !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    border-image: none !important;
+    padding: 0.62rem 0.8rem !important;
+}
+
+/* General panel content in HEY needs more breathing room than cards. */
+html[data-skin-comp="hey"] .surface-pad {
+    padding: 0.9rem 1.05rem !important;
+}
+
+/* Activity feed cards should not feel double-spaced or edge-crowded. */
+html[data-skin-comp="hey"] .activity-feed__item.surface-pad {
+    padding: 0.72rem 0.9rem !important;
+}
+html[data-skin-comp="hey"] .activity-feed__item {
+    gap: 0.62rem;
+}
+html[data-skin-comp="hey"] .activity-feed__icon {
+    margin-top: 0.08rem;
+}
+html[data-skin-comp="hey"] .activity-feed__item + .activity-feed__item {
+    margin-top: 0.42rem;
+}
+
+/* Docs listing columns should not force noisy wraps in HEY's heavier type. */
+html[data-skin-comp="hey"] .docs-table .docs-table__col-title {
+    min-width: 18rem;
+}
+html[data-skin-comp="hey"] .docs-table .docs-table__col-project a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    white-space: nowrap;
+}
+html[data-skin-comp="hey"] .docs-table .page-header__title h1-cell a {
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    font-size: 0.98rem;
+    line-height: 1.25;
+}
+
+html[data-skin-comp="hey"] .crm-card::before,
+html[data-skin-comp="hey"] .crm-card::before,
+html[data-skin-comp="hey"] .surface-pad::before,
+html[data-skin-comp="hey"] .crm-card::after,
+html[data-skin-comp="hey"] .crm-card::after,
+html[data-skin-comp="hey"] .surface-pad::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border: 13px solid transparent;
+    border-image: url("/assets/css/skins/hey-stamp.svg") 30 fill round;
+    pointer-events: none;
+}
+
+html[data-skin-comp="hey"] .crm-card::before,
+html[data-skin-comp="hey"] .crm-card::before,
+html[data-skin-comp="hey"] .surface-pad::before {
+    z-index: -2;
+    transform: translate(2px, 2px);
+    filter: brightness(0);
+    opacity: 0.12;
+}
+
+html[data-skin-comp="hey"] .crm-card::after,
+html[data-skin-comp="hey"] .crm-card::after,
+html[data-skin-comp="hey"] .surface-pad::after {
+    z-index: -1;
+}
+
+html[data-skin-comp="hey"] .crm-card > *,
+html[data-skin-comp="hey"] .crm-card > *,
+html[data-skin-comp="hey"] .surface-pad > * {
+    position: relative;
+    z-index: 1;
+}
+
+/* Board columns — no box; just a thick black header rule (matches mockup 190) */
+html[data-skin-comp="hey"] .swimlane {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 0.5rem;
+}
+
+html[data-skin-comp="hey"] .swimlane__header {
+    border-bottom: 3px solid #000;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+    justify-content: flex-start;
+    gap: 0.6rem;
+}
+
+html[data-skin-comp="hey"] .swimlane__header .status-pill {
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    font-weight: 700;
+    font-size: 1.35rem;
+    line-height: 1;
+    text-transform: uppercase;
+    letter-spacing: -0.01em;
+    color: #000 !important;
+    border: 0 !important;
+    background: transparent !important;
+    padding: 0;
+}
+
+html[data-skin-comp="hey"] .swimlane__header .status-pill::before {
+    display: none;
+}
+
+html[data-skin-comp="hey"] .swimlane__count {
+    font-weight: 700;
+    background: #000;
+    color: #fff;
+    border-radius: 999px;
+    min-width: 1.6rem;
+    height: 1.6rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.82rem;
+}
+
+html[data-skin-comp="hey"] .admin-nav {
+    background: #fff !important;
+    border-bottom: 2px solid #000;
+    box-shadow: none;
+}
+
+html[data-skin-comp="hey"] .admin-nav .navbar-brand {
+    font-family: "Fraunces", Georgia, serif;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: #000 !important;
+}
+
+html[data-skin-comp="hey"] .admin-nav .navbar-text,
+html[data-skin-comp="hey"] .admin-nav .navbar-text i {
+    color: #000 !important;
+}
+
+html[data-skin-comp="hey"] .admin-nav .btn-outline-light {
+    color: #000 !important;
+    border-color: #000 !important;
+    font-weight: 600;
+}
+
+html[data-skin-comp="hey"] .admin-nav .btn-outline-light:hover {
+    background: var(--crm-accent) !important;
+    border-color: var(--crm-accent) !important;
+    color: #fff !important;
+}
+
+html[data-skin-comp="hey"] .admin-nav .navbar-toggler {
+    border-color: #000;
+}
+/* Belt-and-suspenders if markup still has navbar-dark */
+html[data-skin-comp="hey"] .admin-nav .navbar-toggler-icon {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%280, 0, 0, 0.85%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+}
+
+html[data-skin-comp="hey"] .btn-primary {
+    background: var(--crm-accent);
+    border-color: var(--crm-accent);
+    font-weight: 700;
+    border-radius: 999px;
+    padding-left: 1.1rem;
+    padding-right: 1.1rem;
+}
+
+html[data-skin-comp="hey"] .btn-primary:hover {
+    background: var(--crm-accent-hover);
+    border-color: var(--crm-accent-hover);
+}
+
+html[data-skin-comp="hey"] .btn-outline-primary,
+html[data-skin-comp="hey"] .btn-outline-secondary {
+    border-width: 2px;
+    font-weight: 600;
+    border-radius: 999px;
+}
+
+html[data-skin-comp="hey"] .status-pill {
+    border-radius: 4px;
+    border: 2px solid currentColor !important;
+    background: transparent !important;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.72rem;
+    padding: 0.15rem 0.55rem;
+}
+
+html[data-skin-comp="hey"] .status-pill::before {
+    display: none;
+}
+
+html[data-skin-comp="hey"] .priority-chip {
+    border-radius: 4px;
+    border: 1.5px solid currentColor;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 0.68rem;
+}
+
+html[data-skin-comp="hey"] .tabbar {
+    border-bottom: 2px solid #000;
+    gap: 0.5rem;
+}
+
+html[data-skin-comp="hey"] .tabbar a {
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.82rem;
+    border-bottom-width: 3px;
+}
+
+html[data-skin-comp="hey"] .tabbar a.active {
+    color: #000;
+    border-bottom-color: var(--crm-accent);
+}
+
+html[data-skin-comp="hey"] .admin-breadcrumb {
+    border: 2px solid #000;
+    border-radius: var(--crm-radius-sm);
+    box-shadow: none;
+}
+
+html[data-skin-comp="hey"] .activity-feed__item {
+    border: 2px solid transparent;
+    border-radius: var(--crm-radius-sm);
+    padding: 0.55rem 0.65rem;
+}
+
+html[data-skin-comp="hey"] .activity-feed__item:hover,
+html[data-skin-comp="hey"] .activity-feed__item:focus-within {
+    border-color: #000;
+    background: #fff;
+}
+
+html[data-skin-comp="hey"] .activity-feed__item + .activity-feed__item {
+    border-top: 1px solid #000;
+}
+
+html[data-skin-comp="hey"] .surface {
+    border: 2px solid #000;
+    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.16);
+    border-radius: var(--crm-radius-sm);
+}
+
+html[data-skin-comp="hey"] .comment-item--mine .surface {
+    background: var(--crm-accent-soft) !important;
+    border-color: var(--crm-accent);
+    box-shadow: 3px 3px 0 var(--crm-accent);
+}
+
+html[data-skin-comp="hey"] .form-control,
+html[data-skin-comp="hey"] .form-select {
+    border: 2px solid #000;
+    border-radius: var(--crm-radius-sm);
+    background: #fff;
+}
+
+html[data-skin-comp="hey"] .form-control:focus,
+html[data-skin-comp="hey"] .form-select:focus {
+    border-color: var(--crm-accent);
+    box-shadow: 0 0 0 3px var(--crm-accent-soft);
+}
+
+html[data-skin-comp="hey"] .task-table thead th {
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    border-bottom: 2px solid #000;
+    background: #fff;
+}
+
+html[data-skin-comp="hey"] .task-table tbody td {
+    border-bottom: 1px solid #000;
+}
+
+html[data-skin-comp="hey"] .task-table .page-header__title h1-cell a {
+    font-family: "Fraunces", Georgia, serif;
+    font-weight: 700;
+    font-size: 1.02rem;
+}
+
+html[data-skin-comp="hey"] .admin-nav .form-select {
+    background-color: #fff !important;
+    color: #000 !important;
+    border: 2px solid #000 !important;
+}
+
+html[data-skin-comp="hey"] .meta-chip {
+    border: 1.5px solid #000;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+/* CRM login shell */
+html[data-skin-comp="hey"] .crm-login-card {
+    background: var(--crm-bg-surface) !important;
+    border-color: var(--crm-border-subtle) !important;
+    box-shadow: var(--crm-shadow-md);
+    color: var(--crm-text-primary);
+}
+html[data-skin-comp="hey"] .crm-login-brand__title {
+    color: var(--crm-text-primary);
+}
+html[data-skin-comp="hey"] .crm-login-brand__subtitle,
+html[data-skin-comp="hey"] .crm-login-fineprint {
+    color: var(--crm-text-muted);
+}
