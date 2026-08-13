@@ -353,3 +353,13 @@ TestUtils::setupTestDatabase();
 
 // Clear any output
 ob_end_clean(); 
+
+require_once __DIR__ . '/../public/includes/EnrichmentCronService.php';
+require_once __DIR__ . '/../public/includes/ContactMergeService.php';
+require_once __DIR__ . '/../public/includes/ContactDataStore.php';
+require_once __DIR__ . '/../public/includes/ContactTagService.php';
+require_once __DIR__ . '/../public/includes/MigrationRunner.php';
+require_once __DIR__ . '/../public/includes/WebhookQueue.php';
+require_once __DIR__ . '/../public/includes/WebhookDispatcher.php';
+require_once __DIR__ . '/../public/includes/ApiRequestContext.php';
+require_once __DIR__ . '/../public/includes/skin-lab-env.php';
