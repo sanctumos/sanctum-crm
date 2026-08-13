@@ -485,7 +485,7 @@ class ContactMergeService
         foreach ($contacts as $c) {
             $id = (int) $c['id'];
             $email = strtolower(trim((string) ($c['email'] ?? '')));
-            // Skip Mark's own Gerwil addresses — they match every "Mark *" card.
+            // Skip configured owner self-addresses when enabled (disabled in Sanctum).
             if ($this->isOwnerSelfEmail($email)) {
                 continue;
             }
@@ -799,7 +799,7 @@ class ContactMergeService
         } elseif (in_array('gerwil_local_named', $reasons, true)) {
             $score = 0.74;
         } elseif (in_array('gerwil_first_only_named_other', $reasons, true)) {
-            // andrew@gerwil → Andrew Lowe (no last on Gerwil side): weak, not mass-accept
+            // employer local first-only vs fully named other: weak, not mass-accept
             $score = 0.50;
         } elseif (in_array('gerwil_local_first_only', $reasons, true)) {
             $score = 0.52;
@@ -961,11 +961,11 @@ class ContactMergeService
             'phone_and_last' => 'Phone + last name match',
             'phone_only' => 'Phone match only (names incomplete or weak)',
             'distinct_personal_emails' => 'Different personal emails on matching cards',
-            'gerwil_local_to_personal' => 'Roger Wilco address matches personal contact',
-            'gerwil_local_named' => 'Roger Wilco local matches named contact',
-            'gerwil_local_first_only' => 'Roger Wilco local matches first name only',
-            'gerwil_first_only_named_other' => 'Roger Wilco first-only vs fully named contact (weak)',
-            'gerwil_last_mismatch' => 'Roger Wilco last name disagrees',
+            'gerwil_local_to_personal' => 'Employer-domain address matches personal contact',
+            'gerwil_local_named' => 'Employer-domain local matches named contact',
+            'gerwil_local_first_only' => 'Employer-domain local matches first name only',
+            'gerwil_first_only_named_other' => 'Employer-domain first-only vs fully named contact (weak)',
+            'gerwil_last_mismatch' => 'Employer-domain last name disagrees',
         ];
         $priority = [
             'phone_and_full_name', 'exact_name', 'full_name_mismatch_penalized', 'full_name_mismatch',

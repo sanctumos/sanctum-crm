@@ -17,6 +17,7 @@ See [LICENSE](LICENSE) for complete details.
 - **⚡ First Boot Configuration**: Intelligent setup wizard for instant deployment
 - **👥 Contact Management**: Unified leads and customers with comprehensive data fields
 - **🔀 Contact Merges**: Confidence-tiered duplicate detection with inspect/accept workflow
+- **🏷️ Contact Tags & Sidecar**: Many-to-many tags plus durable enrichment facts storage
 - **✨ Enrichment Automation**: Scheduled RocketReach enrichment with per-run and daily caps
 - **🎨 Skin Lab**: Theme presets (hey / ledger / brutalist / obsidian) aligned with Sanctum Tasks
 - **📬 Webhook Delivery Queue**: Durable outbound webhook processing
