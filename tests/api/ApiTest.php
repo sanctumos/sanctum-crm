@@ -35,7 +35,12 @@ class ApiTest {
         echo "Running API Integration Tests...\n";
         
         if (!$this->apiKey) {
-            echo "FAIL - No API key available for testing\n";
+            echo "SKIP - No API key available for testing\n";
+            return;
+        }
+
+        if (!$this->isTestServerReachable()) {
+            echo "SKIP - HTTP test server not reachable at {$this->baseUrl}\n";
             return;
         }
         
@@ -781,6 +786,21 @@ class ApiTest {
         }
     }
     
+    private function isTestServerReachable(): bool {
+        if (!function_exists('curl_init')) {
+            return false;
+        }
+        $ch = curl_init($this->baseUrl . '/');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 2);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
+        curl_exec($ch);
+        $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $errno = curl_errno($ch);
+        curl_close($ch);
+        return $errno === 0 && $code > 0;
+    }
+
     private function makeRequest($method, $endpoint, $data = null, $headers = null) {
         file_put_contents(__DIR__ . '/api_test_debug.log', date('c') . " makeRequest: method=$method endpoint=$endpoint\n", FILE_APPEND);
         // Check if CURL is available

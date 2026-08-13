@@ -8,8 +8,12 @@ class MockLeadEnrichmentService {
     private $db;
     
     public function __construct() {
-        // Use production database for integration tests
-        $this->db = new SQLite3(__DIR__ . '/../../db/crm.db');
+        $dbPath = __DIR__ . '/../../db/crm.db';
+        if (!is_file($dbPath) || filesize($dbPath) === 0) {
+            $this->db = null;
+            return;
+        }
+        $this->db = new SQLite3($dbPath);
     }
     
     public function canEnrich($contact) {

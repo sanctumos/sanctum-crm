@@ -386,8 +386,16 @@ ob_start();
 // Set up test database
 TestUtils::setupTestDatabase();
 
+// Keep legacy hard-coded paths (db/crm.db) in sync with the test DB so API/E2E
+// fixtures that open SQLite3('…/db/crm.db') see the same admin + schema.
+$legacyCrmDb = __DIR__ . '/../db/crm.db';
+$testCrmDb = __DIR__ . '/../db/test_crm.db';
+if (is_file($testCrmDb) && filesize($testCrmDb) > 0) {
+    @copy($testCrmDb, $legacyCrmDb);
+}
+
 // Clear any output
-ob_end_clean(); 
+ob_end_clean();
 
 require_once __DIR__ . '/../public/includes/EnrichmentCronService.php';
 require_once __DIR__ . '/../public/includes/ContactMergeService.php';

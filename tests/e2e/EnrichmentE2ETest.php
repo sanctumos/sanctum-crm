@@ -26,6 +26,11 @@ class EnrichmentE2ETest {
             echo "SKIP - No API key available for E2E testing\n";
             return;
         }
+
+        if (!$this->isTestServerReachable()) {
+            echo "SKIP - HTTP test server not reachable at {$this->baseUrl}\n";
+            return;
+        }
         
         $this->testContactPageEnrichmentButtons();
         $this->testViewContactPageEnrichment();
@@ -223,6 +228,22 @@ class EnrichmentE2ETest {
             'body' => $response
         ];
     }
+
+    private function isTestServerReachable(): bool {
+        if (!function_exists('curl_init')) {
+            return false;
+        }
+        $ch = curl_init($this->baseUrl . '/');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 2);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
+        curl_exec($ch);
+        $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $errno = curl_errno($ch);
+        curl_close($ch);
+        return $errno === 0 && $code > 0;
+    }
+
 }
 
 // Run tests if called directly

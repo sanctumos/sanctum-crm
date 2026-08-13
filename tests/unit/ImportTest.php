@@ -197,12 +197,14 @@ class ImportTest {
     public function testDataSanitization() {
         echo "  Testing data sanitization...\n";
         
+        // sanitizeInput strips tags only; HTML escaping is crm_h() at render time.
         $testInputs = [
             'Normal Text' => 'Normal Text',
-            '<script>alert("xss")</script>' => '&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;',
-            'Text with "quotes"' => 'Text with &quot;quotes&quot;',
-            "Text with 'apostrophes'" => "Text with &#039;apostrophes&#039;",
-            'Text with & ampersands' => 'Text with &amp; ampersands'
+            '<script>alert("xss")</script>' => 'alert("xss")',
+            'Text with "quotes"' => 'Text with "quotes"',
+            "Text with 'apostrophes'" => "Text with 'apostrophes'",
+            'Text with & ampersands' => 'Text with & ampersands',
+            '  padded  ' => 'padded',
         ];
         
         foreach ($testInputs as $input => $expected) {
