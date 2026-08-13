@@ -27,6 +27,11 @@ class ContactMergeServiceTest
         }
     }
 
+    public function runAllTests(): void
+    {
+        $this->run();
+    }
+
     public function run(): int
     {
         $this->svc = new ContactMergeService();
@@ -207,4 +212,6 @@ class ContactMergeServiceTest
     }
 }
 
-exit((new ContactMergeServiceTest())->run());
+if (php_sapi_name() === 'cli' && basename(__FILE__) === basename($_SERVER['argv'][0] ?? '')) {
+    exit((new ContactMergeServiceTest())->run());
+}

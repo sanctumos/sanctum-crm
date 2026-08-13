@@ -61,8 +61,7 @@ class TestRunner {
             'LayoutTest.php' => 'LayoutTest',
             'LeadEnrichmentOutcomeTest.php' => 'LeadEnrichmentOutcomeTest',
             'ConfigManagerTest.php' => 'ConfigManagerTest',
-            'InstallationManagerTest.php' => 'InstallationManagerTest',
-            'EnvironmentDetectorTest.php' => 'EnvironmentDetectorTest',
+            // InstallationManagerTest / EnvironmentDetectorTest are PHPUnit-style (no runAllTests)
         ];
         
         foreach ($unitTests as $file => $class) {
