@@ -21,6 +21,7 @@ class Database {
         $this->connect();
         $this->initializeTables();
         $this->ensureSkinLabColumns();
+        $this->ensureMustChangePasswordColumn();
         $this->ensureContactDataSidecar();
         if (!self::$skipAutoMigrate && self::autoMigrateEnabled()) {
             require_once __DIR__ . '/MigrationRunner.php';
@@ -92,6 +93,7 @@ class Database {
         $this->ensureSettingsColumns();
         $this->ensureConfigTables();
         $this->ensureSkinLabColumns();
+        $this->ensureMustChangePasswordColumn();
         $this->ensureContactDataSidecar();
         $this->ensureEnrichmentCronTables();
         $this->ensureContactTagsTable();
@@ -142,6 +144,20 @@ class Database {
         }
     }
 
+    public function ensureMustChangePasswordColumn(): void
+    {
+        try {
+            $userNames = array_column($this->getTableInfo('users'), 'name');
+            if (!in_array('must_change_password', $userNames, true)) {
+                $this->db->exec('ALTER TABLE users ADD COLUMN must_change_password INTEGER DEFAULT 0');
+            }
+        } catch (Exception $e) {
+            if (defined('DEBUG_MODE') && DEBUG_MODE) {
+                error_log('ensureMustChangePasswordColumn: ' . $e->getMessage());
+            }
+        }
+    }
+
     private function ensureContactTagsTable(): void
     {
         try {
@@ -187,6 +203,7 @@ class Database {
                     role VARCHAR(20) DEFAULT 'user',
                     api_key VARCHAR(255) UNIQUE,
                     is_active BOOLEAN DEFAULT 1,
+                    must_change_password INTEGER DEFAULT 0,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )

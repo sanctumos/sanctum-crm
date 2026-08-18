@@ -14,15 +14,20 @@ $success = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = (string) ($_POST['action'] ?? 'password');
+    $forceChange = !empty($user['must_change_password']);
 
     if ($action === 'save_skin') {
-        $mine = crmSkinNormalizeSlug((string) ($_POST['skin_slug'] ?? ''));
-        $db->update('users', [
-            'skin_slug' => $mine,
-            'updated_at' => getCurrentTimestamp(),
-        ], 'id = ?', [(int) $user['id']]);
-        $user = $db->fetchOne('SELECT * FROM users WHERE id = ?', [(int) $user['id']]) ?: $user;
-        $success = 'Theme preference saved.';
+        if ($forceChange) {
+            $error = 'Set a new password before changing other account settings.';
+        } else {
+            $mine = crmSkinNormalizeSlug((string) ($_POST['skin_slug'] ?? ''));
+            $db->update('users', [
+                'skin_slug' => $mine,
+                'updated_at' => getCurrentTimestamp(),
+            ], 'id = ?', [(int) $user['id']]);
+            $user = $db->fetchOne('SELECT * FROM users WHERE id = ?', [(int) $user['id']]) ?: $user;
+            $success = 'Theme preference saved.';
+        }
     } else {
         $new = $_POST['new_password'] ?? '';
         $confirm = $_POST['confirm_password'] ?? '';
@@ -35,23 +40,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $hash = password_hash($new, PASSWORD_DEFAULT);
             $db->update('users', [
                 'password_hash' => $hash,
+                'must_change_password' => 0,
                 'updated_at' => getCurrentTimestamp(),
             ], 'id = ?', [$user['id']]);
             logActivity($user['id'], 'password_change', 'User changed password via account page');
+            $user['must_change_password'] = 0;
             $success = 'Your password has been updated.';
+            if ($forceChange || !empty($_GET['must_change']) || !empty($_POST['must_change'])) {
+                header('Location: /index.php');
+                exit;
+            }
         }
     }
 }
 
 $userSkin = crmSkinUserOverrideSlug(is_array($user) ? $user : null) ?? '';
 $defaultSkin = crmSkinMasterSlug();
+$forceChange = !empty($user['must_change_password']);
 
 renderHeader('Account');
-renderPageHeader('Account', 'Password and theme');
+renderPageHeader('Account', $forceChange ? 'Choose a new password' : 'Password and theme');
 ?>
+
+<?php if ($forceChange): ?>
+    <div class="alert alert-warning" role="alert">
+        You need to set a new password before you can use the CRM.
+    </div>
+<?php endif; ?>
 
 <div class="row g-3">
     <div class="col-lg-7">
+        <?php if (!$forceChange): ?>
         <div class="surface mb-3">
             <div class="surface__header">
                 <h5 class="mb-0"><i class="bi bi-palette me-2"></i>Theme</h5>
@@ -86,6 +105,7 @@ renderPageHeader('Account', 'Password and theme');
                 </form>
             </div>
         </div>
+        <?php endif; ?>
 
         <div class="surface">
             <div class="surface__header">
@@ -107,6 +127,9 @@ renderPageHeader('Account', 'Password and theme');
                 <h6 class="mb-3">Change password</h6>
                 <form method="POST" action="" autocomplete="off">
                     <input type="hidden" name="action" value="password">
+                    <?php if ($forceChange): ?>
+                    <input type="hidden" name="must_change" value="1">
+                    <?php endif; ?>
                     <div class="mb-3">
                         <label for="new_password" class="form-label">New password</label>
                         <input type="password" class="form-control" id="new_password" name="new_password" required

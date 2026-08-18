@@ -26,6 +26,7 @@ class AuthTest {
         $this->testAdminFunctions();
         $this->testPasswordValidation();
         $this->testEmailValidation();
+        $this->testMustChangePassword();
         
         echo "All Authentication tests completed!\n";
     }
@@ -323,6 +324,36 @@ class AuthTest {
             } else {
                 echo "  Testing invalid email... FAIL\n";
             }
+        } catch (Exception $e) {
+            echo "FAIL - " . $e->getMessage() . "\n";
+        }
+    }
+
+    public function testMustChangePassword() {
+        echo "  Testing must-change-password flag... ";
+
+        try {
+            $userData = [
+                'username' => 'testmustchange',
+                'email' => 'testmustchange@example.com',
+                'password' => 'tempPass123',
+                'must_change_password' => 1,
+            ];
+            $user = $this->auth->createUser($userData);
+            $this->auth->login('testmustchange', 'tempPass123');
+            if (!$this->auth->mustChangePassword()) {
+                echo "FAIL - flag not set after login\n";
+                $this->db->delete('users', 'id = ?', [$user['id']]);
+                return;
+            }
+            $this->auth->clearMustChangePassword();
+            if ($this->auth->mustChangePassword()) {
+                echo "FAIL - flag not cleared\n";
+                $this->db->delete('users', 'id = ?', [$user['id']]);
+                return;
+            }
+            $this->db->delete('users', 'id = ?', [$user['id']]);
+            echo "PASS\n";
         } catch (Exception $e) {
             echo "FAIL - " . $e->getMessage() . "\n";
         }

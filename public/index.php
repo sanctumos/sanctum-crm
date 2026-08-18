@@ -64,6 +64,11 @@ if (!in_array($page, $allowedPages)) {
     $page = 'dashboard';
 }
 
+if ($auth->mustChangePassword() && $page !== 'profile') {
+    header('Location: /index.php?page=profile&must_change=1');
+    exit;
+}
+
 // Include the page
 $pageFile = __DIR__ . "/pages/$page.php";
 if (file_exists($pageFile)) {

@@ -143,6 +143,21 @@ class Auth {
     public function getUserRole() {
         return $this->user ? $this->user['role'] : null;
     }
+
+    public function mustChangePassword(): bool {
+        return $this->user && !empty($this->user['must_change_password']);
+    }
+
+    public function clearMustChangePassword(): void {
+        if (!$this->user) {
+            return;
+        }
+        $this->db->update('users', [
+            'must_change_password' => 0,
+            'updated_at' => getCurrentTimestamp(),
+        ], 'id = ?', [$this->user['id']]);
+        $this->user['must_change_password'] = 0;
+    }
     
     public function setApiKey($apiKey) {
         // Set API key for testing purposes
@@ -223,7 +238,8 @@ class Auth {
             'first_name' => $data['first_name'] ?? '',
             'last_name' => $data['last_name'] ?? '',
             'role' => $data['role'] ?? 'user',
-            'api_key' => $apiKey
+            'api_key' => $apiKey,
+            'must_change_password' => !empty($data['must_change_password']) ? 1 : 0,
         ];
         
         // Insert user
@@ -268,6 +284,13 @@ class Auth {
         
         if (isset($data['password']) && strlen($data['password']) >= PASSWORD_MIN_LENGTH) {
             $updateData['password_hash'] = password_hash($data['password'], PASSWORD_DEFAULT);
+            if (!array_key_exists('must_change_password', $data)) {
+                $updateData['must_change_password'] = 1;
+            }
+        }
+
+        if (array_key_exists('must_change_password', $data)) {
+            $updateData['must_change_password'] = !empty($data['must_change_password']) ? 1 : 0;
         }
         
         if (empty($updateData)) {

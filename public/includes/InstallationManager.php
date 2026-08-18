@@ -238,6 +238,7 @@ class InstallationManager {
             'role' => 'admin',
             'api_key' => $apiKey,
             'is_active' => 1,
+            'must_change_password' => 1,
             'created_at' => getCurrentTimestamp(),
             'updated_at' => getCurrentTimestamp()
         ]);

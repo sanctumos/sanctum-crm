@@ -28,6 +28,10 @@ $showDefaultCredentials = $settings ? ($settings['show_default_credentials'] ?? 
 
 // Check if already logged in
 if ($auth->isAuthenticated()) {
+    if ($auth->mustChangePassword()) {
+        header('Location: /index.php?page=profile&must_change=1');
+        exit;
+    }
     header('Location: /index.php');
     exit;
 }
@@ -44,6 +48,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Username and password are required';
     } else {
         if ($auth->login($username, $password)) {
+            if ($auth->mustChangePassword()) {
+                header('Location: /index.php?page=profile&must_change=1');
+                exit;
+            }
             header('Location: /index.php');
             exit;
         } else {
