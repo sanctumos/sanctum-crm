@@ -193,7 +193,8 @@ function renderPageHeader(string $title, string $subtitle = '', string $actionsH
 
 function renderHeader($title = null) {
     global $user, $auth, $currentPage;
-    $pageTitle = $title ? $title . ' - ' . APP_NAME : APP_NAME;
+    $appName = getAppName();
+    $pageTitle = $title ? $title . ' - ' . $appName : $appName;
     $userName = $user ? trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '')) : '';
     if ($userName === '' && $user) {
         $userName = $user['username'] ?? '';
@@ -234,10 +235,10 @@ function renderHeader($title = null) {
     <body class="bg-light">
         <nav class="navbar navbar-expand-lg <?php echo htmlspecialchars($navThemeClass); ?> admin-nav py-0<?php echo $navLight ? '' : ' bg-dark'; ?>">
             <div class="container-fluid px-3 px-lg-4">
-                <a class="navbar-brand fw-semibold d-inline-flex align-items-center gap-2" href="/index.php" title="<?php echo htmlspecialchars(APP_NAME); ?>">
+                <a class="navbar-brand fw-semibold d-inline-flex align-items-center gap-2" href="/index.php" title="<?php echo htmlspecialchars($appName); ?>">
                     <i class="bi bi-people"></i>
-                    <span class="crm-brand-short d-none d-xxl-inline"><?php echo htmlspecialchars(APP_NAME); ?></span>
-                    <span class="crm-brand-compact d-inline d-xxl-none">DSC CRM</span>
+                    <span class="crm-brand-short d-none d-xxl-inline"><?php echo htmlspecialchars($appName); ?></span>
+                    <span class="crm-brand-compact d-inline d-xxl-none"><?php echo htmlspecialchars($appName); ?></span>
                 </a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#crmNavbar" aria-controls="crmNavbar" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>

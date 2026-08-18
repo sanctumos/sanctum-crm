@@ -10,6 +10,7 @@ define('CRM_LOADED', true);
 // Include required files
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/database.php';
+require_once __DIR__ . '/includes/ConfigManager.php';
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/skin-lab-env.php';
 
@@ -60,13 +61,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 $skin = crmSkinPreviewSlug() ?? crmSkinMasterSlug();
+$appName = getAppName();
 ?>
 <!DOCTYPE html>
 <html lang="en" data-skin-comp="<?php echo htmlspecialchars($skin); ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login &middot; <?php echo htmlspecialchars(APP_NAME); ?></title>
+    <title>Login &middot; <?php echo htmlspecialchars($appName); ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="/assets/css/crm.css?v=14" rel="stylesheet">
@@ -77,7 +79,7 @@ $skin = crmSkinPreviewSlug() ?? crmSkinMasterSlug();
         <div class="crm-login-card">
             <div class="crm-login-brand">
                 <span class="crm-glyph-tile crm-glyph-tile--accent crm-glyph-tile--lg"><i class="bi bi-people"></i></span>
-                <h1 class="crm-login-brand__title"><?php echo htmlspecialchars(APP_NAME); ?></h1>
+                <h1 class="crm-login-brand__title"><?php echo htmlspecialchars($appName); ?></h1>
                 <p class="crm-login-brand__subtitle">Sign in to your account</p>
             </div>
 

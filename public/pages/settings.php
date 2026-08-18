@@ -41,6 +41,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ], 'id = 1');
         $user = $db->fetchOne('SELECT * FROM users WHERE id = ?', [(int) $user['id']]) ?: $user;
         $success = 'Theme preferences saved.';
+    } elseif ($action === 'save_branding') {
+        require_once __DIR__ . '/../includes/ConfigManager.php';
+        $appName = trim((string) ($_POST['app_name'] ?? ''));
+        if ($appName === '') {
+            $error = 'Application name is required.';
+        } elseif (strlen($appName) > 100) {
+            $error = 'Application name must be 100 characters or fewer.';
+        } elseif (preg_match('/<[^>]*>/', $appName)) {
+            $error = 'Application name cannot contain HTML.';
+        } else {
+            ConfigManager::getInstance()->set('application', 'app_name', $appName);
+            $success = 'Branding saved. Header and login will show the new name.';
+        }
     } elseif ($action === 'enrichment_cron') {
         $enrichmentCronService->updateConfig([
             'enabled' => isset($_POST['enabled']) ? 1 : 0,
@@ -97,6 +110,9 @@ require_once __DIR__ . '/../includes/skin-lab-env.php';
 $userSkin = crmSkinUserOverrideSlug(is_array($user) ? $user : null) ?? '';
 $defaultSkin = crmSkinMasterSlug();
 
+require_once __DIR__ . '/../includes/ConfigManager.php';
+$appNameSetting = getAppName();
+
 // Render the page
 renderHeader('Settings');
 renderPageHeader('Settings', 'System configuration');
@@ -104,6 +120,41 @@ renderPageHeader('Settings', 'System configuration');
 
 <div class="row">
     <div class="col-lg-8">
+        <div class="surface mb-3">
+            <div class="surface__header">
+                <h5 class="mb-0"><i class="bi bi-type me-2"></i>Branding</h5>
+            </div>
+            <div class="surface__body">
+                <?php if (isset($error) && (($_POST['action'] ?? '') === 'save_branding')): ?>
+                    <div class="alert alert-danger" role="alert">
+                        <i class="bi bi-exclamation-triangle"></i> <?php echo htmlspecialchars($error); ?>
+                    </div>
+                <?php endif; ?>
+                <?php if (isset($success) && (($_POST['action'] ?? '') === 'save_branding')): ?>
+                    <div class="alert alert-success" role="alert">
+                        <i class="bi bi-check-circle"></i> <?php echo htmlspecialchars($success); ?>
+                    </div>
+                <?php endif; ?>
+                <p class="text-muted small mb-3">
+                    Shown in the top navbar and on the login page. Default is <code>Sanctum CRM</code>.
+                </p>
+                <form method="POST" action="" class="row g-3" autocomplete="off">
+                    <input type="hidden" name="action" value="save_branding">
+                    <div class="col-md-8">
+                        <label class="form-label" for="app_name">Application name</label>
+                        <input type="text" class="form-control" id="app_name" name="app_name"
+                               value="<?php echo htmlspecialchars($appNameSetting); ?>"
+                               maxlength="100" required>
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save me-2"></i>Save branding
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <div class="surface mb-3">
             <div class="surface__header">
                 <h5 class="mb-0"><i class="bi bi-palette me-2"></i>Theme</h5>
@@ -156,7 +207,7 @@ renderPageHeader('Settings', 'System configuration');
                 <h5 class="mb-0"><i class="bi bi-gear me-2"></i>System Settings</h5>
             </div>
             <div class="surface__body">
-                <?php if (isset($success) && ($_POST['action'] ?? 'credentials') !== 'save_skin' && ($_POST['action'] ?? '') !== 'enrichment_cron'): ?>
+                <?php if (isset($success) && ($_POST['action'] ?? 'credentials') !== 'save_skin' && ($_POST['action'] ?? '') !== 'enrichment_cron' && ($_POST['action'] ?? '') !== 'save_branding'): ?>
                     <div class="alert alert-success" role="alert">
                         <i class="bi bi-check-circle"></i> <?php echo htmlspecialchars($success); ?>
                     </div>

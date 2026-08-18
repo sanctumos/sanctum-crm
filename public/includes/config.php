@@ -261,14 +261,18 @@ function validateUrl($url) {
     return filter_var($url, FILTER_VALIDATE_URL) !== false;
 }
 
-// Helper function to get current application name
+// Helper function to get current application name (navbar / titles / login)
 function getAppName() {
+    $fallback = defined('APP_NAME') ? APP_NAME : 'Sanctum CRM';
     if (class_exists('ConfigManager')) {
         $config = ConfigManager::getInstance();
         $appConfig = $config->getCategory('application');
-        return $appConfig['app_name'] ?? APP_NAME;
+        $name = trim((string) ($appConfig['app_name'] ?? ''));
+        if ($name !== '') {
+            return $name;
+        }
     }
-    return APP_NAME;
+    return $fallback;
 }
 
 // Helper function to get current application URL
