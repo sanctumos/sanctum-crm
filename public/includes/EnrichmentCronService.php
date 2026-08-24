@@ -172,7 +172,12 @@ class EnrichmentCronService
             $this->enrichmentService = new EnrichmentService();
         } else {
             $settings = $this->getSettings();
-            $this->enrichmentService = empty($settings['rocketreach_api_key']) && class_exists('MockLeadEnrichmentService')
+            require_once __DIR__ . '/enrichment/EnrichmentProviders.php';
+            $provider = EnrichmentProviders::normalize($settings['enrichment_provider'] ?? null);
+            $hasKey = $provider === EnrichmentProviders::APOLLO
+                ? !empty($settings['apollo_api_key'])
+                : !empty($settings['rocketreach_api_key']);
+            $this->enrichmentService = (!$hasKey && class_exists('MockLeadEnrichmentService'))
                 ? new MockLeadEnrichmentService()
                 : new LeadEnrichmentService();
         }

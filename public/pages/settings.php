@@ -54,6 +54,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ConfigManager::getInstance()->set('application', 'app_name', $appName);
             $success = 'Branding saved. Header and login will show the new name.';
         }
+    } elseif ($action === 'test_apollo') {
+        require_once __DIR__ . '/../includes/enrichment/ApolloEnrichmentClient.php';
+        $saved = $db->fetchOne("SELECT apollo_api_key FROM settings WHERE id = 1") ?: [];
+        $key = trim((string) ($saved['apollo_api_key'] ?? ''));
+        if ($key === '') {
+            $error = 'Add an Apollo API key and save settings before testing the connection.';
+        } else {
+            try {
+                $client = new ApolloEnrichmentClient($key);
+                $health = $client->health();
+                $org = $client->enrichOrganization('apollo.io');
+                $peopleNote = '';
+                try {
+                    $client->matchPerson(['email' => 'tim@apollo.io']);
+                    $peopleNote = ' People match: OK.';
+                } catch (ApolloApiException $pe) {
+                    if ($pe->isPlanOrScopeBlocked()) {
+                        $peopleNote = ' People match: blocked (key needs people/match scope — create/edit the key in Apollo Settings → API Keys).';
+                    } else {
+                        $peopleNote = ' People match probe: ' . $pe->getMessage();
+                    }
+                }
+                $orgOk = empty($org['not_found']);
+                $success = 'Apollo health '
+                    . (!empty($health['healthy']) ? 'OK' : 'unexpected')
+                    . '; org enrich ' . ($orgOk ? 'OK' : 'no org')
+                    . '.' . $peopleNote;
+            } catch (ApolloApiException $e) {
+                $error = 'Apollo test failed: ' . $e->getMessage();
+            } catch (Exception $e) {
+                $error = 'Apollo test failed: ' . $e->getMessage();
+            }
+        }
     } elseif ($action === 'enrichment_cron') {
         $enrichmentCronService->updateConfig([
             'enabled' => isset($_POST['enabled']) ? 1 : 0,
@@ -74,11 +107,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         $showDefaultCredentials = isset($_POST['show_default_credentials']) ? 1 : 0;
         $rocketreachApiKey = $_POST['rocketreach_api_key'] ?? '';
+        $apolloApiKey = $_POST['apollo_api_key'] ?? '';
+        $provider = strtolower(trim((string) ($_POST['enrichment_provider'] ?? 'rocketreach')));
+        if (!in_array($provider, ['rocketreach', 'apollo'], true)) {
+            $provider = 'rocketreach';
+        }
         
         // Update settings in database
         $db->update('settings', [
             'show_default_credentials' => $showDefaultCredentials,
             'rocketreach_api_key' => $rocketreachApiKey,
+            'apollo_api_key' => $apolloApiKey,
+            'enrichment_provider' => $provider,
             'updated_at' => getCurrentTimestamp()
         ], 'id = 1');
         
@@ -241,7 +281,20 @@ renderPageHeader('Settings', 'System configuration');
                     </div>
                     
                     <div class="mb-4">
-                        <h6 class="mb-3">RocketReach Lead Enrichment</h6>
+                        <h6 class="mb-3">Lead enrichment</h6>
+                        <div class="mb-3">
+                            <label class="form-label d-block">Active provider</label>
+                            <?php $activeProvider = ($settings['enrichment_provider'] ?? 'rocketreach') === 'apollo' ? 'apollo' : 'rocketreach'; ?>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="enrichment_provider" id="provider_rr" value="rocketreach" <?php echo $activeProvider === 'rocketreach' ? 'checked' : ''; ?>>
+                                <label class="form-check-label" for="provider_rr">RocketReach</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="enrichment_provider" id="provider_apollo" value="apollo" <?php echo $activeProvider === 'apollo' ? 'checked' : ''; ?>>
+                                <label class="form-check-label" for="provider_apollo">Apollo</label>
+                            </div>
+                            <small class="text-muted d-block mt-1">Manual enrich and the enrichment cron use the active provider.</small>
+                        </div>
                         <div class="mb-3">
                             <label for="rocketreach_api_key" class="form-label">RocketReach API Key</label>
                             <div class="input-group">
@@ -254,8 +307,23 @@ renderPageHeader('Settings', 'System configuration');
                                 </button>
                             </div>
                             <small class="text-muted">
-                                Lead enrichment will be automatically enabled when you add your RocketReach API key. 
-                                Get your API key from <a href="https://rocketreach.co" target="_blank">RocketReach.co</a>.
+                                Get a key from <a href="https://rocketreach.co" target="_blank" rel="noopener">RocketReach.co</a>.
+                            </small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="apollo_api_key" class="form-label">Apollo API Key</label>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="apollo_api_key"
+                                       name="apollo_api_key"
+                                       value="<?php echo htmlspecialchars($settings['apollo_api_key'] ?? ''); ?>"
+                                       placeholder="Enter your Apollo API key">
+                                <button class="btn btn-outline-secondary" type="button" id="toggleApolloKey">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted">
+                                Create a key under Apollo → Settings → Integrations → API Keys.
+                                Enable <code>people/match</code> and <code>organizations/enrich</code> (or use a master key).
                             </small>
                         </div>
                     </div>
@@ -265,13 +333,21 @@ renderPageHeader('Settings', 'System configuration');
                     </button>
                 </form>
 
+                <form method="POST" action="" class="mt-3">
+                    <input type="hidden" name="action" value="test_apollo">
+                    <button type="submit" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-heart-pulse me-1"></i>Test Apollo connection
+                    </button>
+                    <small class="text-muted ms-2">Uses the Apollo key currently saved in settings.</small>
+                </form>
+
                 <hr class="my-5">
 
                 <form method="POST" action="">
                     <input type="hidden" name="action" value="enrichment_cron">
                     <div class="mb-4">
                         <h6 class="mb-3">Enrichment Automation</h6>
-                        <p class="text-muted mb-3">Schedule RocketReach enrichment from cron while enforcing caps and filters before spending lookup quota.</p>
+                        <p class="text-muted mb-3">Schedule enrichment from cron using the <strong>active provider</strong> above, with caps and filters before spending lookup quota.</p>
                         <div class="form-check form-switch">
                             <input class="form-check-input" type="checkbox" id="enrichment_enabled" name="enabled" <?php echo $enrichmentCronConfig['enabled'] ? 'checked' : ''; ?>>
                             <label class="form-check-label" for="enrichment_enabled">Enable scheduled enrichment</label>
@@ -441,7 +517,22 @@ document.getElementById('toggleRocketReachKey').addEventListener('click', functi
         toggleBtn.title = 'Show API Key';
     }
 });
-
+const toggleApolloKey = document.getElementById('toggleApolloKey');
+if (toggleApolloKey) {
+    toggleApolloKey.addEventListener('click', function() {
+        const apiKeyInput = document.getElementById('apollo_api_key');
+        const icon = this.querySelector('i');
+        if (apiKeyInput.type === 'password') {
+            apiKeyInput.type = 'text';
+            icon.className = 'bi bi-eye-slash';
+            this.title = 'Hide API Key';
+        } else {
+            apiKeyInput.type = 'password';
+            icon.className = 'bi bi-eye';
+            this.title = 'Show API Key';
+        }
+    });
+}
 </script>
 
 <?php
