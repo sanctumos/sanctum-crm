@@ -125,26 +125,26 @@
             <div class="card-body">
                 <h6>Enrichment Not Working</h6>
                 <ul>
-                    <li>Check API key in settings</li>
-                    <li>Verify enrichment is enabled</li>
-                    <li>Check RocketReach status</li>
-                    <li>Review API credits</li>
+                    <li>Confirm active provider in Settings (RocketReach vs Apollo)</li>
+                    <li>Check the API key for that provider is set and saved</li>
+                    <li>Apollo: key must allow people/match (not org-only trial)</li>
+                    <li>Review provider credits / plan status</li>
                 </ul>
                 
                 <h6 class="mt-3">No Results Found</h6>
                 <ul>
-                    <li>Contact not in database</li>
-                    <li>Insufficient contact info</li>
-                    <li>Privacy settings blocking</li>
-                    <li>Try different search terms</li>
+                    <li>Person not in the provider database</li>
+                    <li>Need email, LinkedIn, or name + company</li>
+                    <li>Privacy / compliance hiding data</li>
+                    <li>Try a different match strategy or provider</li>
                 </ul>
                 
                 <h6 class="mt-3">Rate Limiting</h6>
                 <ul>
-                    <li>Check API usage limits</li>
-                    <li>Wait before retrying</li>
-                    <li>Consider upgrading plan</li>
-                    <li>Batch enrichment requests</li>
+                    <li>Check provider usage limits (429)</li>
+                    <li>Wait before retrying; lower cron caps</li>
+                    <li>Consider upgrading the provider plan</li>
+                    <li>Batch enrichment within CRM daily caps</li>
                 </ul>
             </div>
         </div>

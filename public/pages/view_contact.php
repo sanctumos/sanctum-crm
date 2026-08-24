@@ -102,6 +102,9 @@ renderPageHeader(
                 <?php if (!empty($contact['rocketreach_profile_id'])): ?>
                     <p class="mb-2 text-muted">RocketReach profile ID: <?php echo (int) $contact['rocketreach_profile_id']; ?></p>
                 <?php endif; ?>
+                <?php if (!empty($contact['apollo_person_id'])): ?>
+                    <p class="mb-2 text-muted">Apollo person ID: <?php echo htmlspecialchars((string) $contact['apollo_person_id']); ?></p>
+                <?php endif; ?>
                 <?php if (!empty($enrichBundle['lookup_status'])): ?>
                     <p class="mb-2"><strong>Lookup status:</strong> <?php echo crm_h((string) $enrichBundle['lookup_status']); ?></p>
                 <?php endif; ?>

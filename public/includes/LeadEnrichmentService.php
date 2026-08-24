@@ -1,7 +1,7 @@
 <?php
 /**
  * Lead Enrichment Service
- * Sanctum CRM - RocketReach Integration Service
+ * Sanctum CRM - RocketReach / Apollo enrichment
  */
 
 // Prevent direct access
@@ -24,6 +24,8 @@ require_once __DIR__ . '/../helpers/rocketreach/Endpoints/PersonEnrich.php';
 require_once __DIR__ . '/../helpers/rocketreach/Endpoints/PeopleSearch.php';
 require_once __DIR__ . '/../helpers/rocketreach/Endpoints/PersonLookup.php';
 require_once __DIR__ . '/../helpers/rocketreach/RocketReachClient.php';
+require_once __DIR__ . '/enrichment/EnrichmentProviders.php';
+require_once __DIR__ . '/enrichment/ApolloEnrichmentClient.php';
 
 use RocketReach\SDK\RocketReachClient;
 use RocketReach\SDK\Models\EnrichResponse;
@@ -36,41 +38,56 @@ class LeadEnrichmentService
     private const ENRICHMENT_SCHEMA = 2;
 
     private ?RocketReachClient $client = null;
+    private ?ApolloEnrichmentClient $apolloClient = null;
+    private string $provider = EnrichmentProviders::ROCKETREACH;
     private Database $db;
     private bool $enabled;
 
     public function __construct()
     {
         $this->db = Database::getInstance();
-        
-        // Get RocketReach API key from database
-        $settings = $this->db->fetchOne("SELECT rocketreach_api_key FROM settings WHERE id = 1");
-        $apiKey = $settings['rocketreach_api_key'] ?? '';
-        
-        // Auto-detect if enrichment is available based on API key presence
-        $this->enabled = !empty($apiKey);
-        
+
+        $settings = $this->db->fetchOne("SELECT * FROM settings WHERE id = 1") ?: [];
+        $this->provider = EnrichmentProviders::normalize($settings['enrichment_provider'] ?? null);
+        $rrKey = trim((string) ($settings['rocketreach_api_key'] ?? ''));
+        $apolloKey = trim((string) ($settings['apollo_api_key'] ?? ''));
+
+        if ($this->provider === EnrichmentProviders::APOLLO) {
+            $this->enabled = $apolloKey !== '';
+            if ($this->enabled) {
+                try {
+                    $this->apolloClient = new ApolloEnrichmentClient($apolloKey);
+                } catch (Exception $e) {
+                    $this->enabled = false;
+                    $this->apolloClient = null;
+                }
+            }
+            $this->client = null;
+            return;
+        }
+
+        $this->enabled = $rrKey !== '';
         if ($this->enabled) {
             try {
-                // Configure for different environments
                 $config = [];
-                
-                // Only disable SSL verification in Windows development environment
                 if (defined('DEBUG_MODE') && DEBUG_MODE && PHP_OS_FAMILY === 'Windows') {
-                    $config['verify_ssl'] = false; // Disable SSL verification only on Windows dev
+                    $config['verify_ssl'] = false;
                 } else {
-                    $config['verify_ssl'] = true; // Enable SSL verification on Ubuntu production
+                    $config['verify_ssl'] = true;
                 }
-                
-                $this->client = new RocketReachClient($apiKey, $config);
+                $this->client = new RocketReachClient($rrKey, $config);
             } catch (Exception $e) {
-                // If RocketReach client fails to initialize, disable enrichment
                 $this->enabled = false;
                 $this->client = null;
             }
         } else {
             $this->client = null;
         }
+    }
+
+    public function getActiveProvider(): string
+    {
+        return $this->provider;
     }
     
     /**
@@ -89,11 +106,12 @@ class LeadEnrichmentService
         }
 
         if (!$this->enabled) {
+            $label = EnrichmentProviders::label($this->provider);
             return $this->recordEnrichmentOutcome(
                 $contactId,
                 $contact,
                 'failed',
-                'RocketReach enrichment is not enabled or API key is missing'
+                $label . ' enrichment is not enabled or API key is missing'
             );
         }
         
@@ -114,12 +132,13 @@ class LeadEnrichmentService
         if ($contact['enrichment_status'] === 'not_found') {
             $strategyNorm = strtolower(trim($strategy));
             $hasTwitter = trim((string) ($contact['twitter_handle'] ?? '')) !== '';
-            if (!$hasTwitter && !in_array($strategyNorm, ['twitter', 'force'], true)) {
+            $twitterOk = $this->provider === EnrichmentProviders::ROCKETREACH;
+            if ((!$hasTwitter || !$twitterOk) && !in_array($strategyNorm, ['twitter', 'force'], true)) {
                 return [
                     'success' => false,
                     'outcome' => 'not_found',
                     'contact' => $contact,
-                    'message' => 'Contact previously marked as not found in RocketReach database',
+                    'message' => 'Contact previously marked as not found in ' . EnrichmentProviders::label($this->provider) . ' database',
                 ];
             }
         }
@@ -129,7 +148,8 @@ class LeadEnrichmentService
                 $contactId,
                 $contact,
                 'failed',
-                'Insufficient data for enrichment. Need email, LinkedIn profile, name+company, or Twitter handle'
+                'Insufficient data for enrichment. Need email, LinkedIn profile, name+company'
+                    . ($this->provider === EnrichmentProviders::ROCKETREACH ? ', or Twitter handle' : '')
             );
         }
         
@@ -149,7 +169,7 @@ class LeadEnrichmentService
             if (isset($enrichmentData['not_found']) && $enrichmentData['not_found']) {
                 $this->db->update('contacts', [
                     'enrichment_status' => 'not_found',
-                    'enrichment_error' => $enrichmentData['message'] ?? 'Person not found in RocketReach database',
+                    'enrichment_error' => $enrichmentData['message'] ?? ('Person not found in ' . EnrichmentProviders::label($this->provider) . ' database'),
                     'updated_at' => getCurrentTimestamp()
                 ], 'id = ?', [$contactId]);
                 
@@ -157,7 +177,7 @@ class LeadEnrichmentService
                 return [
                     'success' => false,
                     'outcome' => 'not_found',
-                    'message' => $enrichmentData['message'] ?? 'Person not found in RocketReach database',
+                    'message' => $enrichmentData['message'] ?? ('Person not found in ' . EnrichmentProviders::label($this->provider) . ' database'),
                     'contact' => $updatedContact,
                 ];
             }
@@ -168,11 +188,16 @@ class LeadEnrichmentService
                 $updateData = $this->mapEnrichmentData($normalized, $rawPerson, $contact);
                 $updateData['enrichment_status'] = 'enriched';
                 $updateData['enriched_at'] = getCurrentTimestamp();
-                $updateData['enrichment_source'] = 'rocketreach';
+                $updateData['enrichment_source'] = $this->provider;
                 // Card still gets a compact enrichment_data summary for UI; full raw → sidecar (Doc #919).
                 $updateData['enrichment_data'] = $this->encodeJson($normalized);
-                if (isset($rawPerson['id']) && is_numeric($rawPerson['id'])) {
+                if ($this->provider === EnrichmentProviders::ROCKETREACH
+                    && isset($rawPerson['id']) && is_numeric($rawPerson['id'])) {
                     $updateData['rocketreach_profile_id'] = (int) $rawPerson['id'];
+                }
+                if ($this->provider === EnrichmentProviders::APOLLO
+                    && !empty($rawPerson['id']) && is_string($rawPerson['id'])) {
+                    $updateData['apollo_person_id'] = substr((string) $rawPerson['id'], 0, 80);
                 }
                 $updateData['updated_at'] = getCurrentTimestamp();
 
@@ -184,13 +209,23 @@ class LeadEnrichmentService
                     $store = new ContactDataStore($this->db);
                     $store->ensureSchema();
                     $lookup = $enrichmentData['lookup_used'] ?? null;
-                    $lookupLabel = 'RocketReach enrichment';
+                    $providerLabel = EnrichmentProviders::label($this->provider);
+                    $lookupLabel = $providerLabel . ' enrichment';
                     if (is_array($lookup) && !empty($lookup['type'])) {
-                        $lookupLabel = 'RocketReach via ' . $lookup['type']
+                        $lookupLabel = $providerLabel . ' via ' . $lookup['type']
                             . (!empty($lookup['source']) ? ' (' . $lookup['source'] . ')' : '');
                     }
+                    $facts = $this->provider === EnrichmentProviders::APOLLO
+                        ? $store->factsFromRocketReach(
+                            is_array($rawPerson) ? $rawPerson : [],
+                            is_array($normalized) ? $normalized : null
+                        )
+                        : $store->factsFromRocketReach(
+                            is_array($rawPerson) ? $rawPerson : [],
+                            is_array($normalized) ? $normalized : null
+                        );
                     $recorded = $store->recordRun($contactId, [
-                        'source' => 'rocketreach',
+                        'source' => $this->provider,
                         'outcome' => 'enriched',
                         'label' => $lookupLabel,
                         'raw_payload' => [
@@ -199,14 +234,11 @@ class LeadEnrichmentService
                             'lookup_used' => $lookup,
                             'lookup_attempts' => $enrichmentData['lookup_attempts'] ?? [],
                         ],
-                        'facts' => $store->factsFromRocketReach(
-                            is_array($rawPerson) ? $rawPerson : [],
-                            is_array($normalized) ? $normalized : null
-                        ),
+                        'facts' => $facts,
                     ]);
                     $runId = $recorded['run_id'];
                 } catch (Exception $sidecarEx) {
-                    error_log('ContactDataStore rocketreach write failed: ' . $sidecarEx->getMessage());
+                    error_log('ContactDataStore enrichment write failed: ' . $sidecarEx->getMessage());
                 }
                 
                 $updatedContact = $this->db->fetchOne("SELECT * FROM contacts WHERE id = ?", [$contactId]);
@@ -343,7 +375,18 @@ class LeadEnrichmentService
      * @return array|null Enrichment data
      * @throws Exception
      */
+    /**
+     * Dispatch to active provider (RocketReach or Apollo).
+     */
     private function performEnrichment(array $contact, string $strategy): ?array
+    {
+        if ($this->provider === EnrichmentProviders::APOLLO) {
+            return $this->performApolloEnrichment($contact, $strategy);
+        }
+        return $this->performRocketReachEnrichment($contact, $strategy);
+    }
+
+    private function performRocketReachEnrichment(array $contact, string $strategy): ?array
     {
         try {
             $contactId = (int) ($contact['id'] ?? 0);
@@ -450,6 +493,201 @@ class LeadEnrichmentService
             }
             throw new Exception('Enrichment failed: ' . $msg);
         }
+    }
+
+
+    /**
+     * Apollo people match using the same lookup order as RocketReach (no Twitter).
+     */
+    private function performApolloEnrichment(array $contact, string $strategy): ?array
+    {
+        if (!$this->apolloClient) {
+            throw new Exception('Apollo client is not configured');
+        }
+        try {
+            $contactId = (int) ($contact['id'] ?? 0);
+            $lookups = $this->collectEnrichmentLookups($contactId, $contact);
+            $lookups = $this->filterLookupsForStrategy($lookups, $strategy, $contact);
+            // Apollo has no first-class Twitter match in v1
+            $lookups = array_values(array_filter(
+                $lookups,
+                static fn($l) => ($l['type'] ?? '') !== 'twitter'
+            ));
+
+            if ($lookups === []) {
+                throw new Exception('Insufficient data for enrichment. Need email (card or sidecar), LinkedIn, or name+company');
+            }
+
+            $attempts = [];
+            $lastNotFound = null;
+
+            foreach ($lookups as $lookup) {
+                $attempt = [
+                    'type' => $lookup['type'],
+                    'value' => $lookup['value'],
+                    'source' => $lookup['source'] ?? null,
+                ];
+                try {
+                    $params = [];
+                    switch ($lookup['type']) {
+                        case 'email':
+                            $params['email'] = $lookup['value'];
+                            break;
+                        case 'linkedin':
+                            $params['linkedin_url'] = $lookup['value'];
+                            break;
+                        case 'name_company':
+                            $name = trim((string) $lookup['value']);
+                            $parts = preg_split('/\s+/', $name, 2) ?: [];
+                            if (!empty($parts[0])) {
+                                $params['first_name'] = $parts[0];
+                            }
+                            if (!empty($parts[1])) {
+                                $params['last_name'] = $parts[1];
+                            }
+                            $employer = trim((string) ($lookup['employer'] ?? ''));
+                            if ($employer !== '') {
+                                $params['organization_name'] = $employer;
+                                if (str_contains($employer, '.')) {
+                                    $params['domain'] = strtolower(preg_replace('#^https?://#', '', $employer) ?? $employer);
+                                }
+                            }
+                            break;
+                        default:
+                            continue 2;
+                    }
+                    $result = $this->apolloClient->matchPerson($params);
+                    $attempt['outcome'] = !empty($result['not_found']) ? 'not_found' : 'hit';
+                    $attempts[] = $attempt;
+
+                    if (!empty($result['not_found'])) {
+                        $lastNotFound = [
+                            'not_found' => true,
+                            'message' => $result['message'] ?? 'Person not found in Apollo',
+                            'lookup_attempts' => $attempts,
+                        ];
+                        continue;
+                    }
+
+                    $person = $result['person'];
+                    $rawPerson = $this->apolloPersonToRawShape($person);
+                    $normalized = $this->buildNormalizedPayloadFromApollo($person);
+                    return [
+                        'raw_person' => $rawPerson,
+                        'normalized' => $normalized,
+                        'lookup_used' => $lookup,
+                        'lookup_attempts' => $attempts,
+                    ];
+                } catch (ApolloApiException $e) {
+                    if ($e->isRateLimited()) {
+                        throw new Exception('Apollo rate limit exceeded. Please try again later.');
+                    }
+                    if ($e->isPlanOrScopeBlocked()) {
+                        throw new Exception(
+                            'Apollo API key cannot call people enrichment (missing people/match scope or plan). '
+                            . 'In Apollo → Settings → API Keys, enable people/match (or create a master key), then update the key in CRM Settings.'
+                        );
+                    }
+                    $attempt['outcome'] = 'api_error';
+                    $attempt['error'] = $e->getMessage();
+                    $attempts[] = $attempt;
+                    $lastNotFound = [
+                        'not_found' => true,
+                        'message' => $e->getMessage(),
+                        'lookup_attempts' => $attempts,
+                    ];
+                    continue;
+                }
+            }
+
+            if ($lastNotFound !== null) {
+                $lastNotFound['lookup_attempts'] = $attempts;
+                return $lastNotFound;
+            }
+            throw new Exception('Enrichment failed: no usable lookup produced a result');
+        } catch (Exception $e) {
+            $msg = $e->getMessage();
+            if (str_starts_with($msg, 'Enrichment failed:')
+                || str_starts_with($msg, 'Insufficient data')
+                || str_starts_with($msg, 'Apollo')
+                || str_starts_with($msg, 'Network error')) {
+                throw $e;
+            }
+            throw new Exception('Enrichment failed: ' . $msg);
+        }
+    }
+
+    /**
+     * Map Apollo person object into the RR-shaped raw array mapEnrichmentData understands.
+     *
+     * @param array<string,mixed> $person
+     * @return array<string,mixed>
+     */
+    private function apolloPersonToRawShape(array $person): array
+    {
+        $org = is_array($person['organization'] ?? null) ? $person['organization'] : [];
+        $phones = [];
+        foreach (($person['phone_numbers'] ?? []) as $p) {
+            if (!is_array($p)) {
+                continue;
+            }
+            $num = $p['sanitized_number'] ?? $p['raw_number'] ?? $p['number'] ?? null;
+            if ($num) {
+                $phones[] = ['number' => $num, 'type' => $p['type'] ?? null];
+            }
+        }
+        $email = $person['email'] ?? null;
+        return [
+            'id' => $person['id'] ?? null,
+            'name' => $person['name'] ?? trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] ?? '')),
+            'first_name' => $person['first_name'] ?? null,
+            'last_name' => $person['last_name'] ?? null,
+            'recommended_professional_email' => is_string($email) ? $email : null,
+            'recommended_email' => is_string($email) ? $email : null,
+            'emails' => is_string($email) && $email !== '' ? [['email' => $email]] : [],
+            'phones' => $phones,
+            'current_title' => $person['title'] ?? null,
+            'linkedin_url' => $person['linkedin_url'] ?? null,
+            'city' => $person['city'] ?? null,
+            'region' => $person['state'] ?? null,
+            'country' => $person['country'] ?? null,
+            'location' => $person['present_raw_address'] ?? null,
+            'profile_pic' => $person['photo_url'] ?? null,
+            'current_employer' => $org['name'] ?? null,
+            'current_employer_domain' => $org['primary_domain'] ?? null,
+            'current_employer_website' => $org['website_url'] ?? null,
+            'current_employer_linkedin_url' => $org['linkedin_url'] ?? null,
+            'current_employer_industry' => $org['industry'] ?? null,
+            'links' => array_filter([
+                'linkedin' => $person['linkedin_url'] ?? null,
+                'twitter' => $person['twitter_url'] ?? null,
+            ]),
+            'apollo_organization' => $org,
+        ];
+    }
+
+    /**
+     * @param array<string,mixed> $person
+     * @return array<string,mixed>
+     */
+    private function buildNormalizedPayloadFromApollo(array $person): array
+    {
+        $raw = $this->apolloPersonToRawShape($person);
+        $org = is_array($person['organization'] ?? null) ? $person['organization'] : [];
+        $sdkCompany = [
+            'name' => $org['name'] ?? null,
+            'id' => $org['id'] ?? null,
+            'domain' => $org['primary_domain'] ?? null,
+            'website' => $org['website_url'] ?? null,
+            'linkedin_url' => $org['linkedin_url'] ?? null,
+            'industry' => $org['industry'] ?? null,
+            'employee_count' => $org['estimated_num_employees'] ?? null,
+            'location' => $org['raw_address'] ?? null,
+        ];
+        $normalized = $this->buildNormalizedPayload($raw, $sdkCompany);
+        $normalized['apollo_person_id'] = $person['id'] ?? null;
+        unset($normalized['rocketreach_profile_id']);
+        return $normalized;
     }
 
     /**
@@ -1087,15 +1325,25 @@ class LeadEnrichmentService
     {
         if (!empty($contact['email'])
             || !empty($contact['linkedin_profile'])
-            || $this->normalizeTwitterHandle((string) ($contact['twitter_handle'] ?? '')) !== ''
             || (!empty($contact['first_name']) && !empty($contact['last_name']) && !empty($contact['company']))) {
+            return true;
+        }
+        if ($this->provider === EnrichmentProviders::ROCKETREACH
+            && $this->normalizeTwitterHandle((string) ($contact['twitter_handle'] ?? '')) !== '') {
             return true;
         }
         $id = (int) ($contact['id'] ?? 0);
         if ($id <= 0) {
             return false;
         }
-        return $this->collectEnrichmentLookups($id, $contact) !== [];
+        $lookups = $this->collectEnrichmentLookups($id, $contact);
+        if ($this->provider === EnrichmentProviders::APOLLO) {
+            $lookups = array_values(array_filter(
+                $lookups,
+                static fn($l) => ($l['type'] ?? '') !== 'twitter'
+            ));
+        }
+        return $lookups !== [];
     }
 
     /**

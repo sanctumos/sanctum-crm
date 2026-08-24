@@ -367,6 +367,8 @@ class Database {
 
         $settingsColumns = [
             'rocketreach_api_key' => 'VARCHAR(255)',
+            'apollo_api_key' => 'VARCHAR(255)',
+            'enrichment_provider' => "VARCHAR(32) DEFAULT 'rocketreach'",
             'default_skin_slug' => "TEXT DEFAULT 'hey'",
             'enrichment_cron_enabled' => 'INTEGER DEFAULT 0',
             'enrichment_cron_interval_minutes' => 'INTEGER DEFAULT 60',
@@ -635,6 +637,7 @@ class Database {
             'enrichment_data' => 'TEXT',
             'enrichment_raw' => 'TEXT',
             'rocketreach_profile_id' => 'INTEGER',
+            'apollo_person_id' => 'VARCHAR(80)',
             'enrichment_status' => 'VARCHAR(20) DEFAULT "pending"',
             'enrichment_attempts' => 'INTEGER DEFAULT 0',
             'enrichment_error' => 'TEXT'

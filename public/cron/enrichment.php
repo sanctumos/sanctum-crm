@@ -1,6 +1,6 @@
 <?php
 /**
- * Scheduled RocketReach enrichment cron.
+ * Scheduled lead enrichment cron (active provider: RocketReach or Apollo).
  *
  * Run from the deployed web root:
  *   php /var/www/localhost/html/cron/enrichment.php
@@ -13,6 +13,7 @@ require_once __DIR__ . '/../includes/database.php';
 require_once __DIR__ . '/../includes/LeadEnrichmentService.php';
 require_once __DIR__ . '/../includes/MockLeadEnrichmentService.php';
 require_once __DIR__ . '/../includes/EnrichmentCronService.php';
+require_once __DIR__ . '/../includes/enrichment/EnrichmentProviders.php';
 
 if (php_sapi_name() !== 'cli') {
     http_response_code(403);
@@ -20,21 +21,30 @@ if (php_sapi_name() !== 'cli') {
 }
 
 $db = Database::getInstance();
-$settings = $db->fetchOne("SELECT rocketreach_api_key FROM settings WHERE id = 1");
-$hasApiKey = !empty($settings['rocketreach_api_key']);
-$hasRocketReachClient = false;
+$settings = $db->fetchOne(
+    "SELECT rocketreach_api_key, apollo_api_key, enrichment_provider FROM settings WHERE id = 1"
+) ?: [];
+$provider = EnrichmentProviders::normalize($settings['enrichment_provider'] ?? null);
+$useRealEnrichment = false;
 
-if (class_exists('RocketReach\SDK\RocketReachClient')) {
-    try {
-        new RocketReach\SDK\RocketReachClient('test');
-        $hasRocketReachClient = true;
-    } catch (Exception $e) {
-        $hasRocketReachClient = false;
+if ($provider === EnrichmentProviders::APOLLO) {
+    $useRealEnrichment = trim((string) ($settings['apollo_api_key'] ?? '')) !== '';
+} else {
+    $rrKey = trim((string) ($settings['rocketreach_api_key'] ?? ''));
+    $hasRocketReachClient = false;
+    if ($rrKey !== '' && class_exists('RocketReach\SDK\RocketReachClient')) {
+        try {
+            new RocketReach\SDK\RocketReachClient('test');
+            $hasRocketReachClient = true;
+        } catch (Exception $e) {
+            $hasRocketReachClient = false;
+        }
     }
+    $useRealEnrichment = $rrKey !== '' && $hasRocketReachClient;
 }
 
 if (!class_exists('EnrichmentService', false)) {
-    if ($hasApiKey && $hasRocketReachClient) {
+    if ($useRealEnrichment) {
         class_alias('LeadEnrichmentService', 'EnrichmentService');
     } else {
         class_alias('MockLeadEnrichmentService', 'EnrichmentService');
