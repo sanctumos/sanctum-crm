@@ -2,7 +2,7 @@
   "openapi": "3.0.0",
   "info": {
     "title": "Sanctum CRM API",
-    "description": "MCP-ready CRM API for managing contacts, deals, and users.\n\nStock nginx (try_files only): call endpoints via /api/v1/index.php?path=/resource… with the same logical paths documented below (e.g. path=/contacts). PHP dev server with router may still use /api/v1/… URLs.",
+    "description": "MCP-ready CRM API for managing contacts, deals, and users.\n\nLead enrichment supports RocketReach or Apollo (one active provider in Settings).\nSee docs/ENRICHMENT.md.\n\nStock nginx (try_files only): call endpoints via /api/v1/index.php?path=/resource\u2026 with the same logical paths documented below (e.g. path=/contacts). PHP dev server with router may still use /api/v1/\u2026 URLs.",
     "version": "1.0.0",
     "contact": {
       "name": "Sanctum OS",
@@ -32,7 +32,10 @@
             "description": "Filter by contact type",
             "schema": {
               "type": "string",
-              "enum": ["lead", "customer"]
+              "enum": [
+                "lead",
+                "customer"
+              ]
             }
           },
           {
@@ -41,7 +44,12 @@
             "description": "Filter by contact status",
             "schema": {
               "type": "string",
-              "enum": ["new", "qualified", "active", "inactive"]
+              "enum": [
+                "new",
+                "qualified",
+                "active",
+                "inactive"
+              ]
             }
           }
         ],
@@ -230,6 +238,166 @@
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/contacts/{id}/enrich": {
+      "post": {
+        "summary": "Enrich a contact",
+        "description": "Uses the active Settings provider (RocketReach or Apollo).",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "strategy": {
+                    "type": "string",
+                    "enum": [
+                      "auto",
+                      "email",
+                      "linkedin",
+                      "name_company",
+                      "twitter"
+                    ],
+                    "default": "auto",
+                    "description": "twitter is RocketReach-only"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Enrichment outcome (enriched or skipped)"
+          },
+          "422": {
+            "description": "Enrichment failed or not found"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/contacts/{id}/enrichment-status": {
+      "get": {
+        "summary": "Get contact enrichment status",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Status payload"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/contacts/bulk-enrich": {
+      "post": {
+        "summary": "Bulk enrich contacts",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "contact_ids"
+                ],
+                "properties": {
+                  "contact_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    }
+                  },
+                  "strategy": {
+                    "type": "string",
+                    "default": "auto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Bulk enrichment results"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/enrichment/stats": {
+      "get": {
+        "summary": "Enrichment statistics",
+        "responses": {
+          "200": {
+            "description": "Aggregate stats"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/enrichment/cron": {
+      "get": {
+        "summary": "Get enrichment cron config and last run",
+        "responses": {
+          "200": {
+            "description": "Config + last_run"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update enrichment cron config (admin)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated config"
+          },
+          "403": {
+            "description": "Admin required"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
           }
         }
       }
@@ -560,11 +728,19 @@
           },
           "contact_type": {
             "type": "string",
-            "enum": ["lead", "customer"]
+            "enum": [
+              "lead",
+              "customer"
+            ]
           },
           "contact_status": {
             "type": "string",
-            "enum": ["new", "qualified", "active", "inactive"]
+            "enum": [
+              "new",
+              "qualified",
+              "active",
+              "inactive"
+            ]
           },
           "source": {
             "type": "string"
@@ -593,9 +769,33 @@
           "updated_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "enrichment_status": {
+            "type": "string",
+            "description": "enriched|failed|not_found|processing|skipped|empty"
+          },
+          "enriched_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "rocketreach_profile_id": {
+            "type": "integer",
+            "nullable": true
+          },
+          "apollo_person_id": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 80
           }
         },
-        "required": ["id", "first_name", "last_name", "contact_type", "contact_status"]
+        "required": [
+          "id",
+          "first_name",
+          "last_name",
+          "contact_type",
+          "contact_status"
+        ]
       },
       "ContactCreate": {
         "type": "object",
@@ -655,12 +855,20 @@
           },
           "contact_type": {
             "type": "string",
-            "enum": ["lead", "customer"],
+            "enum": [
+              "lead",
+              "customer"
+            ],
             "default": "lead"
           },
           "contact_status": {
             "type": "string",
-            "enum": ["new", "qualified", "active", "inactive"],
+            "enum": [
+              "new",
+              "qualified",
+              "active",
+              "inactive"
+            ],
             "default": "new"
           },
           "source": {
@@ -673,7 +881,10 @@
             "type": "string"
           }
         },
-        "required": ["first_name", "last_name"]
+        "required": [
+          "first_name",
+          "last_name"
+        ]
       },
       "ContactUpdate": {
         "type": "object",
@@ -733,11 +944,19 @@
           },
           "contact_type": {
             "type": "string",
-            "enum": ["lead", "customer"]
+            "enum": [
+              "lead",
+              "customer"
+            ]
           },
           "contact_status": {
             "type": "string",
-            "enum": ["new", "qualified", "active", "inactive"]
+            "enum": [
+              "new",
+              "qualified",
+              "active",
+              "inactive"
+            ]
           },
           "source": {
             "type": "string"
@@ -767,7 +986,14 @@
           },
           "stage": {
             "type": "string",
-            "enum": ["prospecting", "qualification", "proposal", "negotiation", "closed_won", "closed_lost"]
+            "enum": [
+              "prospecting",
+              "qualification",
+              "proposal",
+              "negotiation",
+              "closed_won",
+              "closed_lost"
+            ]
           },
           "probability": {
             "type": "integer",
@@ -793,7 +1019,13 @@
             "format": "date-time"
           }
         },
-        "required": ["id", "title", "contact_id", "stage", "probability"]
+        "required": [
+          "id",
+          "title",
+          "contact_id",
+          "stage",
+          "probability"
+        ]
       },
       "DealCreate": {
         "type": "object",
@@ -809,7 +1041,14 @@
           },
           "stage": {
             "type": "string",
-            "enum": ["prospecting", "qualification", "proposal", "negotiation", "closed_won", "closed_lost"],
+            "enum": [
+              "prospecting",
+              "qualification",
+              "proposal",
+              "negotiation",
+              "closed_won",
+              "closed_lost"
+            ],
             "default": "prospecting"
           },
           "probability": {
@@ -829,7 +1068,10 @@
             "type": "string"
           }
         },
-        "required": ["title", "contact_id"]
+        "required": [
+          "title",
+          "contact_id"
+        ]
       },
       "DealUpdate": {
         "type": "object",
@@ -845,7 +1087,14 @@
           },
           "stage": {
             "type": "string",
-            "enum": ["prospecting", "qualification", "proposal", "negotiation", "closed_won", "closed_lost"]
+            "enum": [
+              "prospecting",
+              "qualification",
+              "proposal",
+              "negotiation",
+              "closed_won",
+              "closed_lost"
+            ]
           },
           "probability": {
             "type": "integer",
@@ -885,7 +1134,10 @@
           },
           "role": {
             "type": "string",
-            "enum": ["user", "admin"]
+            "enum": [
+              "user",
+              "admin"
+            ]
           },
           "is_active": {
             "type": "boolean"
@@ -895,7 +1147,13 @@
             "format": "date-time"
           }
         },
-        "required": ["id", "username", "email", "role", "is_active"]
+        "required": [
+          "id",
+          "username",
+          "email",
+          "role",
+          "is_active"
+        ]
       },
       "UserCreate": {
         "type": "object",
@@ -919,11 +1177,18 @@
           },
           "role": {
             "type": "string",
-            "enum": ["user", "admin"],
+            "enum": [
+              "user",
+              "admin"
+            ],
             "default": "user"
           }
         },
-        "required": ["username", "email", "password"]
+        "required": [
+          "username",
+          "email",
+          "password"
+        ]
       },
       "Error": {
         "type": "object",
@@ -938,7 +1203,10 @@
             "type": "string"
           }
         },
-        "required": ["error", "code"]
+        "required": [
+          "error",
+          "code"
+        ]
       }
     },
     "responses": {
@@ -984,4 +1252,4 @@
       }
     }
   }
-} 
+}

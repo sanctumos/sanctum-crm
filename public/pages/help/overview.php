@@ -20,7 +20,7 @@
                 <p class="mb-3">Welcome to Sanctum CRM — Sanctum&rsquo;s CRM for contacts, deals, pipelines, and integrations.</p>
                 <ul class="list-unstyled">
                     <li><i class="bi bi-check text-success me-2"></i>Import contacts from CSV files</li>
-                    <li><i class="bi bi-check text-success me-2"></i>Enrich contact data with RocketReach</li>
+                    <li><i class="bi bi-check text-success me-2"></i>Enrich contact data with RocketReach or Apollo</li>
                     <li><i class="bi bi-check text-success me-2"></i>Manage deals and opportunities</li>
                     <li><i class="bi bi-check text-success me-2"></i>Set up webhooks for integrations</li>
                     <li><i class="bi bi-check text-success me-2"></i>Use the REST API for automation</li>
@@ -39,7 +39,7 @@
                     <li class="mb-2"><strong>CSV Import:</strong> Use the name splitting feature for full names</li>
                     <li class="mb-2"><strong>API Keys:</strong> Generate them in Settings for external access</li>
                     <li class="mb-2"><strong>Webhooks:</strong> Set up real-time notifications</li>
-                    <li class="mb-2"><strong>Enrichment:</strong> Configure RocketReach API key in Settings</li>
+                    <li class="mb-2"><strong>Enrichment:</strong> Pick RocketReach or Apollo and set that provider&rsquo;s API key in Settings</li>
                     <li class="mb-2"><strong>Security:</strong> Use HTTPS in production</li>
                 </ul>
             </div>
@@ -93,7 +93,7 @@
                             <div class="card-body text-center">
                                 <i class="bi bi-person-plus fs-1 text-info mb-3"></i>
                                 <h6>Lead Enrichment</h6>
-                                <p class="text-muted small">Enhance contact data with RocketReach integration</p>
+                                <p class="text-muted small">Enhance contact data via RocketReach or Apollo</p>
                                 <a href="?page=help&help_page=enrichment" class="btn btn-outline-info btn-sm">View Enrichment</a>
                             </div>
                         </div>

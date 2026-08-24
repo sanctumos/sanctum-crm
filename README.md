@@ -18,7 +18,7 @@ See [LICENSE](LICENSE) for complete details.
 - **👥 Contact Management**: Unified leads and customers with comprehensive data fields
 - **🔀 Contact Merges**: Confidence-tiered duplicate detection with inspect/accept workflow
 - **🏷️ Contact Tags & Sidecar**: Many-to-many tags plus durable enrichment facts storage
-- **✨ Enrichment Automation**: Scheduled RocketReach enrichment with per-run and daily caps
+- **✨ Enrichment Automation**: RocketReach **or** Apollo (one active provider) with scheduled cron, per-run and daily caps — see [docs/ENRICHMENT.md](docs/ENRICHMENT.md)
 - **🎨 Skin Lab**: Theme presets (hey / ledger / brutalist / obsidian) aligned with Sanctum Tasks
 - **📬 Webhook Delivery Queue**: Durable outbound webhook processing
 - **💼 Deal Pipeline**: Track sales opportunities and conversions with Kanban view

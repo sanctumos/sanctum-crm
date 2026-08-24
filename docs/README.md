@@ -13,6 +13,9 @@ Complete system documentation including:
 - Recent updates and fixes
 - Development guide
 
+### [✨ Lead Enrichment](ENRICHMENT.md)
+RocketReach and Apollo provider setup, strategies, cron, and API paths.
+
 ### [🔗 OpenAPI Specification](../public/api/openapi.json)
 Machine-readable API specification for automated tooling and code generation.
 
@@ -20,10 +23,11 @@ Machine-readable API specification for automated tooling and code generation.
 
 ## 🚀 Quick Start
 
-1. **For Users**: Start with the [Comprehensive Documentation](COMPREHENSIVE_DOCUMENTATION.md)
-2. **For Developers**: Check the API reference section in the comprehensive docs
-3. **For Integrations**: See the integration guide section with code examples
-4. **For Deployment**: Follow the installation and deployment sections
+1. **For Users**: Start with the [Comprehensive Documentation](COMPREHENSIVE_DOCUMENTATION.md) and in-app **Help → Enrichment**
+2. **For Enrichment**: Read [ENRICHMENT.md](ENRICHMENT.md)
+3. **For Developers**: Check the API reference section in the comprehensive docs + OpenAPI
+4. **For Integrations**: See the integration guide section with code examples
+5. **For Deployment**: Follow the installation and deployment sections
 
 ---
 
@@ -40,7 +44,9 @@ The comprehensive documentation is organized into these main sections:
 7. **Recent Updates & Fixes** - Latest changes and improvements
 8. **Development Guide** - Contributing and development setup
 
+Enrichment (RocketReach / Apollo) is documented in **[ENRICHMENT.md](ENRICHMENT.md)** and mirrored in the CRM Help UI.
+
 ---
 
-**Last Updated**: January 2025  
-**Version**: 1.3.0 
+**Last Updated**: August 2026  
+**Version**: 1.4.0 (Apollo enrichment provider) 

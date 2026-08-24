@@ -1,6 +1,6 @@
 <?php
 /**
- * Scheduled RocketReach enrichment orchestration.
+ * Scheduled lead enrichment orchestration (active provider: RocketReach or Apollo).
  */
 
 if (!defined('CRM_LOADED')) {

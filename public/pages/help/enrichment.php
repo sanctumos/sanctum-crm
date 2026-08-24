@@ -1,69 +1,114 @@
 <?php
 /**
  * Lead Enrichment Help Page
- * Sanctum CRM - Lead enrichment documentation
+ * Sanctum CRM - Lead enrichment documentation (RocketReach + Apollo)
  */
 ?>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h4><i class="bi bi-person-plus me-2"></i>Lead Enrichment Guide</h4>
-    <span class="badge bg-info">RocketReach Integration</span>
+    <span class="badge bg-info">RocketReach &amp; Apollo</span>
 </div>
 
 <div class="alert alert-info">
     <i class="bi bi-info-circle me-2"></i>
-    <strong>Lead Enrichment</strong> automatically enhances contact data using RocketReach's database of professional information.
+    <strong>Lead Enrichment</strong> fills in professional contact details from an external data provider.
+    You pick <strong>one active provider</strong> in Settings: <strong>RocketReach</strong> or <strong>Apollo</strong>.
+    Both keys can be stored; only the selected provider is used for Enrich buttons, bulk runs, cron, and the API.
 </div>
 
 <div class="row">
     <div class="col-md-8">
         <div class="card">
             <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="bi bi-gear me-2"></i>Setup & Configuration</h5>
+                <h5 class="mb-0"><i class="bi bi-gear me-2"></i>Setup &amp; Configuration</h5>
             </div>
             <div class="card-body">
-                <h6>Step 1: Get RocketReach API Key</h6>
-                <ol>
-                    <li>Visit <a href="https://rocketreach.co" target="_blank">RocketReach.co</a></li>
-                    <li>Sign up for an account</li>
-                    <li>Navigate to API settings</li>
-                    <li>Generate your API key</li>
-                </ol>
-                
+                <h6>Step 1: Get an API key</h6>
+                <ul>
+                    <li><strong>RocketReach:</strong> <a href="https://rocketreach.co" target="_blank" rel="noopener">rocketreach.co</a> → account → API settings → create a key.</li>
+                    <li><strong>Apollo:</strong> <a href="https://apollo.io" target="_blank" rel="noopener">apollo.io</a> → Settings → Integrations → API.
+                        People enrichment needs a key with <code>people/match</code> (or master) access — trial/org-only keys cannot enrich people.</li>
+                </ul>
+
                 <h6 class="mt-4">Step 2: Configure in CRM</h6>
                 <ol>
-                    <li>Go to Settings page</li>
-                    <li>Find "RocketReach Lead Enrichment" section</li>
-                    <li>Enable enrichment toggle</li>
-                    <li>Enter your API key</li>
-                    <li>Save settings</li>
+                    <li>Open <strong>Settings</strong>.</li>
+                    <li>Find the <strong>Lead Enrichment</strong> section.</li>
+                    <li>Choose the active provider (RocketReach or Apollo).</li>
+                    <li>Paste the matching API key (you may store both keys for later switching).</li>
+                    <li>Use <strong>Test Apollo</strong> (when Apollo is selected) to verify connectivity.</li>
+                    <li>Save settings.</li>
                 </ol>
-                
-                <div class="alert alert-warning mt-3">
+
+                <div class="alert alert-warning mt-3 mb-0">
                     <i class="bi bi-exclamation-triangle me-2"></i>
-                    <strong>Important:</strong> Keep your API key secure and don't share it publicly.
+                    <strong>Important:</strong> Keep API keys secret. Do not put them in git, Tasks, or public docs.
                 </div>
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-4">
         <div class="card">
             <div class="card-header bg-success text-white">
                 <h5 class="mb-0"><i class="bi bi-hdd-stack me-2"></i>Enrichment Data</h5>
             </div>
             <div class="card-body">
-                <h6>Available Information:</h6>
-                <ul class="list-unstyled">
+                <h6>Typical fields (provider-dependent):</h6>
+                <ul class="list-unstyled mb-0">
                     <li class="mb-2"><i class="bi bi-check text-success me-2"></i>Professional email</li>
                     <li class="mb-2"><i class="bi bi-check text-success me-2"></i>Phone numbers</li>
-                    <li class="mb-2"><i class="bi bi-check text-success me-2"></i>Social profiles</li>
+                    <li class="mb-2"><i class="bi bi-check text-success me-2"></i>Social / LinkedIn profiles</li>
                     <li class="mb-2"><i class="bi bi-check text-success me-2"></i>Company information</li>
                     <li class="mb-2"><i class="bi bi-check text-success me-2"></i>Job title</li>
-                    <li class="mb-2"><i class="bi bi-check text-success me-2"></i>Location data</li>
-                    <li class="mb-2"><i class="bi bi-check text-success me-2"></i>Education history</li>
-                    <li class="mb-2"><i class="bi bi-check text-success me-2"></i>Work experience</li>
+                    <li class="mb-2"><i class="bi bi-check text-success me-2"></i>Location</li>
+                    <li class="mb-2"><i class="bi bi-check text-success me-2"></i>Provider person / profile IDs</li>
                 </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-diagram-3 me-2"></i>Providers compared</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Topic</th>
+                                <th>RocketReach</th>
+                                <th>Apollo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Match inputs</td>
+                                <td>Email, LinkedIn, name + company, Twitter (auto)</td>
+                                <td>Email, LinkedIn, name + company (no Twitter)</td>
+                            </tr>
+                            <tr>
+                                <td>Stored provider ID</td>
+                                <td><code>rocketreach_profile_id</code></td>
+                                <td><code>apollo_person_id</code></td>
+                            </tr>
+                            <tr>
+                                <td>Settings key column</td>
+                                <td><code>rocketreach_api_key</code></td>
+                                <td><code>apollo_api_key</code></td>
+                            </tr>
+                            <tr>
+                                <td>Active switch</td>
+                                <td colspan="2"><code>settings.enrichment_provider</code> = <code>rocketreach</code> or <code>apollo</code></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -80,32 +125,38 @@
                     <div class="col-md-6">
                         <h6>Manual Enrichment</h6>
                         <ol>
-                            <li>Go to Contacts page</li>
-                            <li>Find the contact you want to enrich</li>
-                            <li>Click "Enrich" button</li>
-                            <li>Wait for enrichment to complete</li>
-                            <li>Review enriched data</li>
+                            <li>Open Contacts (or a contact detail page).</li>
+                            <li>Click <strong>Enrich</strong> on the contact.</li>
+                            <li>Wait for the run to finish.</li>
+                            <li>Review stored enrichment on the contact.</li>
                         </ol>
-                        
+
                         <h6 class="mt-4">Bulk Enrichment</h6>
                         <ol>
-                            <li>Select multiple contacts</li>
-                            <li>Click "Bulk Actions"</li>
-                            <li>Choose "Enrich Selected"</li>
-                            <li>Monitor progress</li>
-                            <li>Review results</li>
+                            <li>Select multiple contacts.</li>
+                            <li>Use bulk actions → enrich selected.</li>
+                            <li>Monitor outcomes (enriched / not found / failed).</li>
                         </ol>
+
+                        <h6 class="mt-4">Scheduled cron</h6>
+                        <p class="mb-0">When cron is enabled in Settings, <code>cron/enrichment.php</code> uses the <strong>active</strong> provider and the same per-run / daily caps.</p>
                     </div>
                     <div class="col-md-6">
-                        <h6>API Enrichment</h6>
-                        <p>Use the API to enrich contacts programmatically:</p>
-                        <pre class="bg-light p-2"><code>POST /api/v1/enrichment/enrich
-{
-  "contact_id": 123
-}</code></pre>
-                        
-                        <h6 class="mt-3">Check Enrichment Status</h6>
-                        <pre class="bg-light p-2"><code>GET /api/v1/enrichment/status</code></pre>
+                        <h6>API — enrich one contact</h6>
+                        <p class="small text-muted">Stock nginx: use <code>index.php?path=…</code>. Paths below are logical.</p>
+                        <pre class="bg-light p-2 small"><code>POST /api/v1/contacts/{id}/enrich
+Authorization: Bearer YOUR_KEY
+Content-Type: application/json
+
+{"strategy":"auto"}</code></pre>
+
+                        <h6 class="mt-3">API — status &amp; bulk</h6>
+                        <pre class="bg-light p-2 small mb-0"><code>GET  /api/v1/contacts/{id}/enrichment-status
+POST /api/v1/contacts/bulk-enrich
+     {"contact_ids":[1,2,3],"strategy":"auto"}
+
+GET  /api/v1/enrichment/stats
+GET|PUT /api/v1/enrichment/cron   (admin for writes)</code></pre>
                     </div>
                 </div>
             </div>
@@ -117,45 +168,39 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-header bg-warning text-dark">
-                <h5 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Limitations & Costs</h5>
+                <h5 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Limits &amp; costs</h5>
             </div>
             <div class="card-body">
-                <h6>RocketReach Limits</h6>
+                <h6>Provider plans</h6>
                 <ul>
-                    <li>API calls are limited by your plan</li>
-                    <li>Each enrichment uses 1 credit</li>
-                    <li>Failed lookups don't consume credits</li>
-                    <li>Rate limits apply</li>
+                    <li>Credits / rate limits follow your RocketReach or Apollo plan.</li>
+                    <li>CRM cron caps (max per run / per day) limit how many contacts we attempt.</li>
+                    <li>Not-found lookups still count against some provider plans — check their docs.</li>
                 </ul>
-                
-                <h6 class="mt-3">Data Quality</h6>
-                <ul>
-                    <li>Not all contacts can be enriched</li>
-                    <li>Data accuracy varies by source</li>
-                    <li>Some information may be outdated</li>
-                    <li>Privacy settings may limit data</li>
+
+                <h6 class="mt-3">Data quality</h6>
+                <ul class="mb-0">
+                    <li>Not every contact is in the provider database.</li>
+                    <li>Accuracy and freshness vary.</li>
+                    <li>Privacy / compliance settings can hide fields.</li>
                 </ul>
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-6">
         <div class="card">
             <div class="card-header bg-info text-white">
-                <h5 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Enrichment Statistics</h5>
+                <h5 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Statistics &amp; source</h5>
             </div>
             <div class="card-body">
-                <h6>Track Your Usage</h6>
-                <p>Monitor enrichment activity and success rates:</p>
+                <p>Contact rows store <code>enrichment_status</code>, <code>enriched_at</code>, and provider source in enrichment sidecar / raw JSON.</p>
                 <ul>
-                    <li>Total contacts enriched</li>
-                    <li>Success rate percentage</li>
-                    <li>API credits remaining</li>
-                    <li>Recent enrichment activity</li>
+                    <li>Total enriched / failed / not found (via stats API and UI)</li>
+                    <li>Active provider used for the last successful enrich</li>
+                    <li>Cron last-run summary in Settings</li>
                 </ul>
-                
-                <h6 class="mt-3">View Statistics</h6>
-                <pre class="bg-light p-2"><code>GET /api/v1/enrichment/stats</code></pre>
+                <pre class="bg-light p-2 mb-0"><code>GET /api/v1/enrichment/stats</code></pre>
             </div>
         </div>
     </div>
@@ -170,62 +215,22 @@
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-6">
-                        <h6>Common Issues</h6>
+                        <h6>Common issues</h6>
                         <ul>
-                            <li><strong>API Key Invalid:</strong> Check key in settings</li>
-                            <li><strong>No Results Found:</strong> Contact not in database</li>
-                            <li><strong>Rate Limited:</strong> Wait and try again</li>
-                            <li><strong>Enrichment Disabled:</strong> Check settings</li>
+                            <li><strong>Wrong provider:</strong> Settings → active provider must match the key you expect.</li>
+                            <li><strong>Apollo 403 / inaccessible:</strong> Key lacks people match scope — use a master or people-enabled key.</li>
+                            <li><strong>API key invalid:</strong> Re-paste key for the active provider; save; retest.</li>
+                            <li><strong>No results:</strong> Add email or LinkedIn; name + company helps.</li>
+                            <li><strong>Rate limited (429):</strong> Wait; lower cron caps; retry later.</li>
                         </ul>
                     </div>
                     <div class="col-md-6">
-                        <h6>Best Practices</h6>
+                        <h6>Best practices</h6>
                         <ul>
-                            <li>Enrich contacts with basic info first</li>
-                            <li>Use company name for better results</li>
-                            <li>Check enrichment status regularly</li>
-                            <li>Monitor API usage and costs</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="row mt-4">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header bg-success text-white">
-                <h5 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Tips for Better Results</h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-4">
-                        <h6>Contact Information</h6>
-                        <ul>
-                            <li>Include full name</li>
-                            <li>Add company name</li>
-                            <li>Provide job title</li>
-                            <li>Include location</li>
-                        </ul>
-                    </div>
-                    <div class="col-md-4">
-                        <h6>Enrichment Strategy</h6>
-                        <ul>
-                            <li>Start with high-value contacts</li>
-                            <li>Enrich in batches</li>
-                            <li>Review results before saving</li>
-                            <li>Update existing data carefully</li>
-                        </ul>
-                    </div>
-                    <div class="col-md-4">
-                        <h6>Data Management</h6>
-                        <ul>
-                            <li>Keep original data</li>
-                            <li>Track enrichment source</li>
-                            <li>Regular data validation</li>
-                            <li>Monitor data quality</li>
+                            <li>Start with contacts that have email or LinkedIn.</li>
+                            <li>Use cron caps so you do not burn the whole credit pool overnight.</li>
+                            <li>Switch providers deliberately — do not assume both run at once.</li>
+                            <li>Review raw enrichment JSON on the contact when debugging mismatches.</li>
                         </ul>
                     </div>
                 </div>

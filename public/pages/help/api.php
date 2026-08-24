@@ -175,19 +175,29 @@ if (!function_exists('crm_help_api_url')) {
                         </h2>
                         <div id="enrichmentCollapse" class="accordion-collapse collapse" data-bs-parent="#apiEndpoints">
                             <div class="accordion-body">
-                                <h6>POST /api/v1/enrichment/enrich</h6>
-                                <p>Enrich a contact</p>
+                                <p class="small text-muted">Uses the <strong>active</strong> Settings provider (RocketReach or Apollo). Stock nginx: <code>index.php?path=…</code>.</p>
+
+                                <h6>POST /api/v1/contacts/{id}/enrich</h6>
+                                <p>Enrich one contact (<code>strategy</code>: <code>auto</code>, <code>email</code>, <code>linkedin</code>, <code>name_company</code>; RocketReach also supports <code>twitter</code>)</p>
                                 <pre class="bg-light p-2"><code>curl -X POST \
   -H "Authorization: Bearer YOUR_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"contact_id":123}' \
-  "<?php echo htmlspecialchars(crm_help_api_url('enrichment/enrich')); ?>"</code></pre>
-                                
+  -d '{"strategy":"auto"}' \
+  "<?php echo htmlspecialchars(crm_help_api_url('contacts/123/enrich')); ?>"</code></pre>
+
+                                <h6 class="mt-3">GET /api/v1/contacts/{id}/enrichment-status</h6>
+                                <p>Per-contact enrichment status</p>
+
+                                <h6 class="mt-3">POST /api/v1/contacts/bulk-enrich</h6>
+                                <p>Body: <code>{"contact_ids":[1,2],"strategy":"auto"}</code></p>
+
                                 <h6 class="mt-3">GET /api/v1/enrichment/stats</h6>
-                                <p>Get enrichment statistics</p>
-                                
-                                <h6 class="mt-3">GET /api/v1/enrichment/status</h6>
-                                <p>Check enrichment service status</p>
+                                <p>Aggregate enrichment statistics</p>
+                                <pre class="bg-light p-2"><code>curl -H "Authorization: Bearer YOUR_KEY" \
+  "<?php echo htmlspecialchars(crm_help_api_url('enrichment/stats')); ?>"</code></pre>
+
+                                <h6 class="mt-3">GET|PUT /api/v1/enrichment/cron</h6>
+                                <p>Cron config (admin required for writes)</p>
                             </div>
                         </div>
                     </div>

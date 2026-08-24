@@ -195,34 +195,61 @@
                 <?php
                 try {
                     $db = Database::getInstance();
-                    $settings = $db->fetchOne("SELECT rocketreach_api_key FROM settings WHERE id = 1");
-                    $apiKeySet = !empty($settings['rocketreach_api_key']);
-                    $enrichmentEnabled = $apiKeySet; // Auto-detect based on API key presence
+                    $settings = $db->fetchOne(
+                        "SELECT rocketreach_api_key, apollo_api_key, enrichment_provider FROM settings WHERE id = 1"
+                    ) ?: [];
+                    $provider = strtolower(trim((string) ($settings['enrichment_provider'] ?? 'rocketreach')));
+                    if ($provider !== 'apollo') {
+                        $provider = 'rocketreach';
+                    }
+                    $rrKeySet = !empty($settings['rocketreach_api_key']);
+                    $apolloKeySet = !empty($settings['apollo_api_key']);
+                    $activeKeySet = $provider === 'apollo' ? $apolloKeySet : $rrKeySet;
                 } catch (Exception $e) {
-                    $enrichmentEnabled = 0;
-                    $apiKeySet = false;
+                    $provider = 'rocketreach';
+                    $rrKeySet = false;
+                    $apolloKeySet = false;
+                    $activeKeySet = false;
                 }
                 ?>
                 <table class="table table-sm">
                     <tr>
-                        <td><strong>RocketReach Enrichment:</strong></td>
+                        <td><strong>Active enrichment provider:</strong></td>
                         <td>
-                            <?php if ($enrichmentEnabled && $apiKeySet): ?>
-                                <span class="badge bg-success">Enabled</span>
-                            <?php elseif ($apiKeySet): ?>
-                                <span class="badge bg-warning">Configured but Disabled</span>
+                            <?php if ($provider === 'apollo'): ?>
+                                <span class="badge bg-primary">Apollo</span>
                             <?php else: ?>
-                                <span class="badge bg-danger">Not Configured</span>
+                                <span class="badge bg-primary">RocketReach</span>
                             <?php endif; ?>
                         </td>
                     </tr>
                     <tr>
-                        <td><strong>API Key Status:</strong></td>
+                        <td><strong>Active provider key:</strong></td>
                         <td>
-                            <?php if ($apiKeySet): ?>
+                            <?php if ($activeKeySet): ?>
                                 <span class="badge bg-success">Set</span>
                             <?php else: ?>
                                 <span class="badge bg-danger">Not Set</span>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>RocketReach API key:</strong></td>
+                        <td>
+                            <?php if ($rrKeySet): ?>
+                                <span class="badge bg-success">Set</span>
+                            <?php else: ?>
+                                <span class="badge bg-secondary">Not Set</span>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Apollo API key:</strong></td>
+                        <td>
+                            <?php if ($apolloKeySet): ?>
+                                <span class="badge bg-success">Set</span>
+                            <?php else: ?>
+                                <span class="badge bg-secondary">Not Set</span>
                             <?php endif; ?>
                         </td>
                     </tr>

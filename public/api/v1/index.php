@@ -33,28 +33,34 @@ require_once __DIR__ . '/handlers/webhooks.php';
 require_once __DIR__ . '/handlers/reports.php';
 require_once __DIR__ . '/handlers/merges.php';
 
-// Auto-detect if RocketReach is available based on API key presence and client availability
+// Resolve EnrichmentService: real LeadEnrichmentService when the *active* provider has a key
+require_once __DIR__ . '/../../includes/enrichment/EnrichmentProviders.php';
 $db = Database::getInstance();
-$settings = $db->fetchOne("SELECT rocketreach_api_key FROM settings WHERE id = 1");
-$hasApiKey = !empty($settings['rocketreach_api_key']);
+$settings = $db->fetchOne(
+    "SELECT rocketreach_api_key, apollo_api_key, enrichment_provider FROM settings WHERE id = 1"
+) ?: [];
+$provider = EnrichmentProviders::normalize($settings['enrichment_provider'] ?? null);
+$useRealEnrichment = false;
 
-// Check if RocketReach client is available
-$hasRocketReachClient = false;
-if (class_exists('RocketReach\SDK\RocketReachClient')) {
-    try {
-        // Test if we can actually instantiate the client
-        $testClient = new RocketReach\SDK\RocketReachClient('test');
-        $hasRocketReachClient = true;
-    } catch (Exception $e) {
-        $hasRocketReachClient = false;
+if ($provider === EnrichmentProviders::APOLLO) {
+    $useRealEnrichment = trim((string) ($settings['apollo_api_key'] ?? '')) !== '';
+} else {
+    $rrKey = trim((string) ($settings['rocketreach_api_key'] ?? ''));
+    $hasRocketReachClient = false;
+    if ($rrKey !== '' && class_exists('RocketReach\SDK\RocketReachClient')) {
+        try {
+            new RocketReach\SDK\RocketReachClient('test');
+            $hasRocketReachClient = true;
+        } catch (Exception $e) {
+            $hasRocketReachClient = false;
+        }
     }
+    $useRealEnrichment = $rrKey !== '' && $hasRocketReachClient;
 }
 
-if ($hasApiKey && $hasRocketReachClient) {
-    // Use real RocketReach service when API key is present and client is available
+if ($useRealEnrichment) {
     class_alias('LeadEnrichmentService', 'EnrichmentService');
 } else {
-    // Use mock service when no API key is configured or client is not available
     class_alias('MockLeadEnrichmentService', 'EnrichmentService');
 }
 

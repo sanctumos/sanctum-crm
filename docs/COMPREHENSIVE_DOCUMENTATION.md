@@ -538,6 +538,42 @@ PUT /contacts/{id}
 DELETE /contacts/{id}
 ```
 
+### Enrichment API
+
+Lead enrichment uses the **active provider** from Settings (`rocketreach` or `apollo`). Full guide: [ENRICHMENT.md](ENRICHMENT.md).
+
+On stock nginx, call via `/api/v1/index.php?path=/contacts/…` (same pattern as other routes).
+
+#### Enrich one contact
+```http
+POST /contacts/{id}/enrich
+```
+```json
+{"strategy": "auto"}
+```
+Strategies: `auto`, `email`, `linkedin`, `name_company` (RocketReach also: `twitter`).
+
+#### Enrichment status
+```http
+GET /contacts/{id}/enrichment-status
+```
+
+#### Bulk enrich
+```http
+POST /contacts/bulk-enrich
+```
+```json
+{"contact_ids": [1, 2, 3], "strategy": "auto"}
+```
+
+#### Stats & cron
+```http
+GET /enrichment/stats
+GET /enrichment/cron
+PUT /enrichment/cron
+```
+Cron writes require an admin API key.
+
 ### Deals API
 
 #### List Deals
@@ -1029,6 +1065,12 @@ Check logs for detailed error information.
 ---
 
 ## 🆕 Recent Updates & Fixes
+
+### Apollo enrichment provider (feature/apollo-enrichment)
+- ✅ **Dual providers** — RocketReach or Apollo via `settings.enrichment_provider`
+- ✅ **Apollo client** — people/match + org enrich; Settings Test Apollo
+- ✅ **Cron / API** — honor active provider key (not RocketReach-only)
+- ✅ **Docs** — [ENRICHMENT.md](ENRICHMENT.md), in-app Help → Enrichment, OpenAPI enrichment paths
 
 ### First Boot Configuration System (v2.0.0)
 - ✅ **Intelligent Installation Wizard** - 5-step guided setup process
