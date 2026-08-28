@@ -59,6 +59,7 @@ class TestRunner {
             'WebhookQueueTest.php' => 'WebhookQueueTest',
             'MigrationRunnerTest.php' => 'MigrationRunnerTest',
             'LayoutTest.php' => 'LayoutTest',
+            'ContactsListPaginationTest.php' => 'ContactsListPaginationTest',
             'LeadEnrichmentOutcomeTest.php' => 'LeadEnrichmentOutcomeTest',
             'ConfigManagerTest.php' => 'ConfigManagerTest',
             // InstallationManagerTest / EnvironmentDetectorTest are PHPUnit-style (no runAllTests)

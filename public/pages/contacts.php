@@ -7,6 +7,7 @@
 // Get database instance
 $db = Database::getInstance();
 require_once __DIR__ . '/../includes/ContactTagService.php';
+require_once __DIR__ . '/../includes/ContactsListPagination.php';
 $tagService = new ContactTagService($db);
 
 // Handle actions
@@ -27,30 +28,14 @@ if (isset($_GET['view'])) {
 }
 $view_mode = $_SESSION['contacts_view_mode'] ?? 'cards'; // Default to cards view
 
-// Detect if filters are being applied (any filter parameter is present in URL)
-// This is used to reset to page 1 only when filters are first applied, not when paginating
-$filters_applied = !empty($type_filter) || !empty($status_filter) || !empty($enrichment_filter) || !empty($source_filter) || $tag_filter !== '';
-
 // Handle pagination with session persistence
 if (isset($_GET['per_page'])) {
     $_SESSION['contacts_per_page'] = (int)$_GET['per_page'];
 }
 $per_page = $_SESSION['contacts_per_page'] ?? 100; // Default to 100
 
-// Use page_num from URL if present, otherwise reset to page 1 if filters are being applied
-if (isset($_GET['page_num'])) {
-    // Always respect page_num from URL, even with filters
-    // This allows pagination to work correctly when filters are active
-    $page = (int)$_GET['page_num'];
-} elseif ($filters_applied) {
-    // Filters are being applied but no page_num, reset to page 1
-    $page = 1;
-} else {
-    // No filters and no page_num, default to page 1
-    $page = 1;
-}
-$page = max(1, $page); // Ensure page is at least 1
-$offset = ($page - 1) * $per_page;
+// page_num in the URL always wins when paginating with filters active (GitHub #13)
+$page = ContactsListPagination::resolvePage($_GET);
 
 // Build query
 $where = "1=1";
@@ -94,7 +79,9 @@ $count_sql = "SELECT COUNT(*) as total FROM contacts WHERE $where";
 $count_params = $params; // Copy params for count query
 $total_result = $db->fetchOne($count_sql, $count_params);
 $total_contacts = $total_result['total'] ?? 0;
-$total_pages = ceil($total_contacts / $per_page);
+$total_pages = (int) ceil($total_contacts / $per_page);
+$page = ContactsListPagination::capPage($page, $total_pages);
+$offset = ($page - 1) * $per_page;
 
 // Get contacts with pagination
 $sql = "SELECT * FROM contacts WHERE $where ORDER BY created_at DESC LIMIT ? OFFSET ?";
@@ -261,40 +248,18 @@ renderPageHeader('Contacts', 'Leads and customers', ob_get_clean());
                     <ul class="pagination justify-content-end mb-0">
                         <!-- Previous button -->
                         <?php
-                        // Build pagination params from current filters and view mode
-                        // This ensures only relevant, non-empty parameters are included
-                        $pagination_params = [];
-                        $pagination_params['page'] = 'contacts'; // Ensure page parameter is set
-                        
-                        // Preserve view mode
-                        if ($view_mode) {
-                            $pagination_params['view'] = $view_mode;
-                        }
-                        
-                        // Preserve filter parameters (only if they have non-empty values)
-                        if (!empty($type_filter) && $type_filter !== '') {
-                            $pagination_params['type'] = $type_filter;
-                        }
-                        if (!empty($status_filter) && $status_filter !== '') {
-                            $pagination_params['status'] = $status_filter;
-                        }
-                        if (!empty($enrichment_filter) && $enrichment_filter !== '') {
-                            $pagination_params['enrichment_status'] = $enrichment_filter;
-                        }
-                        // Special handling for 'null' source filter to ensure it's preserved if explicitly set
-                        if ($source_filter === 'null') {
-                            $pagination_params['source'] = 'null';
-                        } elseif (!empty($source_filter) && $source_filter !== '') {
-                            $pagination_params['source'] = $source_filter;
-                        }
-                        if ($tag_filter !== '') {
-                            $pagination_params['tag'] = $tag_filter;
-                        }
-                        
-                        // Preserve per_page if set and valid
-                        if (isset($_GET['per_page']) && !empty($_GET['per_page'])) {
-                            $pagination_params['per_page'] = (int)$_GET['per_page'];
-                        }
+                        $perPageFromQuery = (isset($_GET['per_page']) && $_GET['per_page'] !== '')
+                            ? (int) $_GET['per_page']
+                            : null;
+                        $pagination_params = ContactsListPagination::buildPaginationParams(
+                            $view_mode,
+                            $type_filter,
+                            $status_filter,
+                            $enrichment_filter,
+                            $source_filter,
+                            $tag_filter,
+                            $perPageFromQuery
+                        );
                         ?>
                         <li class="page-item <?php echo $page <= 1 ? 'disabled' : ''; ?>">
                             <a class="page-link" href="/index.php?<?php echo http_build_query(array_merge($pagination_params, ['page_num' => max(1, $page - 1)])); ?>">

@@ -1066,7 +1066,7 @@ Check logs for detailed error information.
 
 ## 🆕 Recent Updates & Fixes
 
-### Apollo enrichment provider (feature/apollo-enrichment)
+### Apollo enrichment provider (`dev` branch → `dev.crm.soletigre.com`; prod on `main`)
 - ✅ **Dual providers** — RocketReach or Apollo via `settings.enrichment_provider`
 - ✅ **Apollo client** — people/match + org enrich; Settings Test Apollo
 - ✅ **Cron / API** — honor active provider key (not RocketReach-only)
