@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
 """
-E2E smoke for Sole Tigre CRM dev — common pages + len-bridge routes.
+E2E smoke for Sanctum CRM + overlays — common pages + len-bridge routes.
 
 Usage:
   python3 tools/e2e_dev_smoke.py
-  python3 tools/e2e_dev_smoke.py --base https://dev.crm.soletigre.com
+  python3 tools/e2e_dev_smoke.py --profile soletigre
+  python3 tools/e2e_dev_smoke.py --profile dsc --base https://dev.crm.decisionsciencecorp.com
+  python3 tools/e2e_dev_smoke.py --matrix   # Sole Tigre + DSC when bases resolve
 
-Requires admin API key (Bearer) — reads from dev DB on multihost via SSH,
-or pass CRM_E2E_API_KEY in env.
+Auth: CRM_E2E_API_KEY, or SSH multihost SQLite for known hosts, or ~/.ssh/dsc-crm-api.pass.
 """
 from __future__ import annotations
 
 import argparse
 import json
 import os
-import re
 import subprocess
 import sys
 import urllib.error
@@ -23,9 +23,23 @@ import urllib.request
 from dataclasses import dataclass, field
 
 
-DEFAULT_BASE = "https://dev.crm.soletigre.com"
 MULTIHOST = "64.95.10.156"
-DEV_DB = "/var/www/dev.crm.soletigre.com/db/crm.db"
+
+PROFILES = {
+    "soletigre": {
+        "base": "https://dev.crm.soletigre.com",
+        "db": "/var/www/dev.crm.soletigre.com/db/crm.db",
+        "poll_file": "/var/www/dev.crm.soletigre.com/db/len_bridge_poll_api_key.txt",
+        "brand_name": "Sole Tigre sCRM",
+    },
+    "dsc": {
+        "base": "https://dev.crm.decisionsciencecorp.com",
+        "db": "/var/www/dev.crm.decisionsciencecorp.com/db/crm.db",
+        "poll_file": "/var/www/dev.crm.decisionsciencecorp.com/db/len_bridge_poll_api_key.txt",
+        "brand_name": "Decision Science Corp CRM",
+        "api_pass": os.path.expanduser("~/.ssh/dsc-crm-api.pass"),
+    },
+}
 
 
 @dataclass
@@ -63,7 +77,7 @@ class Report:
         return 1 if fails else 0
 
 
-def fetch_api_key_via_ssh() -> str:
+def _ssh(remote_cmd: str) -> str:
     cmd = [
         "sshpass",
         "-f",
@@ -72,26 +86,43 @@ def fetch_api_key_via_ssh() -> str:
         "-o",
         "StrictHostKeyChecking=no",
         f"root@{MULTIHOST}",
-        f"sqlite3 {DEV_DB} \"SELECT api_key FROM users WHERE username='rizzn' AND is_active=1 LIMIT 1;\"",
-    ]
-    out = subprocess.check_output(cmd, text=True, stderr=subprocess.DEVNULL).strip()
-    if not out:
-        raise RuntimeError("Could not load rizzn api_key from dev DB")
-    return out
-
-
-def fetch_poll_key_via_ssh() -> str:
-    cmd = [
-        "sshpass",
-        "-f",
-        os.path.expanduser("~/.ssh/multihost.pass"),
-        "ssh",
-        "-o",
-        "StrictHostKeyChecking=no",
-        f"root@{MULTIHOST}",
-        "cat /var/www/dev.crm.soletigre.com/db/len_bridge_poll_api_key.txt",
+        remote_cmd,
     ]
     return subprocess.check_output(cmd, text=True, stderr=subprocess.DEVNULL).strip()
+
+
+def fetch_api_key(profile: dict) -> str:
+    if os.environ.get("CRM_E2E_API_KEY"):
+        return os.environ["CRM_E2E_API_KEY"]
+    pass_file = profile.get("api_pass")
+    if pass_file and os.path.isfile(pass_file):
+        env: dict[str, str] = {}
+        for line in open(pass_file, encoding="utf-8"):
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, v = line.split("=", 1)
+            env[k.strip()] = v.strip().strip("\"'")
+        key = env.get("DSC_CRM_API_KEY") or env.get("CRM_API_KEY") or ""
+        if key:
+            return key
+    db = profile.get("db")
+    if db:
+        out = _ssh(
+            f"sqlite3 {db} \"SELECT api_key FROM users WHERE username='rizzn' AND is_active=1 LIMIT 1;\""
+        )
+        if out:
+            return out
+    raise RuntimeError("Could not resolve CRM API key (env / pass file / multihost DB)")
+
+
+def fetch_poll_key(profile: dict) -> str:
+    if os.environ.get("CRM_LEN_POLL_KEY"):
+        return os.environ["CRM_LEN_POLL_KEY"]
+    poll_file = profile.get("poll_file")
+    if not poll_file:
+        raise RuntimeError("No poll key path for profile")
+    return _ssh(f"cat {poll_file}")
 
 
 def http(
@@ -143,16 +174,12 @@ def post_form(report: Report, name: str, url: str, fields: dict, headers: dict) 
     http(report, name, "POST", url, headers=h, data=body, expect_status=200, body_check="Settings")
 
 
-def main() -> int:
-    p = argparse.ArgumentParser(description="CRM dev E2E smoke")
-    p.add_argument("--base", default=os.environ.get("CRM_E2E_BASE", DEFAULT_BASE))
-    args = p.parse_args()
-    base = args.base.rstrip("/")
+def run_smoke(base: str, profile: dict) -> int:
     report = Report(base=base)
-
-    api_key = os.environ.get("CRM_E2E_API_KEY") or fetch_api_key_via_ssh()
-    poll_key = os.environ.get("CRM_LEN_POLL_KEY") or fetch_poll_key_via_ssh()
+    api_key = fetch_api_key(profile)
+    poll_key = fetch_poll_key(profile)
     auth = {"Authorization": f"Bearer {api_key}"}
+    brand = profile.get("brand_name") or "Sanctum CRM"
 
     # Public / unauthenticated
     http(report, "login page", "GET", f"{base}/login.php", expect_status=200, body_check="login")
@@ -241,12 +268,12 @@ def main() -> int:
         auth,
     )
 
-    # Branding save
+    # Branding save — keep overlay brand name for that host
     post_form(
         report,
         "settings save branding",
         f"{base}/index.php?page=settings",
-        {"action": "save_branding", "app_name": "Sole Tigre sCRM"},
+        {"action": "save_branding", "app_name": brand},
         auth,
     )
 
@@ -312,13 +339,63 @@ def main() -> int:
         expect_status=200,
         json_ok=True,
     )
+    http(
+        report,
+        "crm api contact tags catalog",
+        "GET",
+        f"{base}/api/v1/index.php?path=/contacts/tags",
+        headers=auth,
+        expect_status=200,
+        json_ok=True,
+    )
 
     # Len session routes work with CRM API key (same as logged-in user)
     for action in ["user_session", "history"]:
         req_url = f"{base}/len-bridge/api/v1/index.php?action={action}"
         http(report, f"len {action}", "GET", req_url, headers=auth, expect_status=200, json_ok=True)
 
+    print(f"\n=== smoke {base} ===")
     return report.print_summary()
+
+
+def host_resolves(url: str) -> bool:
+    try:
+        req = urllib.request.Request(url, method="GET")
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            return resp.getcode() < 500
+    except Exception:
+        return False
+
+
+def main() -> int:
+    p = argparse.ArgumentParser(description="CRM overlay E2E smoke (Sole Tigre + DSC)")
+    p.add_argument("--profile", choices=sorted(PROFILES), default=os.environ.get("CRM_E2E_PROFILE", "soletigre"))
+    p.add_argument("--base", default=os.environ.get("CRM_E2E_BASE"))
+    p.add_argument(
+        "--matrix",
+        action="store_true",
+        help="Run soletigre + dsc profiles (skips host that does not resolve)",
+    )
+    args = p.parse_args()
+
+    if args.matrix:
+        rc = 0
+        for name, profile in PROFILES.items():
+            base = profile["base"]
+            if not host_resolves(f"{base}/login.php"):
+                print(f"SKIP {name}: {base} not reachable")
+                continue
+            print(f"\n######## PROFILE {name} ########")
+            try:
+                rc |= run_smoke(base, profile)
+            except Exception as e:
+                print(f"FAIL {name}: {e}")
+                rc = 1
+        return rc
+
+    profile = dict(PROFILES[args.profile])
+    base = (args.base or profile["base"]).rstrip("/")
+    return run_smoke(base, profile)
 
 
 if __name__ == "__main__":
