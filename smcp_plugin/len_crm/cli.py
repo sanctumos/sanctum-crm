@@ -119,9 +119,27 @@ def _base_url() -> str:
     return os.getenv("CRM_API_BASE_URL", os.getenv("CRM_LEN_CRM_API_BASE", "")).rstrip("/")
 
 
+def _api_path_url(logical_path: str, query: Optional[dict] = None) -> str:
+    """
+    Multihost nginx uses index.php?path=/resource (not /api/v1/resource rewrites).
+    logical_path examples: /contacts, /contacts/42, /users/me
+    """
+    path = logical_path.strip()
+    if path.startswith("/api/v1"):
+        path = path[len("/api/v1") :] or "/"
+    if not path.startswith("/"):
+        path = "/" + path
+    params: Dict[str, Any] = {"path": path}
+    if query:
+        for key, val in query.items():
+            if val is not None:
+                params[key] = val
+    return "/api/v1/index.php?" + urllib.parse.urlencode(params)
+
+
 def _request(
     method: str,
-    path: str,
+    logical_path: str,
     api_key: str,
     body: Optional[dict] = None,
     query: Optional[dict] = None,
@@ -129,10 +147,7 @@ def _request(
     base = _base_url()
     if not base:
         raise RuntimeError("CRM_API_BASE_URL (or CRM_LEN_CRM_API_BASE) must be set")
-    url = base + path
-    if query:
-        qs = urllib.parse.urlencode({k: v for k, v in query.items() if v is not None})
-        url += ("&" if "?" in url else "?") + qs
+    url = base + _api_path_url(logical_path, query)
     data = None
     headers = {"Authorization": f"Bearer {api_key}", "Accept": "application/json"}
     if body is not None:
@@ -157,10 +172,10 @@ def _request(
 
 def _handlers(api_key: str) -> Dict[str, Callable[[argparse.Namespace], dict]]:
     def health(_: argparse.Namespace) -> dict:
-        return _request("GET", "/api/v1/contacts?limit=1", api_key)
+        return _request("GET", "/contacts", api_key, query={"limit": 1})
 
     def me(_: argparse.Namespace) -> dict:
-        return _request("GET", "/api/v1/users/me", api_key)
+        return _request("GET", "/users/me", api_key)
 
     def list_contacts(args: argparse.Namespace) -> dict:
         q = {"limit": args.limit, "offset": args.offset}
@@ -172,46 +187,46 @@ def _handlers(api_key: str) -> Dict[str, Callable[[argparse.Namespace], dict]]:
             q["contact_type"] = args.contact_type
         if args.contact_status:
             q["contact_status"] = args.contact_status
-        return _request("GET", "/api/v1/contacts", api_key, query=q)
+        return _request("GET", "/contacts", api_key, query=q)
 
     def get_contact(args: argparse.Namespace) -> dict:
-        return _request("GET", f"/api/v1/contacts/{args.id}", api_key)
+        return _request("GET", f"/contacts/{args.id}", api_key)
 
     def create_contact(args: argparse.Namespace) -> dict:
         body = json.loads(args.json) if args.json else {}
-        return _request("POST", "/api/v1/contacts", api_key, body=body)
+        return _request("POST", "/contacts", api_key, body=body)
 
     def update_contact(args: argparse.Namespace) -> dict:
         body = json.loads(args.json) if args.json else {}
-        return _request("PUT", f"/api/v1/contacts/{args.id}", api_key, body=body)
+        return _request("PUT", f"/contacts/{args.id}", api_key, body=body)
 
     def list_deals(args: argparse.Namespace) -> dict:
         q = {"limit": args.limit, "offset": args.offset}
         if args.stage:
             q["stage"] = args.stage
-        return _request("GET", "/api/v1/deals", api_key, query=q)
+        return _request("GET", "/deals", api_key, query=q)
 
     def get_deal(args: argparse.Namespace) -> dict:
-        return _request("GET", f"/api/v1/deals/{args.id}", api_key)
+        return _request("GET", f"/deals/{args.id}", api_key)
 
     def create_deal(args: argparse.Namespace) -> dict:
         body = json.loads(args.json) if args.json else {}
-        return _request("POST", "/api/v1/deals", api_key, body=body)
+        return _request("POST", "/deals", api_key, body=body)
 
     def update_deal(args: argparse.Namespace) -> dict:
         body = json.loads(args.json) if args.json else {}
-        return _request("PUT", f"/api/v1/deals/{args.id}", api_key, body=body)
+        return _request("PUT", f"/deals/{args.id}", api_key, body=body)
 
     def list_tags(_: argparse.Namespace) -> dict:
-        return _request("GET", "/api/v1/contacts/tags", api_key)
+        return _request("GET", "/contacts/tags", api_key)
 
     def list_contact_tags(args: argparse.Namespace) -> dict:
-        return _request("GET", f"/api/v1/contacts/{args.id}/tags", api_key)
+        return _request("GET", f"/contacts/{args.id}/tags", api_key)
 
     def attach_contact_tag(args: argparse.Namespace) -> dict:
         return _request(
             "POST",
-            f"/api/v1/contacts/{args.id}/tags",
+            f"/contacts/{args.id}/tags",
             api_key,
             body={"tag": args.tag},
         )
