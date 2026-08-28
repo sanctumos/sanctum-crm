@@ -10,6 +10,8 @@ if (!defined('CRM_LOADED')) {
 
 require_once dirname(__DIR__) . '/len-bridge/includes/connection_config.php';
 
+global $auth;
+
 if (!len_bridge_is_ui_enabled()) {
     return;
 }

@@ -16,6 +16,8 @@ if (!$auth->isAdmin()) {
     exit;
 }
 
+require_once __DIR__ . '/../len-bridge/includes/connection_config.php';
+
 // Get database instance
 $db = Database::getInstance();
 require_once __DIR__ . '/../includes/LeadEnrichmentService.php';
@@ -164,7 +166,6 @@ $userSkin = crmSkinUserOverrideSlug(is_array($user) ? $user : null) ?? '';
 $defaultSkin = crmSkinMasterSlug();
 
 require_once __DIR__ . '/../includes/ConfigManager.php';
-require_once __DIR__ . '/../len-bridge/includes/connection_config.php';
 $appNameSetting = getAppName();
 $lenConn = len_bridge_get_connection_config();
 
