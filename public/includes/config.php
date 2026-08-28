@@ -82,11 +82,20 @@ if (!headers_sent()) {
 
 // Custom error handler
 function customErrorHandler($errno, $errstr, $errfile, $errline) {
+    // Notices/warnings must not emit HTML/JSON into bridge or API bodies (breaks Broca JSON parse).
+    $nonFatal = [E_NOTICE, E_USER_NOTICE, E_WARNING, E_USER_WARNING, E_DEPRECATED, E_USER_DEPRECATED];
+    if (in_array($errno, $nonFatal, true)) {
+        if (DEBUG_MODE || isApiRequest() || isLenBridgeRequest()) {
+            error_log("Error [$errno] $errstr on line $errline in file $errfile");
+        }
+        return true;
+    }
+
     if (DEBUG_MODE) {
         error_log("Error [$errno] $errstr on line $errline in file $errfile");
     }
 
-    if (isApiRequest()) {
+    if (isApiRequest() || isLenBridgeRequest()) {
         http_response_code(500);
         echo json_encode([
             'error' => 'Internal server error',
@@ -106,7 +115,13 @@ set_error_handler('customErrorHandler');
 
 // Helper function to check if request is API
 function isApiRequest() {
-    return strpos($_SERVER['REQUEST_URI'] ?? '', '/api/') === 0;
+    $uri = $_SERVER['REQUEST_URI'] ?? '';
+    return strpos($uri, '/api/') === 0 || isLenBridgeRequest();
+}
+
+/** Ask Len / Broca poll surfaces under /len-bridge/ */
+function isLenBridgeRequest() {
+    return strpos($_SERVER['REQUEST_URI'] ?? '', '/len-bridge/') !== false;
 }
 
 // Helper function to generate API key

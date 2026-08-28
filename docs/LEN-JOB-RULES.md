@@ -49,7 +49,7 @@ Len should **fetch** full contact/deal bodies via SMCP when the human asks — n
 
 ## Broca wiring
 
-- Poll base: `{CRM_ORIGIN}/len-bridge/api/v1/`
+- Poll base: `{CRM_ORIGIN}/len-bridge/` (Broca appends `api/v1/index.php`)
 - Poll key: `CRM_LEN_BRIDGE_POLL_API_KEY` (server env) or `db/len_bridge_poll_api_key.txt`
 - SMCP plugin: `len_crm` on the Broca host
 - Chatter context file: `current_crm_user_id.txt` (Broca plugin writes from inbox metadata)

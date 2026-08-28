@@ -22,7 +22,7 @@ def main() -> None:
     p.add_argument("--agent-id", default=DEFAULT_AGENT_ID, help="Letta Len agent id")
     args = p.parse_args()
     crm = args.crm_base.rstrip("/")
-    bridge = f"{crm}/len-bridge/api/v1/"
+    bridge = f"{crm}/len-bridge/"
     print(
         textwrap.dedent(
             f"""
@@ -33,7 +33,7 @@ def main() -> None:
             3. Place poll key on CRM host:
                db/len_bridge_poll_api_key.txt  (or CRM_LEN_BRIDGE_POLL_API_KEY env)
             4. On moya, broca-len env:
-               CRM_LEN_BRIDGE_API_URL={bridge}
+               CRM_LEN_BRIDGE_API_URL={crm}/len-bridge/
                CRM_LEN_BRIDGE_POLL_API_KEY=<same poll key>
                CRM_LEN_CHATTER_FILE=/opt/broca-len/run/current_crm_user_id.txt
                CRM_API_BASE_URL={crm}
