@@ -24,29 +24,95 @@ from resolve_key import chatter_user_id_from_context, resolve_crm_api_key  # noq
 
 PLUGIN = {
     "name": "len_crm",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "description": (
         "Sanctum CRM API tools for Len Vernal — relationship memory agent. "
         "Uses the logged-in chatter's hidden API key (resolved server-side)."
     ),
 }
 
-COMMANDS = {
-    "health",
-    "me",
-    "list-contacts",
-    "get-contact",
-    "create-contact",
-    "update-contact",
-    "list-deals",
-    "get-deal",
-    "create-deal",
-    "update-deal",
-    "list-tags",
-    "list-contact-tags",
-    "attach-contact-tag",
-    "tool-help",
-}
+COMMAND_SPECS: List[Dict[str, Any]] = [
+    {"name": "health", "description": "Check CRM API reachability for this chatter.", "parameters": []},
+    {"name": "me", "description": "Who you are acting as — CRM username/id.", "parameters": []},
+    {
+        "name": "list-contacts",
+        "description": "List/filter contacts. Use q= for name search.",
+        "parameters": [
+            {"name": "limit", "type": "integer", "required": False, "default": 25, "description": "Page size"},
+            {"name": "offset", "type": "integer", "required": False, "default": 0, "description": "Offset"},
+            {"name": "q", "type": "string", "required": False, "default": None, "description": "Name/email search"},
+            {"name": "tag", "type": "string", "required": False, "default": None, "description": "Tag filter"},
+            {"name": "contact-type", "type": "string", "required": False, "default": None, "description": "lead|customer"},
+            {"name": "contact-status", "type": "string", "required": False, "default": None, "description": "Status filter"},
+        ],
+    },
+    {
+        "name": "get-contact",
+        "description": "Fetch one contact by id.",
+        "parameters": [{"name": "id", "type": "integer", "required": True, "default": None, "description": "Contact id"}],
+    },
+    {
+        "name": "create-contact",
+        "description": "Create one contact from JSON body.",
+        "parameters": [{"name": "json", "type": "string", "required": True, "default": None, "description": "JSON body"}],
+    },
+    {
+        "name": "update-contact",
+        "description": "Patch one contact by id.",
+        "parameters": [
+            {"name": "id", "type": "integer", "required": True, "default": None, "description": "Contact id"},
+            {"name": "json", "type": "string", "required": True, "default": None, "description": "JSON body"},
+        ],
+    },
+    {
+        "name": "list-deals",
+        "description": "List deals, optional stage filter.",
+        "parameters": [
+            {"name": "limit", "type": "integer", "required": False, "default": 25, "description": "Page size"},
+            {"name": "offset", "type": "integer", "required": False, "default": 0, "description": "Offset"},
+            {"name": "stage", "type": "string", "required": False, "default": None, "description": "Deal stage"},
+        ],
+    },
+    {
+        "name": "get-deal",
+        "description": "Fetch one deal by id.",
+        "parameters": [{"name": "id", "type": "integer", "required": True, "default": None, "description": "Deal id"}],
+    },
+    {
+        "name": "create-deal",
+        "description": "Create one deal from JSON body.",
+        "parameters": [{"name": "json", "type": "string", "required": True, "default": None, "description": "JSON body"}],
+    },
+    {
+        "name": "update-deal",
+        "description": "Patch one deal by id.",
+        "parameters": [
+            {"name": "id", "type": "integer", "required": True, "default": None, "description": "Deal id"},
+            {"name": "json", "type": "string", "required": True, "default": None, "description": "JSON body"},
+        ],
+    },
+    {"name": "list-tags", "description": "List tag catalog.", "parameters": []},
+    {
+        "name": "list-contact-tags",
+        "description": "List tags on one contact.",
+        "parameters": [{"name": "id", "type": "integer", "required": True, "default": None, "description": "Contact id"}],
+    },
+    {
+        "name": "attach-contact-tag",
+        "description": "Attach a tag name to one contact.",
+        "parameters": [
+            {"name": "id", "type": "integer", "required": True, "default": None, "description": "Contact id"},
+            {"name": "tag", "type": "string", "required": True, "default": None, "description": "Tag name"},
+        ],
+    },
+    {
+        "name": "tool-help",
+        "description": "Intent → tool routing cheat sheet.",
+        "parameters": [],
+    },
+]
+
+COMMANDS = {c["name"] for c in COMMAND_SPECS}
 
 
 def _base_url() -> str:
@@ -214,7 +280,16 @@ def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
     if args.describe:
-        print(json.dumps({"plugin": PLUGIN, "commands": sorted(COMMANDS)}, indent=2))
+        print(
+            json.dumps(
+                {
+                    "contract_version": "1.0",
+                    "plugin": PLUGIN,
+                    "commands": COMMAND_SPECS,
+                },
+                indent=2,
+            )
+        )
         sys.exit(0)
     if not args.command:
         parser.print_help()
@@ -222,12 +297,12 @@ def main() -> None:
 
     uid = chatter_user_id_from_context()
     if not uid:
-        print(json.dumps({"status": "error", "error": "No active CRM chatter context"}))
+        print(json.dumps({"status": "error", "error": "No active CRM chatter context", "error_type": "auth"}))
         sys.exit(1)
     try:
         api_key = resolve_crm_api_key(uid)
     except Exception as e:
-        print(json.dumps({"status": "error", "error": str(e)}))
+        print(json.dumps({"status": "error", "error": str(e), "error_type": "auth"}))
         sys.exit(1)
 
     handler = _handlers(api_key).get(args.command)

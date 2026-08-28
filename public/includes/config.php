@@ -310,10 +310,14 @@ function crm_env_or_default(string $key, string $default): string
     return $default;
 }
 
+// Ask Len — optional hard kill-switch. Leave undefined unless env is set so
+// Settings → Ask Len (system_config) can enable the bubble without site env.
 if (!defined('CRM_LEN_BRIDGE_ENABLED')) {
     $lenEnv = getenv('CRM_LEN_BRIDGE_ENABLED');
-    define(
-        'CRM_LEN_BRIDGE_ENABLED',
-        $lenEnv === '1' || strtolower((string) $lenEnv) === 'true'
-    );
+    if ($lenEnv !== false && $lenEnv !== '') {
+        define(
+            'CRM_LEN_BRIDGE_ENABLED',
+            $lenEnv === '1' || strtolower((string) $lenEnv) === 'true'
+        );
+    }
 }
