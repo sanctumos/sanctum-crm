@@ -112,4 +112,20 @@ class ContactTagService
         );
         return (int) ($row['c'] ?? 0);
     }
+
+    /** @return list<array{tag: string, contact_count: int}> */
+    public function listCatalog(): array
+    {
+        $rows = $this->db->fetchAll(
+            "SELECT tag, COUNT(*) AS contact_count FROM contact_tags GROUP BY tag ORDER BY tag"
+        );
+        $out = [];
+        foreach ($rows as $row) {
+            $out[] = [
+                'tag' => (string) $row['tag'],
+                'contact_count' => (int) ($row['contact_count'] ?? 0),
+            ];
+        }
+        return $out;
+    }
 }

@@ -194,6 +194,92 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
         return;
     }
 
+    // GET /contacts/tags — tag catalog (distinct tags + usage counts)
+    if ($action === 'tags' && !$id) {
+        if ($method !== 'GET') {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed', 'code' => 405]);
+            return;
+        }
+        $tagService = new ContactTagService($db);
+        $tags = $tagService->listCatalog();
+        echo json_encode([
+            'tags' => $tags,
+            'count' => count($tags),
+        ]);
+        return;
+    }
+
+    // /contacts/{id}/tags — list or attach tags on one contact
+    if ($action === 'tags' && $id) {
+        $contactId = (int) $id;
+        $existing = $db->fetchOne('SELECT id FROM contacts WHERE id = ?', [$contactId]);
+        if (!$existing) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Contact not found', 'code' => 404]);
+            return;
+        }
+        $tagService = new ContactTagService($db);
+        if ($method === 'GET') {
+            $tags = $tagService->listTags($contactId);
+            echo json_encode([
+                'contact_id' => $contactId,
+                'tags' => $tags,
+                'count' => count($tags),
+            ]);
+            return;
+        }
+        if ($method === 'POST') {
+            $rawTag = is_array($input) ? ($input['tag'] ?? '') : '';
+            $tag = $tagService->normalizeTag((string) $rawTag);
+            if ($tag === '') {
+                http_response_code(400);
+                echo json_encode([
+                    'error' => 'Missing or invalid tag',
+                    'code' => 400,
+                ]);
+                return;
+            }
+            $tagService->addTag($contactId, $tag);
+            $tags = $tagService->listTags($contactId);
+            http_response_code(201);
+            echo json_encode([
+                'success' => true,
+                'contact_id' => $contactId,
+                'tag' => $tag,
+                'tags' => $tags,
+            ]);
+            return;
+        }
+        if ($method === 'DELETE') {
+            $rawTag = is_array($input) ? ($input['tag'] ?? '') : '';
+            if ($rawTag === '' && isset($_GET['tag'])) {
+                $rawTag = (string) $_GET['tag'];
+            }
+            $tag = $tagService->normalizeTag((string) $rawTag);
+            if ($tag === '') {
+                http_response_code(400);
+                echo json_encode([
+                    'error' => 'Missing or invalid tag',
+                    'code' => 400,
+                ]);
+                return;
+            }
+            $tagService->removeTag($contactId, $tag);
+            $tags = $tagService->listTags($contactId);
+            echo json_encode([
+                'success' => true,
+                'contact_id' => $contactId,
+                'tag' => $tag,
+                'tags' => $tags,
+            ]);
+            return;
+        }
+        http_response_code(405);
+        echo json_encode(['error' => 'Method not allowed', 'code' => 405]);
+        return;
+    }
+
     // Import handling moved to handleImport function
     
     switch ($method) {
