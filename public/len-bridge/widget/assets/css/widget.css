@@ -1,0 +1,841 @@
+/* Sanctum Chat Widget - Core Styles */
+
+:root {
+    /* Light theme variables */
+    --widget-bg: #ffffff;
+    --widget-text: #333333;
+    --widget-border: #e1e5e9;
+    --widget-shadow: rgba(0, 0, 0, 0.1);
+    --primary-color: #007bff;
+    --primary-hover: #0056b3;
+    --secondary-bg: #f8f9fa;
+    --secondary-text: #6c757d;
+    --success-color: #28a745;
+    --error-color: #dc3545;
+    --warning-color: #ffc107;
+    --info-color: #17a2b8;
+    
+    /* Spacing */
+    --widget-radius: 12px;
+    --widget-padding: 16px;
+    --widget-margin: 20px;
+    
+    /* Typography */
+    --widget-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --widget-font-size: 14px;
+    --widget-line-height: 1.5;
+    
+    /* Animations */
+    --widget-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --widget-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    
+    /* Z-index */
+    --widget-z-index: 999999;
+}
+
+/* Dark theme variables */
+[data-theme="dark"] {
+    --widget-bg: #1a1a1a;
+    --widget-text: #ffffff;
+    --widget-border: #333333;
+    --widget-shadow: rgba(0, 0, 0, 0.3);
+    --secondary-bg: #2d2d2d;
+    --secondary-text: #b0b0b0;
+}
+
+/* Auto theme - follows system preference */
+@media (prefers-color-scheme: dark) {
+    [data-theme="auto"] {
+        --widget-bg: #1a1a1a;
+        --widget-text: #ffffff;
+        --widget-border: #333333;
+        --widget-shadow: rgba(0, 0, 0, 0.3);
+        --secondary-bg: #2d2d2d;
+        --secondary-text: #b0b0b0;
+    }
+}
+
+/* Base widget styles */
+.sanctum-chat-widget {
+    font-family: var(--widget-font);
+    font-size: var(--widget-font-size);
+    line-height: var(--widget-line-height);
+    color: var(--widget-text);
+    position: fixed;
+    z-index: var(--widget-z-index);
+    transition: var(--widget-transition);
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: flex-end;
+    gap: 12px;
+    pointer-events: none;
+    * {
+        box-sizing: border-box;
+    }
+}
+
+.sanctum-chat-widget .sanctum-chat-bubble,
+.sanctum-chat-widget .sanctum-chat-window.open {
+    pointer-events: auto;
+}
+
+/* Chat bubble — order 2 keeps it on the anchored corner when panel opens */
+.sanctum-chat-bubble {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 20px var(--widget-shadow);
+    transition: var(--widget-transition);
+    position: relative;
+    overflow: hidden;
+    order: 2;
+    flex-shrink: 0;
+}
+
+.sanctum-chat-bubble:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 25px var(--widget-shadow);
+}
+
+.sanctum-chat-bubble:active {
+    transform: scale(0.95);
+}
+
+.sanctum-chat-bubble svg {
+    width: 24px;
+    height: 24px;
+    fill: currentColor;
+}
+
+/* Notification badge */
+.sanctum-chat-bubble .notification-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: var(--error-color);
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+/* Chat window — stacked above bubble; no layout footprint when closed */
+.sanctum-chat-window {
+    background: var(--widget-bg);
+    border: 1px solid var(--widget-border);
+    border-radius: var(--widget-radius);
+    box-shadow: 0 10px 40px var(--widget-shadow);
+    width: 350px;
+    max-width: calc(100vw - 40px);
+    height: 500px;
+    max-height: calc(100vh - 120px);
+    flex-direction: column;
+    overflow: hidden;
+    transition: var(--widget-transition);
+    opacity: 0;
+    transform: scale(0.92);
+    transform-origin: bottom right;
+    display: none;
+    order: 1;
+}
+
+.sanctum-chat-window.open {
+    display: flex;
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* Panel open: hide launcher (close via header X); window sits on anchor corner */
+.sanctum-chat-widget.is-open {
+    gap: 0;
+}
+
+.sanctum-chat-widget.is-open .sanctum-chat-bubble {
+    display: none !important;
+    visibility: hidden;
+    pointer-events: none;
+    width: 0;
+    height: 0;
+    margin: 0;
+    overflow: hidden;
+}
+
+/* Chat header */
+.sanctum-chat-header {
+    background: var(--primary-color);
+    color: white;
+    padding: var(--widget-padding);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-radius: var(--widget-radius) var(--widget-radius) 0 0;
+}
+
+.sanctum-chat-header-titles {
+    flex: 1;
+    min-width: 0;
+}
+
+.sanctum-chat-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.sanctum-chat-chatter {
+    margin: 2px 0 0;
+    font-size: 12px;
+    font-weight: 500;
+    opacity: 0.92;
+    line-height: 1.3;
+}
+
+.sanctum-chat-header .close-btn {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: var(--widget-transition);
+}
+
+.sanctum-chat-header .close-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Chat messages area */
+.sanctum-chat-messages {
+    flex: 1;
+    padding: var(--widget-padding);
+    overflow-y: auto;
+    background: var(--widget-bg);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.sanctum-chat-messages::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sanctum-chat-messages::-webkit-scrollbar-track {
+    background: var(--secondary-bg);
+    border-radius: 3px;
+}
+
+.sanctum-chat-messages::-webkit-scrollbar-thumb {
+    background: var(--secondary-text);
+    border-radius: 3px;
+}
+
+.sanctum-chat-messages::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-color);
+}
+
+/* Message styles */
+.sanctum-message {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    animation: messageSlideIn 0.3s var(--widget-bounce);
+}
+
+@keyframes messageSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.sanctum-message.user {
+    flex-direction: row-reverse;
+}
+
+.sanctum-message-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.sanctum-message.user .sanctum-message-avatar {
+    background: var(--secondary-text);
+}
+
+.sanctum-message-content {
+    background: var(--secondary-bg);
+    padding: 12px 16px;
+    border-radius: 18px;
+    max-width: 70%;
+    word-wrap: break-word;
+    position: relative;
+}
+
+.sanctum-message.user .sanctum-message-content {
+    background: var(--primary-color);
+    color: white;
+}
+
+/* Markdown inside chat bubbles */
+.sanctum-markdown {
+    line-height: 1.5;
+    font-size: inherit;
+}
+
+.sanctum-markdown p {
+    margin: 0 0 0.5rem 0;
+}
+
+.sanctum-markdown p:last-child {
+    margin-bottom: 0;
+}
+
+.sanctum-markdown h1,
+.sanctum-markdown h2,
+.sanctum-markdown h3,
+.sanctum-markdown h4 {
+    margin: 0.35rem 0 0.4rem;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.sanctum-markdown h1 { font-size: 1.15rem; }
+.sanctum-markdown h2 { font-size: 1.05rem; }
+.sanctum-markdown h3 { font-size: 1rem; }
+
+.sanctum-markdown ul,
+.sanctum-markdown ol {
+    margin: 0.25rem 0 0.5rem 1.15rem;
+    padding: 0;
+}
+
+.sanctum-markdown li {
+    margin: 0.15rem 0;
+}
+
+.sanctum-markdown code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.88em;
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.sanctum-message.user .sanctum-markdown code {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.sanctum-markdown pre {
+    margin: 0.4rem 0;
+    padding: 8px 10px;
+    border-radius: 8px;
+    overflow-x: auto;
+    background: rgba(0, 0, 0, 0.07);
+    font-size: 0.85em;
+}
+
+.sanctum-message.user .sanctum-markdown pre {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.sanctum-markdown pre code {
+    padding: 0;
+    background: transparent;
+}
+
+.sanctum-markdown blockquote {
+    margin: 0.35rem 0;
+    padding-left: 0.65rem;
+    border-left: 3px solid rgba(0, 0, 0, 0.15);
+    opacity: 0.95;
+}
+
+.sanctum-markdown a {
+    color: var(--primary-color);
+    text-decoration: underline;
+}
+
+.sanctum-message.user .sanctum-markdown a {
+    color: #fff;
+    text-decoration: underline;
+}
+
+.sanctum-markdown hr {
+    border: 0;
+    border-top: 1px solid rgba(0, 0, 0, 0.12);
+    margin: 0.5rem 0;
+}
+
+.sanctum-markdown strong {
+    font-weight: 600;
+}
+
+.sanctum-message-time {
+    font-size: 11px;
+    color: var(--secondary-text);
+    margin-top: 4px;
+    text-align: right;
+}
+
+.sanctum-message.user .sanctum-message-time {
+    text-align: left;
+}
+
+/* Typing indicator */
+.sanctum-typing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 12px 16px;
+    background: var(--secondary-bg);
+    border-radius: 18px;
+    max-width: 70%;
+    animation: typingPulse 1.5s infinite;
+}
+
+@keyframes typingPulse {
+    0%, 60%, 100% { opacity: 0.4; }
+    30% { opacity: 1; }
+}
+
+.sanctum-typing-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--secondary-text);
+    border-radius: 50%;
+    animation: typingBounce 1.4s infinite ease-in-out;
+}
+
+.sanctum-typing-dot:nth-child(1) { animation-delay: -0.32s; }
+.sanctum-typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes typingBounce {
+    0%, 80%, 100% { transform: scale(0); }
+    40% { transform: scale(1); }
+}
+
+/* Chat input area */
+.sanctum-chat-input {
+    padding: var(--widget-padding);
+    background: var(--widget-bg);
+    border-top: 1px solid var(--widget-border);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: flex-end;
+}
+
+.sanctum-composer-chips {
+    flex: 0 0 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 2px;
+}
+
+.sanctum-composer-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px 6px 12px;
+    background: var(--secondary-bg);
+    border: 1px solid var(--widget-border);
+    border-radius: 999px;
+    font-size: 12px;
+    max-width: 100%;
+}
+
+.sanctum-composer-chip__icon {
+    opacity: 0.75;
+    flex-shrink: 0;
+}
+
+.sanctum-composer-chip__name {
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 160px;
+}
+
+.sanctum-composer-chip__meta {
+    color: var(--secondary-text);
+    font-size: 11px;
+    flex-shrink: 0;
+}
+
+.sanctum-composer-chip__remove {
+    border: 0;
+    background: transparent;
+    color: var(--secondary-text);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0 2px;
+}
+
+.sanctum-composer-chip__remove:hover {
+    color: #c53030;
+}
+
+.sanctum-composer-caption {
+    margin-bottom: 6px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.sanctum-composer-bubble-attach {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+    padding: 6px 10px;
+    background: rgba(0, 0, 0, 0.06);
+    border-radius: 8px;
+    font-size: 12px;
+}
+
+.sanctum-message.user .sanctum-composer-bubble-attach {
+    background: rgba(255, 255, 255, 0.14);
+}
+
+.sanctum-composer-bubble-attach__label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sanctum-composer-preview-btn {
+    margin-left: auto;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+    font-size: 11px;
+    flex-shrink: 0;
+}
+
+.sanctum-composer-preview-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 100000;
+    background: rgba(0, 0, 0, 0.45);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.sanctum-composer-preview-modal.open {
+    display: flex;
+}
+
+.sanctum-composer-preview-modal__panel {
+    background: var(--widget-bg);
+    color: var(--widget-text);
+    border-radius: 12px;
+    width: min(720px, 100%);
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+}
+
+.sanctum-composer-preview-modal__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--widget-border);
+}
+
+.sanctum-composer-preview-modal__head button {
+    border: 0;
+    background: transparent;
+    font-size: 22px;
+    cursor: pointer;
+    color: var(--secondary-text);
+}
+
+.sanctum-composer-preview-modal__body {
+    margin: 0;
+    padding: 16px;
+    overflow: auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    word-break: break-word;
+    flex: 1;
+    background: var(--secondary-bg);
+}
+
+.sanctum-chat-input textarea {
+    flex: 1;
+    border: 1px solid var(--widget-border);
+    border-radius: 20px;
+    padding: 12px 16px;
+    resize: none;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: 1.4;
+    background: var(--widget-bg);
+    color: var(--widget-text);
+    transition: var(--widget-transition);
+    min-height: 44px;
+    max-height: 120px;
+}
+
+.sanctum-chat-input textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.sanctum-chat-input textarea::placeholder {
+    color: var(--secondary-text);
+}
+
+.sanctum-chat-send {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--widget-transition);
+    flex-shrink: 0;
+}
+
+.sanctum-chat-send:hover {
+    background: var(--primary-hover);
+    transform: scale(1.05);
+}
+
+.sanctum-chat-send:disabled {
+    background: var(--secondary-text);
+    cursor: not-allowed;
+    transform: none;
+}
+
+.sanctum-chat-send svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+
+/* Position variants — anchor launcher corner; panel grows inward from that corner */
+.sanctum-chat-widget[data-position="bottom-right"] {
+    bottom: var(--widget-margin);
+    right: var(--widget-margin);
+    top: auto;
+    left: auto;
+}
+
+.sanctum-chat-widget[data-position="bottom-left"] {
+    bottom: var(--widget-margin);
+    left: var(--widget-margin);
+    top: auto;
+    right: auto;
+    align-items: flex-start;
+}
+
+.sanctum-chat-widget[data-position="bottom-left"] .sanctum-chat-window {
+    transform-origin: bottom left;
+}
+
+.sanctum-chat-widget[data-position="top-right"] {
+    top: var(--widget-margin);
+    right: var(--widget-margin);
+    bottom: auto;
+    left: auto;
+    flex-direction: column-reverse;
+}
+
+.sanctum-chat-widget[data-position="top-left"] {
+    top: var(--widget-margin);
+    left: var(--widget-margin);
+    bottom: auto;
+    right: auto;
+    align-items: flex-start;
+    flex-direction: column-reverse;
+}
+
+.sanctum-chat-widget[data-position="top-left"] .sanctum-chat-window {
+    transform-origin: top left;
+}
+
+.sanctum-chat-widget[data-position="top-right"] .sanctum-chat-window {
+    transform-origin: top right;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .sanctum-chat-widget {
+        /* visualViewport JS pins bottom/right to the visible viewport */
+        transition: bottom 0.2s ease-out, right 0.2s ease-out;
+        /* Prefer home-indicator clearance even before JS runs */
+        bottom: calc(var(--widget-margin) + env(safe-area-inset-bottom, 0px));
+        right: calc(var(--widget-margin) + env(safe-area-inset-right, 0px));
+    }
+
+    .sanctum-chat-widget.sanctum-keyboard-adjust .sanctum-chat-window.open {
+        transition: height 0.2s ease-out, max-height 0.2s ease-out;
+    }
+
+    .sanctum-chat-window {
+        width: calc(100vw - 40px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px));
+        height: min(500px, calc(var(--sanctum-vvh, 100dvh) - 32px));
+        max-height: calc(var(--sanctum-vvh, 100dvh) - 32px);
+    }
+
+    .sanctum-chat-widget.is-open .sanctum-chat-window {
+        height: min(500px, calc(var(--sanctum-vvh, 100dvh) - 24px));
+        max-height: calc(var(--sanctum-vvh, 100dvh) - 24px);
+    }
+    
+    .sanctum-chat-bubble {
+        width: 50px;
+        height: 50px;
+    }
+    
+    .sanctum-chat-bubble svg {
+        width: 20px;
+        height: 20px;
+    }
+    
+    :root {
+        --widget-margin: 15px;
+        --widget-padding: 12px;
+    }
+}
+
+/* Animation classes */
+.sanctum-fade-in {
+    animation: fadeIn 0.3s ease-out;
+}
+
+.sanctum-fade-out {
+    animation: fadeOut 0.3s ease-out;
+}
+
+.sanctum-slide-up {
+    animation: slideUp 0.3s var(--widget-bounce);
+}
+
+.sanctum-slide-down {
+    animation: slideDown 0.3s var(--widget-bounce);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Utility classes */
+.sanctum-hidden {
+    display: none !important;
+}
+
+.sanctum-visible {
+    display: block !important;
+}
+
+.sanctum-loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Focus management — bubble/window only (avoid shifting outline on whole stack) */
+.sanctum-chat-bubble:focus-visible,
+.sanctum-chat-window:focus-within {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    :root {
+        --widget-border: #000000;
+        --widget-shadow: rgba(0, 0, 0, 0.8);
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --widget-transition: none;
+    }
+    
+    .sanctum-chat-widget * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}

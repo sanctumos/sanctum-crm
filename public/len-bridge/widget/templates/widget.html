@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sanctum Chat Widget - Embed Instructions</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background: #f8f9fa;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        .header p {
+            margin: 10px 0 0 0;
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        .content {
+            padding: 40px;
+        }
+        .section {
+            margin-bottom: 40px;
+        }
+        .section h2 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            margin: 20px 0;
+        }
+        .code-block code {
+            color: #81e6d9;
+        }
+        .highlight {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .feature-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
+            border-left: 4px solid #3498db;
+        }
+        .feature-card h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        .demo-button {
+            display: inline-block;
+            background: #3498db;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+        .demo-button:hover {
+            background: #2980b9;
+        }
+        .config-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .config-table th,
+        .config-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        .config-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+        .config-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Sanctum Chat Widget</h1>
+            <p>Embeddable chat widget for any website or application</p>
+        </div>
+        
+        <div class="content">
+            <div class="section">
+                <h2>📋 Quick Start</h2>
+                <p>Add the Sanctum Chat Widget to your website in just two steps:</p>
+                
+                <div class="code-block">
+<code>&lt;!-- Step 1: Include the widget script --&gt;
+&lt;script src="https://yourdomain.com/widget/static/js/chat-widget.js"&gt;&lt;/script&gt;
+
+&lt;!-- Step 2: Initialize the widget --&gt;
+&lt;script&gt;
+  SanctumChat.init({
+    apiKey: 'your-api-key',
+    position: 'bottom-right'
+  });
+&lt;/script&gt;</code>
+                </div>
+                
+                <div class="highlight">
+                    <strong>💡 Pro Tip:</strong> Replace <code>yourdomain.com</code> with your actual domain and <code>your-api-key</code> with your Sanctum API key.
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>🎨 Configuration Options</h2>
+                <p>Customize the widget appearance and behavior with these options:</p>
+                
+                <table class="config-table">
+                    <thead>
+                        <tr>
+                            <th>Option</th>
+                            <th>Type</th>
+                            <th>Default</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>apiKey</code></td>
+                            <td>string</td>
+                            <td><em>required</em></td>
+                            <td>Your Sanctum API key for authentication</td>
+                        </tr>
+                        <tr>
+                            <td><code>position</code></td>
+                            <td>string</td>
+                            <td>'bottom-right'</td>
+                            <td>Widget position: 'bottom-right', 'bottom-left', 'top-right', 'top-left'</td>
+                        </tr>
+                        <tr>
+                            <td><code>theme</code></td>
+                            <td>string</td>
+                            <td>'light'</td>
+                            <td>Widget theme: 'light', 'dark', 'auto'</td>
+                        </tr>
+                        <tr>
+                            <td><code>title</code></td>
+                            <td>string</td>
+                            <td>'Chat with us'</td>
+                            <td>Chat window title</td>
+                        </tr>
+                        <tr>
+                            <td><code>primaryColor</code></td>
+                            <td>string</td>
+                            <td>'#007bff'</td>
+                            <td>Primary brand color (hex)</td>
+                        </tr>
+                        <tr>
+                            <td><code>autoOpen</code></td>
+                            <td>boolean</td>
+                            <td>false</td>
+                            <td>Automatically open chat on page load</td>
+                        </tr>
+                        <tr>
+                            <td><code>notifications</code></td>
+                            <td>boolean</td>
+                            <td>true</td>
+                            <td>Enable browser notifications</td>
+                        </tr>
+                        <tr>
+                            <td><code>sound</code></td>
+                            <td>boolean</td>
+                            <td>true</td>
+                            <td>Enable sound notifications</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="section">
+                <h2>🔧 Advanced Usage</h2>
+                <p>Control the widget programmatically and listen for events:</p>
+                
+                <div class="code-block">
+<code>// Programmatic control
+SanctumChat.open();           // Open chat window
+SanctumChat.close();          // Close chat window
+SanctumChat.toggle();         // Toggle chat window
+SanctumChat.sendMessage('Hello from code!'); // Send message programmatically
+
+// Event listeners
+SanctumChat.on('open', function() {
+  console.log('Chat opened');
+});
+
+SanctumChat.on('message', function(data) {
+  console.log('New message:', data);
+});
+
+SanctumChat.on('close', function() {
+  console.log('Chat closed');
+});</code>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>✨ Features</h2>
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <h3>🎯 Smart Positioning</h3>
+                        <p>8 corner positions with automatic mobile optimization</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>🎨 Theme System</h3>
+                        <p>Light, dark, and auto themes with custom color schemes</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>📱 Responsive Design</h3>
+                        <p>Perfect on all devices from mobile to desktop</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>🔔 Notifications</h3>
+                        <p>Browser notifications and sound alerts for new messages</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>🌐 Multi-language</h3>
+                        <p>Support for 10+ languages with easy localization</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>⚡ Real-time</h3>
+                        <p>Instant messaging with typing indicators and read receipts</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>🧪 Try It Out</h2>
+                <p>Test the widget with different configurations in our interactive demo:</p>
+                <a href="/widget/demo" class="demo-button">Launch Widget Demo</a>
+            </div>
+            
+            <div class="section">
+                <h2>📚 Integration Examples</h2>
+                <p>See how to integrate the widget with popular platforms:</p>
+                
+                <div class="code-block">
+<code>// WordPress Integration
+&lt;script&gt;
+document.addEventListener('DOMContentLoaded', function() {
+  SanctumChat.init({
+    apiKey: '<?php echo get_option("sanctum_api_key"); ?>',
+    position: 'bottom-right',
+    title: '<?php echo get_option("sanctum_chat_title", "Chat with us"); ?>'
+  });
+});
+&lt;/script&gt;
+
+// Shopify Integration
+&lt;script&gt;
+SanctumChat.init({
+  apiKey: 'your-shopify-api-key',
+  position: 'bottom-right',
+  primaryColor: '#007bff'
+});
+&lt;/script&gt;</code>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>🛡️ Security & Privacy</h2>
+                <div class="highlight">
+                    <strong>🔒 Secure by Design:</strong> The widget uses your existing API authentication system, 
+                    ensuring all communications are properly secured and rate-limited. No cross-site data leakage 
+                    and full GDPR compliance.
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>📞 Support</h2>
+                <p>Need help integrating the widget? Check out our documentation or contact support:</p>
+                <ul>
+                    <li><strong>Documentation:</strong> <a href="/docs">/docs</a></li>
+                    <li><strong>API Reference:</strong> <a href="/api/docs">/api/docs</a></li>
+                    <li><strong>Health Check:</strong> <a href="/widget/health">/widget/health</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

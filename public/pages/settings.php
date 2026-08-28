@@ -54,6 +54,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ConfigManager::getInstance()->set('application', 'app_name', $appName);
             $success = 'Branding saved. Header and login will show the new name.';
         }
+    } elseif ($action === 'save_ask_len_connection') {
+        $result = len_bridge_save_connection_config([
+            'enabled' => !empty($_POST['ask_len_enabled']),
+            'sanctum_url' => $_POST['sanctum_url'] ?? '',
+            'agent_id' => $_POST['agent_id'] ?? '',
+            'agent_label' => $_POST['agent_label'] ?? '',
+        ], (int) $user['id']);
+        if ($result['success']) {
+            $success = 'Ask Len connection saved.';
+            $lenConn = $result['config'] ?? len_bridge_get_connection_config();
+        } else {
+            $error = $result['error'] ?? 'Could not save Ask Len settings.';
+        }
     } elseif ($action === 'test_apollo') {
         require_once __DIR__ . '/../includes/enrichment/ApolloEnrichmentClient.php';
         $saved = $db->fetchOne("SELECT apollo_api_key FROM settings WHERE id = 1") ?: [];
@@ -151,7 +164,9 @@ $userSkin = crmSkinUserOverrideSlug(is_array($user) ? $user : null) ?? '';
 $defaultSkin = crmSkinMasterSlug();
 
 require_once __DIR__ . '/../includes/ConfigManager.php';
+require_once __DIR__ . '/../len-bridge/includes/connection_config.php';
 $appNameSetting = getAppName();
+$lenConn = len_bridge_get_connection_config();
 
 // Render the page
 renderHeader('Settings');
@@ -473,6 +488,54 @@ renderPageHeader('Settings', 'System configuration');
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-save me-2"></i>Save Enrichment Automation
                     </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="surface mb-3">
+            <div class="surface__header">
+                <h5 class="mb-0"><i class="bi bi-chat-heart me-2"></i>Ask Len</h5>
+            </div>
+            <div class="surface__body">
+                <?php if (isset($error) && (($_POST['action'] ?? '') === 'save_ask_len_connection')): ?>
+                    <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
+                <?php endif; ?>
+                <?php if (isset($success) && (($_POST['action'] ?? '') === 'save_ask_len_connection')): ?>
+                    <div class="alert alert-success"><?php echo htmlspecialchars($success); ?></div>
+                <?php endif; ?>
+                <p class="text-muted small mb-3">
+                    Enable the in-app Len Vernal chat bubble and record which Sanctum host and Letta agent
+                    Broca should use. Broca polls
+                    <code><?php echo htmlspecialchars((isset($_SERVER['HTTP_HOST']) ? ('https://' . $_SERVER['HTTP_HOST']) : '') . '/len-bridge/'); ?></code>
+                    with this instance's poll API key.
+                </p>
+                <form method="post" action="/index.php?page=settings">
+                    <input type="hidden" name="action" value="save_ask_len_connection">
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" role="switch" name="ask_len_enabled" id="ask_len_enabled" value="1"
+                            <?php echo !empty($lenConn['enabled']) ? 'checked' : ''; ?>>
+                        <label class="form-check-label" for="ask_len_enabled">Enable Ask Len on this instance</label>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="sanctum_url">Sanctum URL</label>
+                        <input class="form-control" type="url" name="sanctum_url" id="sanctum_url"
+                            placeholder="https://sanctum.zero1.network"
+                            value="<?php echo htmlspecialchars((string) ($lenConn['sanctum_url'] ?? '')); ?>">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="agent_id">Agent ID</label>
+                        <input class="form-control" type="text" name="agent_id" id="agent_id"
+                            placeholder="agent-1265f1ed-ddf5-4da8-b768-d8209c01ac51"
+                            value="<?php echo htmlspecialchars((string) ($lenConn['agent_id'] ?? '')); ?>"
+                            autocomplete="off" spellcheck="false">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="agent_label">Agent display name</label>
+                        <input class="form-control" type="text" name="agent_label" id="agent_label"
+                            placeholder="Len Vernal"
+                            value="<?php echo htmlspecialchars((string) ($lenConn['agent_label'] ?? 'Len Vernal')); ?>">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save Ask Len</button>
                 </form>
             </div>
         </div>

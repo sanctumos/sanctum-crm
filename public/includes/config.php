@@ -283,4 +283,22 @@ function getAppUrl() {
         return $appConfig['app_url'] ?? APP_URL;
     }
     return APP_URL;
-} 
+}
+
+/** Env helper for len-bridge (mirrors Docket envOrDefault). */
+function crm_env_or_default(string $key, string $default): string
+{
+    $v = getenv($key);
+    if ($v !== false && $v !== '') {
+        return (string) $v;
+    }
+    return $default;
+}
+
+if (!defined('CRM_LEN_BRIDGE_ENABLED')) {
+    $lenEnv = getenv('CRM_LEN_BRIDGE_ENABLED');
+    define(
+        'CRM_LEN_BRIDGE_ENABLED',
+        $lenEnv === '1' || strtolower((string) $lenEnv) === 'true'
+    );
+}

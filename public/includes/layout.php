@@ -300,6 +300,7 @@ function renderFooter() {
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
         <div class="crm-toast-host" id="crmToastHost" aria-live="polite" aria-relevant="additions"></div>
+        <?php require __DIR__ . '/_ask_len.php'; ?>
     </body>
     </html>
     <?php

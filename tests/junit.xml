@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <testsuites>
-  <testsuite name="AuthTest" tests="26" failures="0">
+  <testsuite name="AuthTest" tests="28" failures="0">
     <testcase name="test_0" status="passed" />
     <testcase name="test_1" status="passed" />
     <testcase name="test_2" status="passed" />
@@ -27,6 +27,8 @@
     <testcase name="test_23" status="passed" />
     <testcase name="test_24" status="passed" />
     <testcase name="test_25" status="passed" />
+    <testcase name="test_26" status="passed" />
+    <testcase name="test_27" status="passed" />
   </testsuite>
   <testsuite name="DatabaseTest" tests="20" failures="0">
     <testcase name="test_0" status="passed" />
@@ -199,6 +201,27 @@
     <testcase name="test_0" status="passed" />
     <testcase name="test_1" status="passed" />
   </testsuite>
+  <testsuite name="ContactsListPaginationTest" tests="6" failures="0">
+    <testcase name="test_0" status="passed" />
+    <testcase name="test_1" status="passed" />
+    <testcase name="test_2" status="passed" />
+    <testcase name="test_3" status="passed" />
+    <testcase name="test_4" status="passed" />
+    <testcase name="test_5" status="passed" />
+  </testsuite>
+  <testsuite name="LenBridgeConnectionConfigTest" tests="2" failures="0">
+    <testcase name="test_0" status="passed" />
+    <testcase name="test_1" status="passed" />
+  </testsuite>
+  <testsuite name="LenBridgePageContextTest" tests="3" failures="0">
+    <testcase name="test_0" status="passed" />
+    <testcase name="test_1" status="passed" />
+    <testcase name="test_2" status="passed" />
+  </testsuite>
+  <testsuite name="LenBridgeSessionTest" tests="2" failures="0">
+    <testcase name="test_0" status="passed" />
+    <testcase name="test_1" status="passed" />
+  </testsuite>
   <testsuite name="LeadEnrichmentOutcomeTest" tests="2" failures="0">
     <testcase name="test_0" status="passed" />
     <testcase name="test_1" status="passed" />
@@ -208,6 +231,13 @@
     <testcase name="test_1" status="passed" />
     <testcase name="test_2" status="passed" />
     <testcase name="test_3" status="passed" />
+  </testsuite>
+  <testsuite name="ReportsAnalyticsServiceTest" tests="5" failures="0">
+    <testcase name="test_0" status="passed" />
+    <testcase name="test_1" status="passed" />
+    <testcase name="test_2" status="passed" />
+    <testcase name="test_3" status="passed" />
+    <testcase name="test_4" status="passed" />
   </testsuite>
   <testsuite name="ApiTest" tests="0" failures="0">
   </testsuite>
@@ -266,6 +296,13 @@
     <testcase name="test_5" status="passed" />
   </testsuite>
   <testsuite name="EnrichmentIntegrationTest" tests="5" failures="0">
+    <testcase name="test_0" status="passed" />
+    <testcase name="test_1" status="passed" />
+    <testcase name="test_2" status="passed" />
+    <testcase name="test_3" status="passed" />
+    <testcase name="test_4" status="passed" />
+  </testsuite>
+  <testsuite name="LenBridgeIntegrationTest" tests="5" failures="0">
     <testcase name="test_0" status="passed" />
     <testcase name="test_1" status="passed" />
     <testcase name="test_2" status="passed" />

@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sanctum Chat Widget - Interactive Demo</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background: #f8f9fa;
+            color: #333;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 30px;
+        }
+        .main-content {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        .sidebar {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 30px;
+            height: fit-content;
+            position: sticky;
+            top: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 2em;
+            font-weight: 300;
+        }
+        .header p {
+            margin: 10px 0 0 0;
+            opacity: 0.9;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        .section h2 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .control-group {
+            margin-bottom: 20px;
+        }
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+        .control-group input,
+        .control-group select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .control-group input[type="color"] {
+            height: 40px;
+            padding: 2px;
+        }
+        .control-group input[type="checkbox"] {
+            width: auto;
+            margin-right: 8px;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #229954;
+        }
+        .btn-warning {
+            background: #f39c12;
+            color: white;
+        }
+        .btn-warning:hover {
+            background: #e67e22;
+        }
+        .demo-area {
+            background: #f8f9fa;
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            margin: 20px 0;
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .demo-area h3 {
+            color: #7f8c8d;
+            margin: 0;
+        }
+        .log-area {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 2px 0;
+        }
+        .log-entry.info { color: #81e6d9; }
+        .log-entry.success { color: #68d391; }
+        .log-entry.warning { color: #f6ad55; }
+        .log-entry.error { color: #fc8181; }
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-online { background: #27ae60; }
+        .status-offline { background: #e74c3c; }
+        .status-connecting { background: #f39c12; }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #3498db;
+            text-decoration: none;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .back-link::before {
+            content: "← ";
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-content">
+            <a href="/widget/" class="back-link">Back to Widget Documentation</a>
+            
+            <div class="header">
+                <h1>🧪 Widget Interactive Demo</h1>
+                <p>Test different configurations and see the widget in action</p>
+            </div>
+            
+            <div class="section">
+                <h2>🎮 Widget Controls</h2>
+                <p>Use these controls to test different widget configurations:</p>
+                
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="SanctumChat.open()">Open Chat</button>
+                    <button class="btn btn-secondary" onclick="SanctumChat.close()">Close Chat</button>
+                    <button class="btn btn-success" onclick="SanctumChat.toggle()">Toggle Chat</button>
+                    <button class="btn btn-warning" onclick="testSendMessage()">Send Test Message</button>
+                </div>
+                
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="SanctumChat.simulateTyping()">Simulate Typing</button>
+                    <button class="btn btn-secondary" onclick="SanctumChat.clearChat()">Clear Chat</button>
+                    <button class="btn btn-success" onclick="testNotifications()">Test Notifications</button>
+                    <button class="btn btn-warning" onclick="getWidgetState()">Get Widget State</button>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>📊 Widget Status</h2>
+                <div id="widget-status">
+                    <p><span class="status-indicator status-offline"></span>Widget not initialized</p>
+                </div>
+                
+                <div class="demo-area" id="demo-area">
+                    <h3>Widget will appear here when initialized</h3>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>📝 Event Log</h2>
+                <p>Watch widget events in real-time:</p>
+                <div class="log-area" id="event-log">
+                    <div class="log-entry info">Event log ready. Initialize the widget to see events.</div>
+                </div>
+                <button class="btn btn-secondary" onclick="clearEventLog()">Clear Log</button>
+            </div>
+            
+            <div class="section">
+                <h2>🔗 Integration Examples</h2>
+                <p>Copy these code snippets to test the widget on your own pages:</p>
+                
+                <div class="demo-area">
+                    <h3>Basic Integration</h3>
+                    <p>Include this in your HTML:</p>
+                    <code>&lt;script src="/widget/static/js/chat-widget.js"&gt;&lt;/script&gt;</code>
+                    <br><br>
+                    <p>Then initialize:</p>
+                    <code>SanctumChat.init({ apiKey: 'demo-key', position: 'bottom-right' });</code>
+                </div>
+            </div>
+        </div>
+        
+        <div class="sidebar">
+            <div class="section">
+                <h2>⚙️ Configuration</h2>
+                
+                <div class="control-group">
+                    <label for="apiKey">API Key:</label>
+                    <input type="text" id="apiKey" value="demo-key" placeholder="Enter your API key">
+                </div>
+                
+                <div class="control-group">
+                    <label for="position">Position:</label>
+                    <select id="position">
+                        <option value="bottom-right">Bottom Right</option>
+                        <option value="bottom-left">Bottom Left</option>
+                        <option value="top-right">Top Right</option>
+                        <option value="top-left">Top Left</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <label for="theme">Theme:</label>
+                    <select id="theme">
+                        <option value="light">Light</option>
+                        <option value="dark">Dark</option>
+                        <option value="auto">Auto</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <label for="title">Title:</label>
+                    <input type="text" id="title" value="Chat with us" placeholder="Chat window title">
+                </div>
+                
+                <div class="control-group">
+                    <label for="primaryColor">Primary Color:</label>
+                    <input type="color" id="primaryColor" value="#007bff">
+                </div>
+                
+                <div class="control-group">
+                    <label for="language">Language:</label>
+                    <select id="language">
+                        <option value="en">English</option>
+                        <option value="es">Spanish</option>
+                        <option value="fr">French</option>
+                        <option value="de">German</option>
+                        <option value="it">Italian</option>
+                        <option value="pt">Portuguese</option>
+                        <option value="ru">Russian</option>
+                        <option value="zh">Chinese</option>
+                        <option value="ja">Japanese</option>
+                        <option value="ko">Korean</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <label>
+                        <input type="checkbox" id="autoOpen"> Auto-open on page load
+                    </label>
+                </div>
+                
+                <div class="control-group">
+                    <label>
+                        <input type="checkbox" id="notifications" checked> Enable notifications
+                    </label>
+                </div>
+                
+                <div class="control-group">
+                    <label>
+                        <input type="checkbox" id="sound" checked> Enable sound
+                    </label>
+                </div>
+                
+                <button class="btn btn-primary" onclick="updateWidgetConfig()" style="width: 100%;">
+                    Update Configuration
+                </button>
+                
+                <button class="btn btn-success" onclick="initializeWidget()" style="width: 100%; margin-top: 10px;">
+                    Initialize Widget
+                </button>
+            </div>
+            
+            <div class="section">
+                <h2>📱 Widget State</h2>
+                <div id="state-display">
+                    <p><strong>Status:</strong> <span id="status-text">Not initialized</span></p>
+                    <p><strong>Position:</strong> <span id="position-text">-</span></p>
+                    <p><strong>Theme:</strong> <span id="theme-text">-</span></p>
+                    <p><strong>Messages:</strong> <span id="messages-count">0</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Event logging
+        function logEvent(message, type = 'info') {
+            const log = document.getElementById('event-log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+        
+        function clearEventLog() {
+            document.getElementById('event-log').innerHTML = '';
+        }
+        
+        // Widget state tracking
+        let messageCount = 0;
+        
+        function updateStatus(status, text) {
+            const statusEl = document.getElementById('widget-status');
+            const indicator = statusEl.querySelector('.status-indicator');
+            const statusText = statusEl.querySelector('p');
+            
+            indicator.className = `status-indicator status-${status}`;
+            statusText.innerHTML = `<span class="status-indicator status-${status}"></span>${text}`;
+        }
+        
+        function updateStateDisplay() {
+            document.getElementById('status-text').textContent = SanctumChat.getState().isOpen ? 'Open' : 'Closed';
+            document.getElementById('position-text').textContent = SanctumChat.getConfig().position;
+            document.getElementById('theme-text').textContent = SanctumChat.getConfig().theme;
+            document.getElementById('messages-count').textContent = messageCount;
+        }
+        
+        // Test functions
+        function testSendMessage() {
+            const testMessage = `Test message ${Date.now()}`;
+            SanctumChat.sendMessage(testMessage);
+            messageCount++;
+            updateStateDisplay();
+            logEvent(`Sent test message: "${testMessage}"`, 'success');
+        }
+        
+        function testNotifications() {
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification('Sanctum Chat', {
+                    body: 'This is a test notification from the widget!',
+                    icon: '/widget/static/assets/icons/chat-icon.svg'
+                });
+                logEvent('Test notification sent', 'success');
+            } else {
+                logEvent('Notifications not available or not permitted', 'warning');
+            }
+        }
+        
+        function getWidgetState() {
+            const state = SanctumChat.getState();
+            const config = SanctumChat.getConfig();
+            logEvent(`Widget state: ${JSON.stringify(state, null, 2)}`, 'info');
+            logEvent(`Widget config: ${JSON.stringify(config, null, 2)}`, 'info');
+        }
+        
+        // Configuration management
+        function getConfigFromForm() {
+            return {
+                apiKey: document.getElementById('apiKey').value,
+                position: document.getElementById('position').value,
+                theme: document.getElementById('theme').value,
+                title: document.getElementById('title').value,
+                primaryColor: document.getElementById('primaryColor').value,
+                language: document.getElementById('language').value,
+                autoOpen: document.getElementById('autoOpen').checked,
+                notifications: document.getElementById('notifications').checked,
+                sound: document.getElementById('sound').checked
+            };
+        }
+        
+        function updateWidgetConfig() {
+            const config = getConfigFromForm();
+            SanctumChat.updateConfig(config);
+            logEvent('Widget configuration updated', 'success');
+            updateStateDisplay();
+        }
+        
+        function initializeWidget() {
+            const config = getConfigFromForm();
+            
+            try {
+                SanctumChat.init(config);
+                logEvent('Widget initialized successfully', 'success');
+                updateStatus('online', 'Widget initialized and ready');
+                
+                // Set up event listeners
+                SanctumChat.on('open', function() {
+                    logEvent('Chat opened', 'success');
+                    updateStateDisplay();
+                });
+                
+                SanctumChat.on('close', function() {
+                    logEvent('Chat closed', 'info');
+                    updateStateDisplay();
+                });
+                
+                SanctumChat.on('message', function(data) {
+                    logEvent(`Message received: ${data.message}`, 'info');
+                    messageCount++;
+                    updateStateDisplay();
+                });
+                
+                SanctumChat.on('error', function(error) {
+                    logEvent(`Error: ${error}`, 'error');
+                });
+                
+                updateStateDisplay();
+                
+            } catch (error) {
+                logEvent(`Failed to initialize widget: ${error.message}`, 'error');
+                updateStatus('offline', 'Widget initialization failed');
+            }
+        }
+        
+        // Auto-initialize with demo config
+        document.addEventListener('DOMContentLoaded', function() {
+            logEvent('Demo page loaded. Configure and initialize the widget to begin testing.', 'info');
+        });
+    </script>
+</body>
+</html>

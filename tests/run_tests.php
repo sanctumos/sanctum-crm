@@ -60,8 +60,13 @@ class TestRunner {
             'MigrationRunnerTest.php' => 'MigrationRunnerTest',
             'LayoutTest.php' => 'LayoutTest',
             'ContactsListPaginationTest.php' => 'ContactsListPaginationTest',
+            'LenBridgeConnectionConfigTest.php' => 'LenBridgeConnectionConfigTest',
+            'LenBridgePageContextTest.php' => 'LenBridgePageContextTest',
+            'LenBridgeSessionTest.php' => 'LenBridgeSessionTest',
+            'LenBridgeAuthTest.php' => 'LenBridgeAuthTest',
             'LeadEnrichmentOutcomeTest.php' => 'LeadEnrichmentOutcomeTest',
             'ConfigManagerTest.php' => 'ConfigManagerTest',
+            'ReportsAnalyticsServiceTest.php' => 'ReportsAnalyticsServiceTest',
             // InstallationManagerTest / EnvironmentDetectorTest are PHPUnit-style (no runAllTests)
         ];
         
@@ -97,7 +102,8 @@ class TestRunner {
         $integrationTests = [
             'IntegrationTest.php' => 'IntegrationTest',
             'ImportIntegrationTest.php' => 'ImportIntegrationTest',
-            'EnrichmentIntegrationTest.php' => 'EnrichmentIntegrationTest'
+            'EnrichmentIntegrationTest.php' => 'EnrichmentIntegrationTest',
+            'LenBridgeIntegrationTest.php' => 'LenBridgeIntegrationTest',
         ];
         
         foreach ($integrationTests as $file => $class) {
