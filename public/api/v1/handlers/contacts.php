@@ -8,6 +8,8 @@ if (!defined('CRM_LOADED')) {
     die('Direct access not permitted');
 }
 
+require_once __DIR__ . '/../../../includes/ContactCreateInput.php';
+
 function handleContacts($method, $id, $input, $auth, $action = null) {
     debugLog("[DEBUG] handleContacts ENTRY: method=$method id=$id action=$action input=" . json_encode($input));
     $db = Database::getInstance();
@@ -475,6 +477,16 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
             
         case 'POST':
             debugLog("contacts POST input=" . json_encode($input));
+            // Normalize webhook / form-tool shapes onto first_name + last_name
+            // (strict clients unchanged; nested/alias payloads become usable).
+            $input = ContactCreateInput::normalize(is_array($input) ? $input : []);
+            // Optional query overrides for webhook URLs that cannot set body fields
+            // (e.g. ?source=wix&api_key=…). Only fills empty keys.
+            foreach (['source', 'contact_type', 'contact_status'] as $qKey) {
+                if (empty($input[$qKey]) && !empty($_GET[$qKey]) && is_scalar($_GET[$qKey])) {
+                    $input[$qKey] = (string) $_GET[$qKey];
+                }
+            }
             // Create new contact
             $required = ['first_name', 'last_name'];
             foreach ($required as $field) {
