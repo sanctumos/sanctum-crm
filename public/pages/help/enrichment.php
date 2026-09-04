@@ -155,9 +155,18 @@ Content-Type: application/json
 POST /api/v1/contacts/bulk-enrich
      {"contact_ids":[1,2,3],"strategy":"auto"}
 
+POST /api/v1/contacts/bulk-delete
+     {"tag":"outscraper-20260904","confirm":true}
+
 GET  /api/v1/enrichment/stats
 GET|PUT /api/v1/enrichment/cron   (admin for writes)</code></pre>
                     </div>
+                </div>
+
+                <div class="alert alert-secondary mt-3 mb-0">
+                    <strong>Outscraper / scrape batches:</strong> Tag each import (e.g. <code>outscraper-20260904</code>).
+                    Filter Contacts by that tag → <strong>Bulk Enrich</strong> (respects the tag filter) or
+                    <strong>Delete tag …</strong> to remove a bad batch. Merge review stays manual for dealer office vs personal numbers.
                 </div>
             </div>
         </div>

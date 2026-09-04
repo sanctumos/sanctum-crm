@@ -113,6 +113,21 @@ class ContactTagService
         return (int) ($row['c'] ?? 0);
     }
 
+    /** @return list<int> */
+    public function listContactIdsWithTag(string $tag, int $limit = 500): array
+    {
+        $tag = $this->normalizeTag($tag);
+        if ($tag === '') {
+            return [];
+        }
+        $limit = max(1, min(2000, $limit));
+        $rows = $this->db->fetchAll(
+            "SELECT contact_id FROM contact_tags WHERE tag = ? ORDER BY contact_id ASC LIMIT {$limit}",
+            [$tag]
+        );
+        return array_values(array_map(static fn ($r) => (int) $r['contact_id'], $rows));
+    }
+
     /** @return list<array{tag: string, contact_count: int}> */
     public function listCatalog(): array
     {

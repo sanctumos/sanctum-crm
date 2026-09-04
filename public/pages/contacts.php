@@ -111,6 +111,9 @@ ob_start();
 <a href="/?page=import_contacts" class="btn btn-success"><i class="bi bi-file-earmark-arrow-up me-1"></i>Import CSV</a>
 <button class="btn btn-info" type="button" onclick="exportContactsCSV()"><i class="bi bi-download me-1"></i>Export CSV</button>
 <button class="btn btn-warning" type="button" onclick="bulkEnrichContacts()"><i class="bi bi-magic me-1"></i>Bulk Enrich</button>
+<?php if ($tag_filter !== ''): ?>
+<button class="btn btn-outline-danger" type="button" onclick="bulkDeleteByTag('<?php echo htmlspecialchars($tag_filter, ENT_QUOTES); ?>', <?php echo (int) $tagService->countContactsWithTag($tag_filter); ?>)"><i class="bi bi-trash me-1"></i>Delete tag “<?php echo htmlspecialchars(crm_format_tag_label($tag_filter)); ?>”</button>
+<?php endif; ?>
 <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#addContactModal"><i class="bi bi-plus-lg me-1"></i>Add Contact</button>
 <?php
 renderPageHeader('Contacts', 'Leads and customers', ob_get_clean());
@@ -1437,6 +1440,54 @@ function deselectAllContacts() {
 function updateSelectedCount() {
     const selectedCount = document.querySelectorAll('#contactSelection .contact-checkbox:checked').length;
     document.getElementById('selectedCount').textContent = selectedCount;
+}
+
+async function bulkDeleteByTag(tag, count) {
+    if (!tag) {
+        showError('No tag selected');
+        return;
+    }
+    const label = tag;
+    const n = Number(count) || 0;
+    if (n < 1) {
+        showError('No contacts with this tag');
+        return;
+    }
+    const ok = confirm(
+        `Delete ALL ${n} contact(s) tagged “${label}”?\n\nThis cannot be undone. Use for bad Outscraper / scrape batches only.`
+    );
+    if (!ok) {
+        return;
+    }
+    const ok2 = confirm(`Final confirm: permanently delete ${n} contacts with tag “${label}”?`);
+    if (!ok2) {
+        return;
+    }
+    try {
+        const response = await fetch(crmApiUrl('contacts/bulk-delete'), {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${getApiKey()}`,
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({ tag, confirm: true, limit: 500 }),
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            showError(result.error || 'Bulk delete failed');
+            return;
+        }
+        showSuccess(`Deleted ${result.deleted_count || 0} contact(s) with tag “${label}”.`);
+        setTimeout(() => {
+            const params = new URLSearchParams(window.location.search);
+            params.delete('tag');
+            params.set('page', 'contacts');
+            window.location.href = '/index.php?' + params.toString();
+        }, 900);
+    } catch (error) {
+        showError('Network error: ' + error.message);
+    }
 }
 
 // Change per page function

@@ -194,6 +194,79 @@ function handleContacts($method, $id, $input, $auth, $action = null) {
         return;
     }
 
+    // POST /contacts/bulk-delete — delete by contact_ids or by tag (Outscraper batch nuke)
+    if ($action === 'bulk-delete') {
+        if ($method !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed', 'code' => 405]);
+            return;
+        }
+        if (empty($input['confirm'])) {
+            http_response_code(400);
+            echo json_encode([
+                'error' => 'confirm=true required for bulk delete',
+                'code' => 400,
+            ]);
+            return;
+        }
+
+        $tagService = new ContactTagService($db);
+        $ids = [];
+        $tagUsed = '';
+        if (!empty($input['tag'])) {
+            $tagUsed = $tagService->normalizeTag((string) $input['tag']);
+            if ($tagUsed === '') {
+                http_response_code(400);
+                echo json_encode(['error' => 'Invalid tag', 'code' => 400]);
+                return;
+            }
+            $ids = $tagService->listContactIdsWithTag($tagUsed, (int) ($input['limit'] ?? 500));
+        } elseif (!empty($input['contact_ids']) && is_array($input['contact_ids'])) {
+            $ids = array_values(array_unique(array_map('intval', $input['contact_ids'])));
+            $ids = array_values(array_filter($ids, static fn ($id) => $id > 0));
+            if (count($ids) > 500) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Max 500 contact_ids per request', 'code' => 400]);
+                return;
+            }
+        } else {
+            http_response_code(400);
+            echo json_encode([
+                'error' => 'tag or contact_ids required',
+                'code' => 400,
+            ]);
+            return;
+        }
+
+        $deleted = [];
+        $missing = [];
+        foreach ($ids as $cid) {
+            $existing = $db->fetchOne('SELECT * FROM contacts WHERE id = ?', [$cid]);
+            if (!$existing) {
+                $missing[] = $cid;
+                continue;
+            }
+            if ($db->delete('contacts', 'id = ?', [$cid])) {
+                $deleted[] = $cid;
+                if (function_exists('crm_dispatch_webhook')) {
+                    crm_dispatch_webhook('contact.deleted', [
+                        'contact_id' => $cid,
+                        'contact' => $existing,
+                    ]);
+                }
+            }
+        }
+
+        echo json_encode([
+            'success' => true,
+            'tag' => $tagUsed !== '' ? $tagUsed : null,
+            'deleted_count' => count($deleted),
+            'deleted_ids' => $deleted,
+            'missing_ids' => $missing,
+        ]);
+        return;
+    }
+
     // GET /contacts/tags — tag catalog (distinct tags + usage counts)
     if ($action === 'tags' && !$id) {
         if ($method !== 'GET') {

@@ -768,18 +768,36 @@ class ContactMergeService
 
         $score = 0.0;
 
+        $companyA = $this->normName($a['company'] ?? '');
+        $companyB = $this->normName($b['company'] ?? '');
+        $sameCompany = $companyA !== '' && $companyA !== 'unknown' && $companyA === $companyB;
+        if ($sameCompany) {
+            $reasons[] = 'exact_company';
+        }
+
         // Strongest: same phone AND same first+last
         if ($phoneMatch && $sameFullName) {
             $score = 0.96;
             $reasons[] = 'phone_and_full_name';
         } elseif ($fullNameMismatch) {
             // Both fully named but disagree — significant decrement; never high/medium-high.
-            // Shared phone still worth a low inspect row; name-only mismatch is not a candidate.
-            $score = $phoneMatch ? 0.48 : 0.0;
-            $reasons[] = 'full_name_mismatch_penalized';
+            // Same phone + company = typical dealer office line (keep as hand-merge, low).
+            if ($phoneMatch && $sameCompany) {
+                $score = 0.42;
+                $reasons[] = 'shared_dealer_line';
+            } else {
+                $score = $phoneMatch ? 0.48 : 0.0;
+                $reasons[] = 'full_name_mismatch_penalized';
+            }
         } elseif ($phoneMatch && $nameConflict) {
-            // Shared line with conflicting name parts (one side incomplete names)
-            $score = 0.55;
+            // Shared line with conflicting names — often dealer office + different people.
+            // Stay low so mass-accept never sweeps these; humans merge when intended.
+            if ($sameCompany) {
+                $score = 0.42;
+                $reasons[] = 'shared_dealer_line';
+            } else {
+                $score = 0.50;
+            }
         } elseif ($phoneMatch && $sameFirst && !$lastConflict) {
             // Same phone + first; last missing/unknown on one side
             $score = 0.84;
@@ -788,8 +806,9 @@ class ContactMergeService
             $score = 0.80;
             $reasons[] = 'phone_and_last';
         } elseif ($phoneMatch) {
-            // Phone only (no usable name agreement) — medium
-            $score = 0.70;
+            // Phone only (no usable name agreement) — low: shared office lines / incomplete scrapes.
+            // Mass accept stays high-only (≥0.85); these stay hand-review.
+            $score = 0.55;
             $reasons[] = 'phone_only';
         } elseif ($sameFullName) {
             // Name match without confirming phone
@@ -959,7 +978,9 @@ class ContactMergeService
             'phone_and_full_name' => 'Phone + full name match',
             'phone_and_first' => 'Phone + first name match',
             'phone_and_last' => 'Phone + last name match',
-            'phone_only' => 'Phone match only (names incomplete or weak)',
+            'phone_only' => 'Phone match only (names incomplete or weak — review; often shared office)',
+            'exact_company' => 'Same company name',
+            'shared_dealer_line' => 'Same phone + company but different people (office line — manual merge)',
             'distinct_personal_emails' => 'Different personal emails on matching cards',
             'gerwil_local_to_personal' => 'Employer-domain address matches personal contact',
             'gerwil_local_named' => 'Employer-domain local matches named contact',
@@ -970,7 +991,7 @@ class ContactMergeService
         $priority = [
             'phone_and_full_name', 'exact_name', 'full_name_mismatch_penalized', 'full_name_mismatch',
             'exact_phone', 'phone_and_first', 'phone_and_last',
-            'phone_only', 'name_conflict', 'exact_first', 'exact_last',
+            'phone_only', 'shared_dealer_line', 'exact_company', 'name_conflict', 'exact_first', 'exact_last',
             'gerwil_local_to_personal', 'gerwil_local_named', 'gerwil_first_only_named_other',
             'gerwil_local_first_only', 'gerwil_last_mismatch',
             'distinct_personal_emails',

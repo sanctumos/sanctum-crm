@@ -145,16 +145,16 @@ class ContactMergeServiceTest
             ['first_name' => 'Jane', 'last_name' => 'Doe', 'phone' => '2145550100', 'email' => ''],
             ['first_name' => 'Unknown', 'last_name' => 'Unknown', 'phone' => '2145550100', 'email' => '']
         );
-        $this->assertTrue($phoneOnly['confidence'] < 0.85, 'phone-only without name agreement < 0.85');
+        $this->assertTrue($phoneOnly['confidence'] < 0.60, 'phone-only without name agreement < 0.60');
         $this->assertTrue(
-            ContactMergeService::tierForScore($phoneOnly['confidence']) === 'medium',
-            'phone-only is medium'
+            ContactMergeService::tierForScore($phoneOnly['confidence']) === 'low',
+            'phone-only is low (hand-review; not mass-accept)'
         );
         $this->assertTrue($phoneFull['confidence'] > $phoneOnly['confidence'], 'full match outranks phone-only');
 
         $phoneConflict = $this->svc->scoreContactPair(
-            ['first_name' => 'Jane', 'last_name' => 'Doe', 'phone' => '2145550100', 'email' => ''],
-            ['first_name' => 'John', 'last_name' => 'Smith', 'phone' => '2145550100', 'email' => '']
+            ['first_name' => 'Jane', 'last_name' => 'Doe', 'phone' => '2145550100', 'email' => '', 'company' => ''],
+            ['first_name' => 'John', 'last_name' => 'Smith', 'phone' => '2145550100', 'email' => '', 'company' => '']
         );
         $this->assertTrue($phoneConflict['confidence'] < 0.85, 'phone + name conflict not high');
         $this->assertTrue(
@@ -164,6 +164,16 @@ class ContactMergeServiceTest
         $this->assertTrue(
             $phoneConflict['confidence'] < $phoneOnly['confidence'],
             'name conflict below weak phone-only'
+        );
+
+        $dealerLine = $this->svc->scoreContactPair(
+            ['first_name' => 'Jane', 'last_name' => 'Doe', 'phone' => '2145550100', 'company' => 'Acme Golf Cars'],
+            ['first_name' => 'John', 'last_name' => 'Smith', 'phone' => '2145550100', 'company' => 'Acme Golf Cars']
+        );
+        $this->assertTrue($dealerLine['confidence'] < 0.50, 'shared dealer office line stays low');
+        $this->assertTrue(
+            in_array('shared_dealer_line', $dealerLine['reason_codes'], true),
+            'shared_dealer_line reason set'
         );
 
         // Andrew Smith vs Andrew Lowe — both fully named, last disagrees

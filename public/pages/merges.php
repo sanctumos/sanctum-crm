@@ -301,6 +301,7 @@ renderHeader('Merge');
                 <div class="alert alert-light border small mb-3">
                     <strong>How Keep was chosen (scan heuristic)</strong>
                     <div class="mt-1">Richer card wins: personal email +5, former-employer email +1, phone +2, real last name +2, company +1, customer +1. Tie → lower contact id. Flip anytime before accept.</div>
+                    <div class="mt-2 text-muted">Mass accept is <strong>high confidence only</strong> (≥0.85: phone+full name). Shared office lines (same phone, different people / same dealer) score <strong>low</strong> so you merge those by hand — both phone numbers stay visible on Keep vs Absorb.</div>
                     <div class="row g-2 mt-2">
                         <div class="col-6">
                             <div class="fw-semibold">Keep score: <?php echo (int) ($sPick['score'] ?? 0); ?></div>
