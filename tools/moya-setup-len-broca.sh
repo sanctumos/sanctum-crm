@@ -202,7 +202,8 @@ if [ -f "$PID_FILE" ] && ! pgrep -f "$PROJECT_DIR.*main.py" >/dev/null 2>&1; the
   rm -f "$PID_FILE"
 fi
 mkdir -p "$PROJECT_DIR/run"
-CMD="cd $PROJECT_DIR && export \$(grep -v '^#' $PARENT_ENV | grep -v '^$' | xargs) && export \$(grep -v '^#' .env | grep -v '^$' | xargs) && exec $VENV_DIR/bin/python main.py >> run/broca-len.log 2>&1"
+# Leave stdout/stderr on the screen pty, same as the other Brocas.
+CMD="cd $PROJECT_DIR && export \$(grep -v '^#' $PARENT_ENV | grep -v '^$' | xargs) && export \$(grep -v '^#' .env | grep -v '^$' | xargs) && exec $VENV_DIR/bin/python main.py"
 screen -dmS "$SESSION_NAME" bash -c "$CMD"
 echo "started screen $SESSION_NAME"
 START
