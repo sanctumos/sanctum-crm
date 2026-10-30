@@ -15,7 +15,19 @@ require_once '../../includes/composer_message.php';
 require_once '../../includes/page_context.php';
 require_once '../../config/database.php';
 
-init_database();
+$action = $_GET['action'] ?? '';
+if ($action === 'inbox') {
+    webchat_bridge_begin_inbox_micropoll();
+}
+try {
+    init_database();
+} catch (Exception $e) {
+    if ($action === 'inbox') {
+        error_log('webchat inbox init: ' . $e->getMessage());
+        send_error_response('Inbox busy', 503);
+    }
+    throw $e;
+}
 
 // Set CORS headers
 set_cors_headers();
@@ -28,8 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 // Periodically cleanup inactive sessions (10% chance on each API call)
 maybe_cleanup_inactive_sessions(0.1);
 
-// Get the action from querystring
-$action = $_GET['action'] ?? '';
+// $action parsed above so inbox micro-polls can fail fast before init_database()
 
 // Route to appropriate handler based on action
 switch ($action) {
@@ -370,8 +381,8 @@ function handle_inbox() {
         ]);
         
     } catch (Exception $e) {
-        log_api_request('/api/inbox', 'GET', [], 500);
-        send_error_response('Internal server error', 500);
+        log_api_request('/api/inbox', 'GET', [], 503);
+        send_error_response('Inbox busy', 503);
     }
 }
 

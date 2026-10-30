@@ -7,6 +7,7 @@ if (!defined('CRM_LOADED')) {
     define('CRM_LOADED', true);
 }
 require_once dirname(__DIR__, 2) . '/includes/config.php';
+require_once __DIR__ . '/../includes/webchat_inbox_micropoll.php';
 
 if (!defined('LEN_BRIDGE_DB_PATH')) {
     define(
@@ -22,7 +23,7 @@ function get_db_connection() {
     try {
         $pdo = new PDO('sqlite:' . LEN_BRIDGE_DB_PATH);
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        $pdo->setAttribute(PDO::ATTR_TIMEOUT, LEN_BRIDGE_DB_TIMEOUT);
+        webchat_bridge_apply_pdo_timeout($pdo, LEN_BRIDGE_DB_TIMEOUT);
         $pdo->exec('PRAGMA journal_mode=WAL;');
         $pdo->exec('PRAGMA synchronous=NORMAL;');
         $pdo->exec('PRAGMA foreign_keys = ON;');
