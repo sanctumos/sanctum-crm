@@ -14,6 +14,7 @@ class LenBridgeConnectionConfigTest
         len_bridge_clear_connection_config_cache();
         $this->testDefaults();
         $this->testSaveAndLoad();
+        $this->testDevHostDisablesUi();
         len_bridge_clear_connection_config_cache();
         echo "LenBridgeConnectionConfigTest: all passed\n";
     }
@@ -57,6 +58,22 @@ class LenBridgeConnectionConfigTest
         }
         if ($loaded['agent_label'] !== 'Len Test') {
             throw new Exception('agent_label mismatch');
+        }
+        echo "PASS\n";
+    }
+
+    private function testDevHostDisablesUi(): void
+    {
+        echo "  Testing Ask Len off on dev HTTP_HOST... ";
+        $prev = $_SERVER['HTTP_HOST'] ?? null;
+        $_SERVER['HTTP_HOST'] = 'dev.crm.decisionsciencecorp.com';
+        if (len_bridge_is_ui_enabled()) {
+            throw new Exception('Ask Len must be off on dev.* hosts');
+        }
+        if ($prev === null) {
+            unset($_SERVER['HTTP_HOST']);
+        } else {
+            $_SERVER['HTTP_HOST'] = $prev;
         }
         echo "PASS\n";
     }

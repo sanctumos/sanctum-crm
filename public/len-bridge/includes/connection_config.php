@@ -93,6 +93,10 @@ function len_bridge_get_connection_config(): array
 
 function len_bridge_is_ui_enabled(): bool
 {
+    require_once __DIR__ . '/webchat_inbox_micropoll.php';
+    if (webchat_bridge_http_host_is_dev()) {
+        return false;
+    }
     if (defined('CRM_LEN_BRIDGE_ENABLED') && !CRM_LEN_BRIDGE_ENABLED) {
         return false;
     }

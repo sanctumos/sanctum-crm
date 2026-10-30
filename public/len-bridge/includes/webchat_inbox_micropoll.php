@@ -5,6 +5,17 @@
  */
 if (!function_exists('webchat_bridge_inbox_busy_timeout_ms')) {
 
+/** DSC `dev.*` vhosts must not share Broca pollers with production. */
+function webchat_bridge_http_host_is_dev(): bool
+{
+    $host = strtolower((string) ($_SERVER['HTTP_HOST'] ?? ''));
+    if (strpos($host, ':') !== false) {
+        $host = explode(':', $host, 2)[0];
+    }
+
+    return strpos($host, 'dev.') === 0 || strpos($host, 'www.dev.') === 0;
+}
+
 function webchat_bridge_inbox_busy_timeout_ms(): int
 {
     $env = getenv('WEBCHAT_INBOX_BUSY_TIMEOUT_MS');
