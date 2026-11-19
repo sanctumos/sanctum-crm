@@ -43,7 +43,16 @@ class Auth {
     private function initSession() {
         if (defined('CRM_TESTING')) return; // Skip session in test mode
         if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
-            session_name('crm_session');
+            require_once __DIR__ . '/https_request.php';
+            session_name(defined('SESSION_NAME') ? SESSION_NAME : 'crm_session');
+            $lifetime = defined('SESSION_LIFETIME') ? (int) SESSION_LIFETIME : 3600;
+            session_set_cookie_params([
+                'lifetime' => $lifetime,
+                'path' => '/',
+                'httponly' => true,
+                'secure' => dsc_session_cookie_secure(),
+                'samesite' => 'Lax',
+            ]);
             session_start();
         }
     }
